@@ -40,6 +40,12 @@ class TurboCoreApp(ctk.CTk):
         self.target_device = ""
         self.monitor_thread_started = False
 
+        # STARTUPINFO CACHE
+        self.si = None
+        if hasattr(subprocess, 'STARTUPINFO'):
+            self.si = subprocess.STARTUPINFO()
+            self.si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+
         # GESTÃO DE CAMINHOS
         if getattr(sys, 'frozen', False):
             self.app_dir = os.path.dirname(sys.executable)
@@ -259,7 +265,29 @@ def _update_device_status(self, connected, device_name):
 
         while True:
             try:
+def _monitor_devices_loop(self):
+        # Garante uso do caminho correto (Pasta BIN)
+        adb = os.path.join(self.bin_dir, "adb.exe")
+        if not os.path.exists(adb): adb = "adb"
+        
+        si = subprocess.STARTUPINFO(); si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+
+        while True:
+            try:
+                # Executa o comando usando as variáveis configuradas acima
                 res = subprocess.run([adb, "devices"], capture_output=True, text=True, startupinfo=si)
+                
+                lines = [l for l in res.stdout.split('\n') if 'device' in l and 'List' not in l]
+
+                if lines:
+                    device_name = lines[0].split()[0]
+                    # self.after garante que a UI não trave
+                    self.after(0, lambda d=device_name: self._update_device_status(True, d))
+                else:
+                    self.after(0, lambda: self._update_device_status(False, ""))
+            except Exception:
+                pass
+            time.sleep(2)
                 lines = [l for l in res.stdout.split('\n') if 'device' in l and 'List' not in l]
 
                 if lines:
