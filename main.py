@@ -69,7 +69,7 @@ class TurboCoreApp(ctk.CTk):
         self.lbl_status = ctk.CTkLabel(self, text="SISTEMA OFFLINE", font=("Consolas", 12, "bold"), text_color="#555555", fg_color="#000000")
         self.lbl_status.pack(fill="x", side="bottom", ipady=5)
 
-        self.detect_device()
+        self.start_device_monitoring()
 
     def create_menu(self, parent, label_text, values, cmd_func, color, bg_color):
         ctk.CTkLabel(parent, text=label_text, font=("Arial", 11, "bold"), text_color=color).pack(anchor="w", pady=(10,0))
@@ -241,18 +241,62 @@ class TurboCoreApp(ctk.CTk):
         missing = [f for f in req if not os.path.exists(os.path.join(self.app_dir, f))]
         messagebox.showerror("FALTA ARQUIVO", f"Não encontrei: {missing}") if missing else messagebox.showinfo("OK", "Todos os arquivos encontrados!")
 
-    def detect_device(self):
-        def loop():
-            try:
-                adb = os.path.join(self.app_dir, "adb.exe")
-                si = subprocess.STARTUPINFO(); si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-                res = subprocess.run([adb, "devices"], capture_output=True, text=True, startupinfo=si)
-                lines = [l for l in res.stdout.split('\n') if 'device' in l and 'List' not in l]
-                if lines: self.target_device = lines[0].split()[0]; self.lbl_status.configure(text=f"CONECTADO: {self.target_device}", text_color="#22c55e")
-                else: self.target_device = ""; self.lbl_status.configure(text="DISPOSITIVO DESCONECTADO", text_color="#ef4444")
-            except: pass
-            self.after(2000, self.detect_device)
-        threading.Thread(target=loop, daemon=True).start()
+    def start_device_monitoring(self):
+        def monitor_loop():
+            adb_exe = os.path.join(self.app_dir, "adb.exe")
+            if not os.path.exists(adb_exe): adb_exe = "adb"
+
+            si = subprocess.STARTUPINFO()
+            si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+
+            # Initial check
+            self.check_device_status()
+
+            while True:
+                try:
+                    process = subprocess.Popen(
+                        [adb_exe, "track-devices"],
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                        text=True,
+                        startupinfo=si,
+                        bufsize=1
+                    )
+
+                    for line in iter(process.stdout.readline, ''):
+                        if not line: break
+                        if line.strip():
+                             self.check_device_status()
+
+                    process.wait()
+                    time.sleep(1)
+                except Exception as e:
+                    print(f"Monitor Error: {e}")
+                    time.sleep(2)
+
+        threading.Thread(target=monitor_loop, daemon=True).start()
+
+    def check_device_status(self):
+        try:
+            adb = os.path.join(self.app_dir, "adb.exe")
+            if not os.path.exists(adb): adb = "adb"
+
+            si = subprocess.STARTUPINFO(); si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+            res = subprocess.run([adb, "devices"], capture_output=True, text=True, startupinfo=si)
+            lines = [l for l in res.stdout.split('\n') if 'device' in l and 'List' not in l]
+
+            target = lines[0].split()[0] if lines else ""
+
+            def update_ui():
+                if target:
+                    self.target_device = target
+                    self.lbl_status.configure(text=f"CONECTADO: {self.target_device}", text_color="#22c55e")
+                else:
+                    self.target_device = ""
+                    self.lbl_status.configure(text="DISPOSITIVO DESCONECTADO", text_color="#ef4444")
+
+            self.after(0, update_ui)
+        except: pass
 
 if __name__ == "__main__":
     app = TurboCoreApp()
