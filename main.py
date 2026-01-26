@@ -5,6 +5,7 @@ import threading
 import os
 import sys
 import time
+import webbrowser
 from PIL import Image
 
 # --- CONFIGURAÇÃO VISUAL ---
@@ -45,43 +46,105 @@ class TurboCoreApp(ctk.CTk):
         else:
             self.app_dir = os.path.dirname(os.path.abspath(__file__))
 
+        self.bin_dir = os.path.join(self.app_dir, "bin")
+
         # IMAGEM DE FUNDO
         try:
             img_path = os.path.join(self.app_dir, "fundo_chip.jpg")
             self.img_bg = ctk.CTkImage(Image.open(img_path), size=(440, 820))
         except: self.img_bg = None
 
-        # ABAS
-        self.tabview = ctk.CTkTabview(self, fg_color="#0a0a0a", segmented_button_selected_color=COR_PRIMARIA, height=770)
-        self.tabview.pack(fill="both", expand=True, padx=5, pady=5)
+        # --- NOVA INTERFACE (MODERNA) ---
+        self.nav_frame = ctk.CTkFrame(self, height=50, corner_radius=0, fg_color="#050505")
+        self.nav_frame.pack(fill="x", side="top")
+
+        self.content_container = ctk.CTkFrame(self, corner_radius=0, fg_color="transparent")
+        self.content_container.pack(fill="both", expand=True)
+
+        # Botões de Navegação
+        self.btn_dash = self.create_nav_btn(self.nav_frame, "CENTRAL", "dash")
+        self.btn_conn = self.create_nav_btn(self.nav_frame, "CONEXÃO", "conn")
+        self.btn_pair = self.create_nav_btn(self.nav_frame, "PAREAR", "pair")
         
-        self.tab_dash = self.tabview.add("CENTRAL")
-        self.tab_conn = self.tabview.add("CONEXÃO")
-        self.tab_pair = self.tabview.add("PAREAR")
+        self.btn_dash.pack(side="left", expand=True, fill="both", padx=2, pady=2)
+        self.btn_conn.pack(side="left", expand=True, fill="both", padx=2, pady=2)
+        self.btn_pair.pack(side="left", expand=True, fill="both", padx=2, pady=2)
+
+        # Frames das Páginas
+        self.frame_dash = ctk.CTkFrame(self.content_container, corner_radius=0, fg_color="transparent")
+        self.frame_conn = ctk.CTkFrame(self.content_container, corner_radius=0, fg_color="transparent")
+        self.frame_pair = ctk.CTkFrame(self.content_container, corner_radius=0, fg_color="transparent")
 
         if self.img_bg:
-            ctk.CTkLabel(self.tab_dash, text="", image=self.img_bg).place(x=0, y=0, relwidth=1, relheight=1)
+            ctk.CTkLabel(self.frame_dash, text="", image=self.img_bg).place(x=0, y=0, relwidth=1, relheight=1)
 
-        self.setup_dashboard()
-        self.setup_connect_tab()
-        self.setup_pair_tab()
+        self.setup_dashboard(self.frame_dash)
+        self.setup_connect_tab(self.frame_conn)
+        self.setup_pair_tab(self.frame_pair)
+
+        self.current_frame = None
+        self.switch_tab("dash") # Inicia na central
         
         self.lbl_status = ctk.CTkLabel(self, text="SISTEMA OFFLINE", font=("Consolas", 12, "bold"), text_color="#555555", fg_color="#000000")
         self.lbl_status.pack(fill="x", side="bottom", ipady=5)
 
-        self.detect_device()
+        self.start_device_monitor()
+        self.after(500, self.validate_installation)
+
+    def create_nav_btn(self, parent, text, mode):
+        return ctk.CTkButton(parent, text=text, fg_color="transparent", corner_radius=5,
+                             font=("Arial", 12, "bold"),
+                             hover_color="#222",
+                             command=lambda: self.switch_tab(mode))
+
+    def switch_tab(self, mode):
+        target_frame = {"dash": self.frame_dash, "conn": self.frame_conn, "pair": self.frame_pair}[mode]
+        target_btn = {"dash": self.btn_dash, "conn": self.btn_conn, "pair": self.btn_pair}[mode]
+
+        if self.current_frame == target_frame: return
+
+        # Visual dos botões
+        for btn in [self.btn_dash, self.btn_conn, self.btn_pair]:
+            btn.configure(fg_color="transparent", text_color="#888")
+        target_btn.configure(fg_color="#222", text_color="white")
+
+        # Animação
+        if self.current_frame is None:
+            target_frame.place(x=0, y=0, relwidth=1, relheight=1)
+            self.current_frame = target_frame
+        else:
+            self.animate_transition(self.current_frame, target_frame)
+
+    def animate_transition(self, old_frame, new_frame):
+        width = 440
+        new_frame.place(x=width, y=0, relwidth=1, relheight=1)
+        new_frame.lift()
+
+        def step(i):
+            progress = i / 15 # 15 steps for speed
+            offset = width * progress
+            old_frame.place(x=0 - offset, y=0, relwidth=1, relheight=1)
+            new_frame.place(x=width - offset, y=0, relwidth=1, relheight=1)
+
+            if i < 15:
+                self.after(10, lambda: step(i+1))
+            else:
+                old_frame.place_forget()
+                self.current_frame = new_frame
+        step(0)
 
     def create_menu(self, parent, label_text, values, cmd_func, color, bg_color):
         ctk.CTkLabel(parent, text=label_text, font=("Arial", 11, "bold"), text_color=color).pack(anchor="w", pady=(10,0))
         f = ctk.CTkFrame(parent, fg_color="transparent")
         f.pack(fill="x", pady=2)
-        m = ctk.CTkOptionMenu(f, values=values, fg_color=bg_color, button_color=color, width=300, command=cmd_func)
+        # Styled OptionMenu
+        m = ctk.CTkOptionMenu(f, values=values, fg_color=bg_color, button_color=color, width=300, command=cmd_func, corner_radius=10)
         m.pack(side="left", padx=(0,5))
-        ctk.CTkButton(f, text="?", width=30, fg_color="#333", command=lambda: self.show_info(m.get())).pack(side="left")
+        ctk.CTkButton(f, text="?", width=30, fg_color="#333", corner_radius=10, command=lambda: self.show_info(m.get())).pack(side="left")
         return m
 
-    def setup_dashboard(self):
-        c = ctk.CTkFrame(self.tab_dash, fg_color="transparent")
+    def setup_dashboard(self, parent):
+        c = ctk.CTkFrame(parent, fg_color="transparent")
         c.pack(fill="both", expand=True, padx=15, pady=15)
 
         # 1. PERFORMANCE
@@ -104,8 +167,8 @@ class TurboCoreApp(ctk.CTk):
         ctk.CTkButton(c, text="TESTAR ARQUIVOS DA PASTA 🛠️", fg_color="#444", command=self.check_files).pack(fill="x", pady=5)
         ctk.CTkButton(c, text="🚨 RESETAR TUDO (PADRÃO)", fg_color="#b91c1c", height=40, font=("Arial", 12, "bold"), command=self.emergency_reset).pack(fill="x", pady=(10,0))
 
-    def setup_connect_tab(self):
-        f = ctk.CTkFrame(self.tab_conn, fg_color="transparent"); f.pack(fill="both", expand=True, padx=30, pady=30)
+    def setup_connect_tab(self, parent):
+        f = ctk.CTkFrame(parent, fg_color="transparent"); f.pack(fill="both", expand=True, padx=30, pady=30)
         ctk.CTkLabel(f, text="LINK WIRELESS", font=("Arial", 20, "bold")).pack(pady=20)
         self.entry_ip = ctk.CTkEntry(f, placeholder_text="IP (ex: 192.168.0.5)", height=45)
         self.entry_ip.pack(fill="x", pady=10)
@@ -113,8 +176,8 @@ class TurboCoreApp(ctk.CTk):
         self.entry_port.pack(fill="x", pady=10)
         ctk.CTkButton(f, text="CONECTAR 🔗", fg_color=COR_PRIMARIA, height=50, command=self.connect_wifi).pack(fill="x", pady=30)
 
-    def setup_pair_tab(self):
-        f = ctk.CTkFrame(self.tab_pair, fg_color="transparent"); f.pack(fill="both", expand=True, padx=20, pady=20)
+    def setup_pair_tab(self, parent):
+        f = ctk.CTkFrame(parent, fg_color="transparent"); f.pack(fill="both", expand=True, padx=20, pady=20)
         ctk.CTkLabel(f, text="PAREAMENTO ANDROID 11+", font=("Arial", 16, "bold"), text_color="#fbbf24").pack(pady=20)
         self.ep_ip = ctk.CTkEntry(f, placeholder_text="IP:Porta Pareamento"); self.ep_ip.pack(fill="x", pady=5)
         self.ep_code = ctk.CTkEntry(f, placeholder_text="Código 6 dígitos"); self.ep_code.pack(fill="x", pady=5)
@@ -126,12 +189,12 @@ class TurboCoreApp(ctk.CTk):
             messagebox.showwarning("AVISO", "Conecte o dispositivo primeiro!")
             return
         
-        exe_scrcpy = os.path.join(self.app_dir, "scrcpy.exe")
-        exe_adb = os.path.join(self.app_dir, "adb.exe")
+        exe_scrcpy = os.path.join(self.bin_dir, "scrcpy.exe")
+        exe_adb = os.path.join(self.bin_dir, "adb.exe")
         if not os.path.exists(exe_adb): exe_adb = "adb"
 
         if not os.path.exists(exe_scrcpy):
-            messagebox.showerror("ERRO", "scrcpy.exe não encontrado!")
+            self.show_missing_files_dialog(["scrcpy.exe"])
             return
 
         def task():
@@ -159,7 +222,7 @@ class TurboCoreApp(ctk.CTk):
             try:
                 self.lbl_status.configure(text=f"🖥️ ABRINDO TELA: {mode_name}", text_color="#22c55e")
                 # Abre o scrcpy sem bloquear o app
-                subprocess.Popen(final_cmd, startupinfo=si, cwd=self.app_dir)
+                subprocess.Popen(final_cmd, startupinfo=si, cwd=self.bin_dir)
             except Exception as e:
                 self.lbl_status.configure(text=f"❌ ERRO SCRCPY", text_color="#ef4444")
                 
@@ -219,12 +282,20 @@ class TurboCoreApp(ctk.CTk):
     # --- UTILITÁRIOS ---
     def run_adb_cmd(self, cmds):
         def t():
-            si = subprocess.STARTUPINFO(); si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-            exe_adb = os.path.join(self.app_dir, "adb.exe")
-            if not os.path.exists(exe_adb): exe_adb = "adb"
-            subprocess.run([exe_adb, "-s", self.target_device, "shell", cmds], startupinfo=si)
-            self.lbl_status.configure(text="MODO APLICADO!", text_color="#22c55e")
-            self.after(2000, lambda: self.lbl_status.configure(text=f"ONLINE: {self.target_device}", text_color="#22c55e"))
+            try:
+                si = subprocess.STARTUPINFO(); si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+                exe_adb = os.path.join(self.bin_dir, "adb.exe")
+                if not os.path.exists(exe_adb): exe_adb = "adb"
+
+                # Use capture_output to avoid writing to stdout/stderr which might cause issues
+                subprocess.run([exe_adb, "-s", self.target_device, "shell", cmds], startupinfo=si, capture_output=True, timeout=10)
+
+                self.after(0, lambda: self.lbl_status.configure(text="MODO APLICADO!", text_color="#22c55e"))
+                self.after(2000, lambda: self.lbl_status.configure(text=f"ONLINE: {self.target_device}", text_color="#22c55e"))
+            except Exception as e:
+                self.after(0, lambda: self.lbl_status.configure(text="ERRO AO APLICAR!", text_color="#ef4444"))
+                print(f"Error running cmd: {e}")
+
         threading.Thread(target=t).start()
 
     def emergency_reset(self): 
@@ -232,27 +303,80 @@ class TurboCoreApp(ctk.CTk):
     
     def show_info(self, m): messagebox.showinfo("Detalhes", DESCRICOES.get(m, "Selecione um modo.")) if m and m!="Selecionar..." else None
     
-    def connect_wifi(self): threading.Thread(target=lambda: subprocess.run([os.path.join(self.app_dir,"adb.exe"), "connect", f"{self.entry_ip.get()}:{self.entry_port.get()}"], startupinfo=subprocess.STARTUPINFO())).start()
+    def connect_wifi(self): threading.Thread(target=lambda: subprocess.run([os.path.join(self.bin_dir,"adb.exe"), "connect", f"{self.entry_ip.get()}:{self.entry_port.get()}"], startupinfo=subprocess.STARTUPINFO())).start()
     
-    def pair_wifi(self): threading.Thread(target=lambda: subprocess.run([os.path.join(self.app_dir,"adb.exe"), "pair", self.ep_ip.get(), self.ep_code.get()], startupinfo=subprocess.STARTUPINFO())).start()
+    def pair_wifi(self): threading.Thread(target=lambda: subprocess.run([os.path.join(self.bin_dir,"adb.exe"), "pair", self.ep_ip.get(), self.ep_code.get()], startupinfo=subprocess.STARTUPINFO())).start()
     
     def check_files(self):
         req = ["scrcpy.exe", "adb.exe", "AdbWinApi.dll"]
-        missing = [f for f in req if not os.path.exists(os.path.join(self.app_dir, f))]
+        missing = [f for f in req if not os.path.exists(os.path.join(self.bin_dir, f))]
         messagebox.showerror("FALTA ARQUIVO", f"Não encontrei: {missing}") if missing else messagebox.showinfo("OK", "Todos os arquivos encontrados!")
 
-    def detect_device(self):
-        def loop():
-            try:
-                adb = os.path.join(self.app_dir, "adb.exe")
-                si = subprocess.STARTUPINFO(); si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-                res = subprocess.run([adb, "devices"], capture_output=True, text=True, startupinfo=si)
-                lines = [l for l in res.stdout.split('\n') if 'device' in l and 'List' not in l]
-                if lines: self.target_device = lines[0].split()[0]; self.lbl_status.configure(text=f"CONECTADO: {self.target_device}", text_color="#22c55e")
-                else: self.target_device = ""; self.lbl_status.configure(text="DISPOSITIVO DESCONECTADO", text_color="#ef4444")
-            except: pass
-            self.after(2000, self.detect_device)
-        threading.Thread(target=loop, daemon=True).start()
+    def update_status(self, device, connected):
+        if connected:
+            self.target_device = device
+            self.lbl_status.configure(text=f"CONECTADO: {self.target_device}", text_color="#22c55e")
+        else:
+            self.target_device = ""
+            self.lbl_status.configure(text="DISPOSITIVO DESCONECTADO", text_color="#ef4444")
+
+    def start_device_monitor(self):
+        def monitor_loop():
+            adb_path = os.path.join(self.bin_dir, "adb.exe")
+            if not os.path.exists(adb_path): adb_path = "adb"
+
+            while True:
+                try:
+                    si = subprocess.STARTUPINFO()
+                    si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+
+                    result = subprocess.run([adb_path, "devices"], capture_output=True, text=True, startupinfo=si, timeout=5)
+
+                    lines = [l for l in result.stdout.split('\n') if 'device' in l and 'List' not in l]
+                    if lines:
+                        new_device = lines[0].split()[0]
+                        self.after(0, lambda d=new_device: self.update_status(d, True))
+                    else:
+                        self.after(0, lambda: self.update_status(None, False))
+                except Exception:
+                    pass
+
+                time.sleep(2)
+
+        threading.Thread(target=monitor_loop, daemon=True).start()
+
+    def validate_installation(self):
+        # Check files
+        missing = []
+        if not os.path.exists(os.path.join(self.bin_dir, "adb.exe")): missing.append("adb.exe")
+        if not os.path.exists(os.path.join(self.bin_dir, "scrcpy.exe")): missing.append("scrcpy.exe")
+
+        if missing:
+            self.show_missing_files_dialog(missing)
+
+    def show_missing_files_dialog(self, missing_files):
+        dialog = ctk.CTkToplevel(self)
+        dialog.title("Arquivos Faltando")
+        dialog.geometry("400x200")
+        dialog.attributes("-topmost", True)
+
+        ctk.CTkLabel(dialog, text=f"Arquivos não encontrados:\n{', '.join(missing_files)}", text_color="red", font=("Arial", 14, "bold")).pack(pady=20)
+
+        frame_btns = ctk.CTkFrame(dialog, fg_color="transparent")
+        frame_btns.pack(fill="x", padx=20, pady=20)
+
+        ctk.CTkButton(frame_btns, text="Download Automático", command=self.open_download_page).pack(side="left", expand=True, padx=5)
+        ctk.CTkButton(frame_btns, text="Abrir Pasta", command=self.open_bin_folder).pack(side="right", expand=True, padx=5)
+
+    def open_download_page(self):
+        webbrowser.open("https://github.com/Genymobile/scrcpy/releases")
+
+    def open_bin_folder(self):
+        try:
+            os.startfile(self.bin_dir)
+        except:
+            # Fallback for non-windows (though this app seems windows specific with dlls)
+            subprocess.Popen(["explorer", self.bin_dir])
 
 if __name__ == "__main__":
     app = TurboCoreApp()
