@@ -39,6 +39,12 @@ class TurboCoreApp(ctk.CTk):
         self.configure(fg_color=COR_FUNDO)
         self.target_device = ""
 
+        # STARTUPINFO CACHE
+        self.si = None
+        if hasattr(subprocess, 'STARTUPINFO'):
+            self.si = subprocess.STARTUPINFO()
+            self.si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+
         # GESTÃO DE CAMINHOS
         if getattr(sys, 'frozen', False):
             self.app_dir = os.path.dirname(sys.executable)
@@ -245,8 +251,7 @@ class TurboCoreApp(ctk.CTk):
         def loop():
             try:
                 adb = os.path.join(self.app_dir, "adb.exe")
-                si = subprocess.STARTUPINFO(); si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-                res = subprocess.run([adb, "devices"], capture_output=True, text=True, startupinfo=si)
+                res = subprocess.run([adb, "devices"], capture_output=True, text=True, startupinfo=self.si)
                 lines = [l for l in res.stdout.split('\n') if 'device' in l and 'List' not in l]
                 if lines: self.target_device = lines[0].split()[0]; self.lbl_status.configure(text=f"CONECTADO: {self.target_device}", text_color="#22c55e")
                 else: self.target_device = ""; self.lbl_status.configure(text="DISPOSITIVO DESCONECTADO", text_color="#ef4444")
