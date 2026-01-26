@@ -45,6 +45,10 @@ class TurboCoreApp(ctk.CTk):
         else:
             self.app_dir = os.path.dirname(os.path.abspath(__file__))
 
+        self.adb_exe = os.path.join(self.app_dir, "adb.exe")
+        if not os.path.exists(self.adb_exe):
+            self.adb_exe = "adb"
+
         # IMAGEM DE FUNDO
         try:
             img_path = os.path.join(self.app_dir, "fundo_chip.jpg")
@@ -244,9 +248,8 @@ class TurboCoreApp(ctk.CTk):
     def detect_device(self):
         def loop():
             try:
-                adb = os.path.join(self.app_dir, "adb.exe")
                 si = subprocess.STARTUPINFO(); si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-                res = subprocess.run([adb, "devices"], capture_output=True, text=True, startupinfo=si)
+                res = subprocess.run([self.adb_exe, "devices"], capture_output=True, text=True, startupinfo=si)
                 lines = [l for l in res.stdout.split('\n') if 'device' in l and 'List' not in l]
                 if lines: self.target_device = lines[0].split()[0]; self.lbl_status.configure(text=f"CONECTADO: {self.target_device}", text_color="#22c55e")
                 else: self.target_device = ""; self.lbl_status.configure(text="DISPOSITIVO DESCONECTADO", text_color="#ef4444")
