@@ -70,7 +70,7 @@ class TurboCoreApp(ctk.CTk):
         self.lbl_status = ctk.CTkLabel(self, text="SISTEMA OFFLINE", font=("Consolas", 12, "bold"), text_color="#555555", fg_color="#000000")
         self.lbl_status.pack(fill="x", side="bottom", ipady=5)
 
-        self.detect_device()
+        self.start_device_monitoring()
 
     def create_menu(self, parent, label_text, values, cmd_func, color, bg_color):
         ctk.CTkLabel(parent, text=label_text, font=("Arial", 11, "bold"), text_color=color).pack(anchor="w", pady=(10,0))
@@ -242,7 +242,7 @@ class TurboCoreApp(ctk.CTk):
         missing = [f for f in req if not os.path.exists(os.path.join(self.app_dir, f))]
         messagebox.showerror("FALTA ARQUIVO", f"Não encontrei: {missing}") if missing else messagebox.showinfo("OK", "Todos os arquivos encontrados!")
 
-    def _update_device_status(self, connected, device_name):
+def _update_device_status(self, connected, device_name):
         if connected:
             self.target_device = device_name
             self.lbl_status.configure(text=f"CONECTADO: {self.target_device}", text_color="#22c55e")
@@ -251,7 +251,10 @@ class TurboCoreApp(ctk.CTk):
             self.lbl_status.configure(text="DISPOSITIVO DESCONECTADO", text_color="#ef4444")
 
     def _monitor_devices_loop(self):
-        adb = os.path.join(self.app_dir, "adb.exe")
+        # Garante uso do caminho correto
+        adb = os.path.join(self.bin_dir, "adb.exe")
+        if not os.path.exists(adb): adb = "adb"
+        
         si = subprocess.STARTUPINFO(); si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
 
         while True:
@@ -261,6 +264,7 @@ class TurboCoreApp(ctk.CTk):
 
                 if lines:
                     device_name = lines[0].split()[0]
+                    # self.after garante que a UI não trave
                     self.after(0, lambda d=device_name: self._update_device_status(True, d))
                 else:
                     self.after(0, lambda: self._update_device_status(False, ""))
@@ -269,7 +273,8 @@ class TurboCoreApp(ctk.CTk):
             time.sleep(2)
 
     def detect_device(self):
-        if self.monitor_thread_started: return
+        # Inicia a thread de monitoramento apenas uma vez
+        if getattr(self, 'monitor_thread_started', False): return
         self.monitor_thread_started = True
         threading.Thread(target=self._monitor_devices_loop, daemon=True).start()
 
