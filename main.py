@@ -38,6 +38,7 @@ class TurboCoreApp(ctk.CTk):
         self.resizable(False, False)
         self.configure(fg_color=COR_FUNDO)
         self.target_device = ""
+        self.monitor_thread_started = False
 
         # GESTÃO DE CAMINHOS
         if getattr(sys, 'frozen', False):
@@ -241,62 +242,41 @@ class TurboCoreApp(ctk.CTk):
         missing = [f for f in req if not os.path.exists(os.path.join(self.app_dir, f))]
         messagebox.showerror("FALTA ARQUIVO", f"Não encontrei: {missing}") if missing else messagebox.showinfo("OK", "Todos os arquivos encontrados!")
 
-    def start_device_monitoring(self):
-        def monitor_loop():
-            adb_exe = os.path.join(self.app_dir, "adb.exe")
-            if not os.path.exists(adb_exe): adb_exe = "adb"
+def _update_device_status(self, connected, device_name):
+        if connected:
+            self.target_device = device_name
+            self.lbl_status.configure(text=f"CONECTADO: {self.target_device}", text_color="#22c55e")
+        else:
+            self.target_device = ""
+            self.lbl_status.configure(text="DISPOSITIVO DESCONECTADO", text_color="#ef4444")
 
-            si = subprocess.STARTUPINFO()
-            si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+    def _monitor_devices_loop(self):
+        # Garante uso do caminho correto
+        adb = os.path.join(self.bin_dir, "adb.exe")
+        if not os.path.exists(adb): adb = "adb"
+        
+        si = subprocess.STARTUPINFO(); si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
 
-            # Initial check
-            self.check_device_status()
+        while True:
+            try:
+                res = subprocess.run([adb, "devices"], capture_output=True, text=True, startupinfo=si)
+                lines = [l for l in res.stdout.split('\n') if 'device' in l and 'List' not in l]
 
-            while True:
-                try:
-                    process = subprocess.Popen(
-                        [adb_exe, "track-devices"],
-                        stdout=subprocess.PIPE,
-                        stderr=subprocess.PIPE,
-                        text=True,
-                        startupinfo=si,
-                        bufsize=1
-                    )
-
-                    for line in iter(process.stdout.readline, ''):
-                        if not line: break
-                        if line.strip():
-                             self.check_device_status()
-
-                    process.wait()
-                    time.sleep(1)
-                except Exception as e:
-                    print(f"Monitor Error: {e}")
-                    time.sleep(2)
-
-        threading.Thread(target=monitor_loop, daemon=True).start()
-
-    def check_device_status(self):
-        try:
-            adb = os.path.join(self.app_dir, "adb.exe")
-            if not os.path.exists(adb): adb = "adb"
-
-            si = subprocess.STARTUPINFO(); si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-            res = subprocess.run([adb, "devices"], capture_output=True, text=True, startupinfo=si)
-            lines = [l for l in res.stdout.split('\n') if 'device' in l and 'List' not in l]
-
-            target = lines[0].split()[0] if lines else ""
-
-            def update_ui():
-                if target:
-                    self.target_device = target
-                    self.lbl_status.configure(text=f"CONECTADO: {self.target_device}", text_color="#22c55e")
+                if lines:
+                    device_name = lines[0].split()[0]
+                    # self.after garante que a UI não trave
+                    self.after(0, lambda d=device_name: self._update_device_status(True, d))
                 else:
-                    self.target_device = ""
-                    self.lbl_status.configure(text="DISPOSITIVO DESCONECTADO", text_color="#ef4444")
+                    self.after(0, lambda: self._update_device_status(False, ""))
+            except Exception:
+                pass
+            time.sleep(2)
 
-            self.after(0, update_ui)
-        except: pass
+    def detect_device(self):
+        # Inicia a thread de monitoramento apenas uma vez
+        if getattr(self, 'monitor_thread_started', False): return
+        self.monitor_thread_started = True
+        threading.Thread(target=self._monitor_devices_loop, daemon=True).start()
 
 if __name__ == "__main__":
     app = TurboCoreApp()
