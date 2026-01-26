@@ -45,6 +45,11 @@ class TurboCoreApp(ctk.CTk):
         else:
             self.app_dir = os.path.dirname(os.path.abspath(__file__))
 
+        # CACHE EXECUTÁVEIS
+        self.adb_exe = os.path.join(self.app_dir, "adb.exe")
+        if not os.path.exists(self.adb_exe): self.adb_exe = "adb"
+        self.scrcpy_exe = os.path.join(self.app_dir, "scrcpy.exe")
+
         # IMAGEM DE FUNDO
         try:
             img_path = os.path.join(self.app_dir, "fundo_chip.jpg")
@@ -125,12 +130,8 @@ class TurboCoreApp(ctk.CTk):
         if not self.target_device: 
             messagebox.showwarning("AVISO", "Conecte o dispositivo primeiro!")
             return
-        
-        exe_scrcpy = os.path.join(self.app_dir, "scrcpy.exe")
-        exe_adb = os.path.join(self.app_dir, "adb.exe")
-        if not os.path.exists(exe_adb): exe_adb = "adb"
 
-        if not os.path.exists(exe_scrcpy):
+        if not os.path.exists(self.scrcpy_exe):
             messagebox.showerror("ERRO", "scrcpy.exe não encontrado!")
             return
 
@@ -141,14 +142,14 @@ class TurboCoreApp(ctk.CTk):
             si = subprocess.STARTUPINFO(); si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
             for cmd in adb_cmds.split(';'):
                 if cmd.strip():
-                    subprocess.run([exe_adb, "-s", self.target_device, "shell", cmd.strip()], startupinfo=si)
+                    subprocess.run([self.adb_exe, "-s", self.target_device, "shell", cmd.strip()], startupinfo=si)
             
             # Pequena pausa para o Android processar a mudança de resolução
             time.sleep(1.5)
             
             # 2. Monta o comando do Scrcpy
             base_scrcpy = [
-                exe_scrcpy, 
+                self.scrcpy_exe,
                 "-s", self.target_device, 
                 "--always-on-top",
                 "--stay-awake",
@@ -220,9 +221,7 @@ class TurboCoreApp(ctk.CTk):
     def run_adb_cmd(self, cmds):
         def t():
             si = subprocess.STARTUPINFO(); si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-            exe_adb = os.path.join(self.app_dir, "adb.exe")
-            if not os.path.exists(exe_adb): exe_adb = "adb"
-            subprocess.run([exe_adb, "-s", self.target_device, "shell", cmds], startupinfo=si)
+            subprocess.run([self.adb_exe, "-s", self.target_device, "shell", cmds], startupinfo=si)
             self.lbl_status.configure(text="MODO APLICADO!", text_color="#22c55e")
             self.after(2000, lambda: self.lbl_status.configure(text=f"ONLINE: {self.target_device}", text_color="#22c55e"))
         threading.Thread(target=t).start()
@@ -232,9 +231,9 @@ class TurboCoreApp(ctk.CTk):
     
     def show_info(self, m): messagebox.showinfo("Detalhes", DESCRICOES.get(m, "Selecione um modo.")) if m and m!="Selecionar..." else None
     
-    def connect_wifi(self): threading.Thread(target=lambda: subprocess.run([os.path.join(self.app_dir,"adb.exe"), "connect", f"{self.entry_ip.get()}:{self.entry_port.get()}"], startupinfo=subprocess.STARTUPINFO())).start()
+    def connect_wifi(self): threading.Thread(target=lambda: subprocess.run([self.adb_exe, "connect", f"{self.entry_ip.get()}:{self.entry_port.get()}"], startupinfo=subprocess.STARTUPINFO())).start()
     
-    def pair_wifi(self): threading.Thread(target=lambda: subprocess.run([os.path.join(self.app_dir,"adb.exe"), "pair", self.ep_ip.get(), self.ep_code.get()], startupinfo=subprocess.STARTUPINFO())).start()
+    def pair_wifi(self): threading.Thread(target=lambda: subprocess.run([self.adb_exe, "pair", self.ep_ip.get(), self.ep_code.get()], startupinfo=subprocess.STARTUPINFO())).start()
     
     def check_files(self):
         req = ["scrcpy.exe", "adb.exe", "AdbWinApi.dll"]
@@ -244,9 +243,8 @@ class TurboCoreApp(ctk.CTk):
     def detect_device(self):
         def loop():
             try:
-                adb = os.path.join(self.app_dir, "adb.exe")
                 si = subprocess.STARTUPINFO(); si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-                res = subprocess.run([adb, "devices"], capture_output=True, text=True, startupinfo=si)
+                res = subprocess.run([self.adb_exe, "devices"], capture_output=True, text=True, startupinfo=si)
                 lines = [l for l in res.stdout.split('\n') if 'device' in l and 'List' not in l]
                 if lines: self.target_device = lines[0].split()[0]; self.lbl_status.configure(text=f"CONECTADO: {self.target_device}", text_color="#22c55e")
                 else: self.target_device = ""; self.lbl_status.configure(text="DISPOSITIVO DESCONECTADO", text_color="#ef4444")
