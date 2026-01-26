@@ -25,10 +25,20 @@ DESCRICOES = {
     "Ultimate Economia": "🪫 DEEP SLEEP\nResolução 360p, Brilho 0, Hibernação forçada.",
 
     # 3. PC / ESPELHAMENTO
-    "PC Lite (Eco/Leve)": "💻 MODO LEVE (30 FPS)\nIdeal para leitura ou bateria baixa.\n600p, 4Mbps, Sem áudio.",
-    "PC Workstation (Soberano)": "🖥️ MODO SOBERANO (90 FPS)\nO equilíbrio perfeito. 720p (Desktop), 16Mbps.\nIdeal para multitarefa e trabalho.",
-    "PC Gamer (Apex/H265)": "🕹️ MODO APEX (BAIXA LATÊNCIA)\nCodec H265, 24Mbps, Buffer de áudio mínimo.\nFeito para jogar competitivo pelo PC."
+    "Modo Leve": "💻 MODO LEVE (30 FPS)\nIdeal para leitura ou bateria baixa.\n4Mbps, Sem áudio.",
+    "Modo Padrão": "🖥️ MODO PADRÃO (60 FPS)\nEquilíbrio perfeito.\n8Mbps, 60 FPS.",
+    "Modo Ultra": "🕹️ MODO ULTRA (90 FPS)\nMáxima qualidade.\n16Mbps, 90 FPS."
 }
+
+class TextRedirector:
+    def __init__(self, callback):
+        self.callback = callback
+
+    def write(self, text):
+        self.callback(text)
+
+    def flush(self):
+        pass
 
 class TurboCoreApp(ctk.CTk):
     def __init__(self):
@@ -65,9 +75,19 @@ class TurboCoreApp(ctk.CTk):
         self.tab_dash = self.tabview.add("CENTRAL")
         self.tab_conn = self.tabview.add("CONEXÃO")
         self.tab_pair = self.tabview.add("PAREAR")
+        self.tab_log = self.tabview.add("BACKEND")
 
         if self.img_bg:
             ctk.CTkLabel(self.tab_dash, text="", image=self.img_bg).place(x=0, y=0, relwidth=1, relheight=1)
+
+        # CONFIGURAÇÃO DO LOG BACKEND
+        self.log_textbox = ctk.CTkTextbox(self.tab_log, font=("Consolas", 10), text_color="#00ff00", fg_color="#111")
+        self.log_textbox.pack(fill="both", expand=True, padx=5, pady=5)
+        self.log_textbox.configure(state="disabled")
+
+        # Redirecionar stdout e stderr
+        sys.stdout = TextRedirector(self.safe_log_write)
+        sys.stderr = TextRedirector(self.safe_log_write)
 
         self.setup_dashboard()
         self.setup_connect_tab()
@@ -76,7 +96,19 @@ class TurboCoreApp(ctk.CTk):
         self.lbl_status = ctk.CTkLabel(self, text="SISTEMA OFFLINE", font=("Consolas", 12, "bold"), text_color="#555555", fg_color="#000000")
         self.lbl_status.pack(fill="x", side="bottom", ipady=5)
 
-        self.start_device_monitoring()
+        self.detect_device()
+
+    def safe_log_write(self, text):
+        self.after(0, self.update_log, text)
+
+    def update_log(self, text):
+        try:
+            self.log_textbox.configure(state="normal")
+            self.log_textbox.insert("end", text)
+            self.log_textbox.configure(state="disabled")
+            self.log_textbox.see("end")
+        except:
+            pass
 
     def create_menu(self, parent, label_text, values, cmd_func, color, bg_color):
         ctk.CTkLabel(parent, text=label_text, font=("Arial", 11, "bold"), text_color=color).pack(anchor="w", pady=(10,0))
@@ -103,7 +135,7 @@ class TurboCoreApp(ctk.CTk):
 
         # 3. MODO PC (SEU CÓDIGO NOVO)
         self.menu_pc = self.create_menu(c, "🖥️ 3. MODO PC / ESPELHAMENTO", 
-            ["Selecionar...", "PC Lite (Eco/Leve)", "PC Workstation (Soberano)", "PC Gamer (Apex/H265)"], 
+            ["Selecionar...", "Modo Leve", "Modo Padrão", "Modo Ultra"],
             self.apply_pc_selector, "#0284c7", "#0c4a6e")
 
         # AÇÕES GLOBAIS
@@ -142,16 +174,19 @@ class TurboCoreApp(ctk.CTk):
             return
 
         def task():
+            print(f"Iniciando modo: {mode_name}")
             self.lbl_status.configure(text=f"⚙️ PREPARANDO: {mode_name}...", text_color="#0284c7")
             
             # 1. Aplica as configurações no Android via ADB
-            si = subprocess.STARTUPINFO(); si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-            for cmd in adb_cmds.split(';'):
-                if cmd.strip():
-                    subprocess.run([exe_adb, "-s", self.target_device, "shell", cmd.strip()], startupinfo=si)
+            if adb_cmds:
+                for cmd in adb_cmds.split(';'):
+                    if cmd.strip():
+                        print(f"Executando ADB: {cmd.strip()}")
+                        subprocess.run([exe_adb, "-s", self.target_device, "shell", cmd.strip()], startupinfo=self.si)
             
             # Pequena pausa para o Android processar a mudança de resolução
-            time.sleep(1.5)
+            if adb_cmds:
+                time.sleep(1.5)
             
             # 2. Monta o comando do Scrcpy
             base_scrcpy = [
@@ -164,34 +199,33 @@ class TurboCoreApp(ctk.CTk):
             final_cmd = base_scrcpy + scrcpy_args
             
             try:
+                print(f"Executando Scrcpy: {' '.join(final_cmd)}")
                 self.lbl_status.configure(text=f"🖥️ ABRINDO TELA: {mode_name}", text_color="#22c55e")
                 # Abre o scrcpy sem bloquear o app
-                subprocess.Popen(final_cmd, startupinfo=si, cwd=self.app_dir)
+                subprocess.Popen(final_cmd, startupinfo=self.si, cwd=self.app_dir)
             except Exception as e:
+                print(f"Erro ao iniciar Scrcpy: {e}")
                 self.lbl_status.configure(text=f"❌ ERRO SCRCPY", text_color="#ef4444")
                 
         threading.Thread(target=task).start()
 
     # --- SELETOR DOS 3 MODOS PC ---
     def apply_pc_selector(self, choice):
-        if choice == "PC Lite (Eco/Leve)":
-            # NÍVEL 1: PC LITE
-            cmds = "wm size 600x1333; wm density 240; settings put global master_sync_enabled 0; settings put global low_power 1; am kill-all"
-            args = ["--max-size=1333", "--max-fps=30", "--bit-rate=4M", "--no-audio"]
-            self.launch_pc_mode(cmds, args, "LITE_MODE")
+        print(f"Selecionado modo PC: {choice}")
+        if choice == "Modo Leve":
+            # 4M bit-rate, 30fps (sem áudio)
+            args = ["--bit-rate=4M", "--max-fps=30", "--no-audio"]
+            self.launch_pc_mode("", args, "LEVE")
 
-        elif choice == "PC Workstation (Soberano)":
-            # NÍVEL 2: WORKSTATION / SOBERANO
-            cmds = "wm size 720x1600; wm density 180; settings put global activity_manager_constants max_phantom_processes=2147483647; settings put global window_animation_scale 0.5"
-            args = ["--max-size=1600", "--max-fps=90", "--bit-rate=16M", "--audio-codec=aac"]
-            self.launch_pc_mode(cmds, args, "SOBERANO")
+        elif choice == "Modo Padrão":
+            # 8M bit-rate, 60fps
+            args = ["--bit-rate=8M", "--max-fps=60"]
+            self.launch_pc_mode("", args, "PADRAO")
 
-        elif choice == "PC Gamer (Apex/H265)":
-            # NÍVEL 3: GAMER APEX
-            cmds = "settings put global power_manager_constants disable_thermal_control=true; wm size 480x1066; wm density 140; cmd power set-mode 1; am kill-all"
-            # H265 exige PC compatível, mas é superior.
-            args = ["--max-size=1066", "--max-fps=90", "--bit-rate=24M", "--audio-buffer=20", "--video-codec=h265"]
-            self.launch_pc_mode(cmds, args, "GAMER_APEX")
+        elif choice == "Modo Ultra":
+            # 16M bit-rate, 90fps
+            args = ["--bit-rate=16M", "--max-fps=90"]
+            self.launch_pc_mode("", args, "ULTRA")
         
         self.menu_pc.set("Selecionar...")
 
@@ -226,29 +260,30 @@ class TurboCoreApp(ctk.CTk):
     # --- UTILITÁRIOS ---
     def run_adb_cmd(self, cmds):
         def t():
-            si = subprocess.STARTUPINFO(); si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+            print(f"Executando comando ADB: {cmds}")
             exe_adb = os.path.join(self.app_dir, "adb.exe")
             if not os.path.exists(exe_adb): exe_adb = "adb"
-            subprocess.run([exe_adb, "-s", self.target_device, "shell", cmds], startupinfo=si)
+            subprocess.run([exe_adb, "-s", self.target_device, "shell", cmds], startupinfo=self.si)
             self.lbl_status.configure(text="MODO APLICADO!", text_color="#22c55e")
             self.after(2000, lambda: self.lbl_status.configure(text=f"ONLINE: {self.target_device}", text_color="#22c55e"))
         threading.Thread(target=t).start()
 
     def emergency_reset(self): 
+        print("Executando reset de emergência")
         self.run_adb_cmd("wm size reset; wm density reset; settings put global power_manager_constants disable_thermal_control=false; settings put global window_animation_scale 1; settings put global zen_mode 0; settings put global low_power 0; settings put system screen_brightness 100")
     
     def show_info(self, m): messagebox.showinfo("Detalhes", DESCRICOES.get(m, "Selecione um modo.")) if m and m!="Selecionar..." else None
     
-    def connect_wifi(self): threading.Thread(target=lambda: subprocess.run([os.path.join(self.app_dir,"adb.exe"), "connect", f"{self.entry_ip.get()}:{self.entry_port.get()}"], startupinfo=subprocess.STARTUPINFO())).start()
+    def connect_wifi(self): threading.Thread(target=lambda: subprocess.run([os.path.join(self.app_dir,"adb.exe"), "connect", f"{self.entry_ip.get()}:{self.entry_port.get()}"], startupinfo=self.si)).start()
     
-    def pair_wifi(self): threading.Thread(target=lambda: subprocess.run([os.path.join(self.app_dir,"adb.exe"), "pair", self.ep_ip.get(), self.ep_code.get()], startupinfo=subprocess.STARTUPINFO())).start()
+    def pair_wifi(self): threading.Thread(target=lambda: subprocess.run([os.path.join(self.app_dir,"adb.exe"), "pair", self.ep_ip.get(), self.ep_code.get()], startupinfo=self.si)).start()
     
     def check_files(self):
         req = ["scrcpy.exe", "adb.exe", "AdbWinApi.dll"]
         missing = [f for f in req if not os.path.exists(os.path.join(self.app_dir, f))]
         messagebox.showerror("FALTA ARQUIVO", f"Não encontrei: {missing}") if missing else messagebox.showinfo("OK", "Todos os arquivos encontrados!")
 
-def _update_device_status(self, connected, device_name):
+    def _update_device_status(self, connected, device_name):
         if connected:
             self.target_device = device_name
             self.lbl_status.configure(text=f"CONECTADO: {self.target_device}", text_color="#22c55e")
@@ -258,24 +293,13 @@ def _update_device_status(self, connected, device_name):
 
     def _monitor_devices_loop(self):
         # Garante uso do caminho correto
-        adb = os.path.join(self.bin_dir, "adb.exe")
+        adb = os.path.join(self.app_dir, "adb.exe")
         if not os.path.exists(adb): adb = "adb"
         
-        si = subprocess.STARTUPINFO(); si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-
-        while True:
-            try:
-def _monitor_devices_loop(self):
-        # Garante uso do caminho correto (Pasta BIN)
-        adb = os.path.join(self.bin_dir, "adb.exe")
-        if not os.path.exists(adb): adb = "adb"
-        
-        si = subprocess.STARTUPINFO(); si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-
         while True:
             try:
                 # Executa o comando usando as variáveis configuradas acima
-                res = subprocess.run([adb, "devices"], capture_output=True, text=True, startupinfo=si)
+                res = subprocess.run([adb, "devices"], capture_output=True, text=True, startupinfo=self.si)
                 
                 lines = [l for l in res.stdout.split('\n') if 'device' in l and 'List' not in l]
 
@@ -285,18 +309,8 @@ def _monitor_devices_loop(self):
                     self.after(0, lambda d=device_name: self._update_device_status(True, d))
                 else:
                     self.after(0, lambda: self._update_device_status(False, ""))
-            except Exception:
-                pass
-            time.sleep(2)
-                lines = [l for l in res.stdout.split('\n') if 'device' in l and 'List' not in l]
-
-                if lines:
-                    device_name = lines[0].split()[0]
-                    # self.after garante que a UI não trave
-                    self.after(0, lambda d=device_name: self._update_device_status(True, d))
-                else:
-                    self.after(0, lambda: self._update_device_status(False, ""))
-            except Exception:
+            except Exception as e:
+                print(f"Erro no monitoramento: {e}")
                 pass
             time.sleep(2)
 
