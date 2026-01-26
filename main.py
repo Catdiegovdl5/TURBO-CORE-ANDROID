@@ -69,7 +69,7 @@ class TurboCoreApp(ctk.CTk):
         self.lbl_status = ctk.CTkLabel(self, text="SISTEMA OFFLINE", font=("Consolas", 12, "bold"), text_color="#555555", fg_color="#000000")
         self.lbl_status.pack(fill="x", side="bottom", ipady=5)
 
-        self.detect_device()
+        self.start_device_monitor()
 
     def create_menu(self, parent, label_text, values, cmd_func, color, bg_color):
         ctk.CTkLabel(parent, text=label_text, font=("Arial", 11, "bold"), text_color=color).pack(anchor="w", pady=(10,0))
@@ -241,18 +241,29 @@ class TurboCoreApp(ctk.CTk):
         missing = [f for f in req if not os.path.exists(os.path.join(self.app_dir, f))]
         messagebox.showerror("FALTA ARQUIVO", f"Não encontrei: {missing}") if missing else messagebox.showinfo("OK", "Todos os arquivos encontrados!")
 
-    def detect_device(self):
-        def loop():
-            try:
-                adb = os.path.join(self.app_dir, "adb.exe")
-                si = subprocess.STARTUPINFO(); si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-                res = subprocess.run([adb, "devices"], capture_output=True, text=True, startupinfo=si)
-                lines = [l for l in res.stdout.split('\n') if 'device' in l and 'List' not in l]
-                if lines: self.target_device = lines[0].split()[0]; self.lbl_status.configure(text=f"CONECTADO: {self.target_device}", text_color="#22c55e")
-                else: self.target_device = ""; self.lbl_status.configure(text="DISPOSITIVO DESCONECTADO", text_color="#ef4444")
-            except: pass
-            self.after(2000, self.detect_device)
-        threading.Thread(target=loop, daemon=True).start()
+    def start_device_monitor(self):
+        def monitor_loop():
+            while True:
+                try:
+                    adb = os.path.join(self.app_dir, "adb.exe")
+                    si = subprocess.STARTUPINFO(); si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+                    res = subprocess.run([adb, "devices"], capture_output=True, text=True, startupinfo=si)
+                    lines = [l for l in res.stdout.split('\n') if 'device' in l and 'List' not in l]
+
+                    device = lines[0].split()[0] if lines else ""
+                    self.after(0, self.update_device_status, device)
+                except:
+                    pass
+                time.sleep(2)
+
+        threading.Thread(target=monitor_loop, daemon=True).start()
+
+    def update_device_status(self, device):
+        self.target_device = device
+        if device:
+            self.lbl_status.configure(text=f"CONECTADO: {device}", text_color="#22c55e")
+        else:
+            self.lbl_status.configure(text="DISPOSITIVO DESCONECTADO", text_color="#ef4444")
 
 if __name__ == "__main__":
     app = TurboCoreApp()
