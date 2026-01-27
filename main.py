@@ -45,7 +45,7 @@ FONT_MONO = ("Consolas", 11)
 # --- TRADUÇÕES ---
 TRANSLATIONS = {
     "PT": {
-        "app_title": "TURBO CORE V108 - MAX SPEED EDITION",
+        "app_title": "TURBO CORE V108.1 - MAX SPEED (FIX)",
         "sidebar_dash": "🖥️ DASHBOARD",
         "sidebar_game": "🎮 COMPETITIVO",
         "sidebar_apps": "📦 APPS",
@@ -112,10 +112,10 @@ TRANSLATIONS = {
         "help_perf_std": "USUAL TURBO\n\n• Ação: Acelera animações do Android (0.5x).\n• Risco: NENHUM.\n\nDeixa a navegação mais rápida visualmente sem forçar o hardware.",
         "help_bat_eco": "ECONOMIA NORMAL\n\n• Ação: Ativa modo Low Power nativo.\n• Risco: NENHUM.\n\nGerenciamento padrão do Android.",
         "help_bat_sup": "SUPER ECONOMIA\n\n• Ação: Desliga Bluetooth, Sync e reduz resolução.\n• Risco: BAIXO.\n\nVocê deixará de receber notificações de alguns apps.",
-        "help_bat_ult": "ULTIMATE ECONOMIA (DEEP)\n\n• Ação: Brilho Zero, Mata Apps, Limita CPU.\n• Risco: USABILIDADE.\n\n⚠️ O celular vira um 'tijolo' para sobreviver. A tela ficará quase apagada. Só use em emergências."
+        "help_bat_ult": "ULTIMATE ECONOMIA (DEEP)\n\n• Ação: Brilho Zero, Mata Apps, Limita CPU.\n• Risco: USABILITY.\n\n⚠️ O celular vira um 'tijolo' para sobreviver. A tela ficará quase apagada. Só use em emergências."
     },
     "EN": {
-        "app_title": "TURBO CORE V108 - MAX SPEED EDITION",
+        "app_title": "TURBO CORE V108.1 - MAX SPEED (FIX)",
         "sidebar_dash": "🖥️ DASHBOARD",
         "sidebar_game": "🎮 COMPETITIVE",
         "sidebar_apps": "📦 APPS",
@@ -185,7 +185,7 @@ TRANSLATIONS = {
         "help_bat_ult": "ULTIMATE SAVER\n\n• Action: Zero Brightness, Kill Apps.\n• Risk: USABILITY.\n\n⚠️ Phone becomes barely usable to survive."
     },
     "ES": {
-        "app_title": "TURBO CORE V108 - MAX SPEED EDITION",
+        "app_title": "TURBO CORE V108.1 - MAX SPEED (FIX)",
         "sidebar_dash": "🖥️ PANEL",
         "sidebar_game": "🎮 COMPETITIVO",
         "sidebar_apps": "📦 APPS",
@@ -285,7 +285,7 @@ class TurboCoreApp(ctk.CTk):
         self.stop_logcat_flag = False
         self.last_ip = ""
 
-        self.debug_log(f"--- INICIANDO TURBO CORE V108 MAX SPEED [{self.current_lang}] ---")
+        self.debug_log(f"--- INICIANDO TURBO CORE V108.1 MAX SPEED FIX [{self.current_lang}] ---")
         self.title(self.T("app_title"))
         self.geometry("900x750")
         self.resizable(False, True)
@@ -350,7 +350,7 @@ class TurboCoreApp(ctk.CTk):
 
     def key_tap_handler(self, event):
         if self.keymapping_active and self.target_device:
-            threading.Thread(target=lambda: self.run_adb_generic("shell input tap 640 360")).start()
+            threading.Thread(target=lambda: self.run_adb_generic("shell input tap 640 360", show_success=False)).start()
 
     def key_swipe_handler(self, key):
         if self.keymapping_active and self.target_device:
@@ -361,7 +361,7 @@ class TurboCoreApp(ctk.CTk):
             elif key == "s": y2 += dist
             elif key == "a": x2 -= dist
             elif key == "d": x2 += dist
-            threading.Thread(target=lambda: self.run_adb_generic(f"shell input swipe {x1} {y1} {x2} {y2} {dur}")).start()
+            threading.Thread(target=lambda: self.run_adb_generic(f"shell input swipe {x1} {y1} {x2} {y2} {dur}", show_success=False)).start()
 
     def toggle_keymapping(self):
         self.keymapping_active = not self.keymapping_active
@@ -512,7 +512,7 @@ class TurboCoreApp(ctk.CTk):
 
         def do_pair():
             addr = ip_pair_entry.get(); code = code_entry.get()
-            if addr and code: threading.Thread(target=lambda: self.run_adb_generic(f"pair {addr} {code}")).start()
+            if addr and code: threading.Thread(target=lambda: self.run_adb_generic(f"pair {addr} {code}", show_success=True)).start()
 
         ctk.CTkButton(frame_tools, text=self.T("btn_pair"), fg_color="transparent", border_width=1, border_color=self.accent_color,
                       text_color=self.accent_color, hover_color=COLOR_HOVER, command=do_pair).pack(fill="x", pady=5)
@@ -523,7 +523,7 @@ class TurboCoreApp(ctk.CTk):
 
         def do_connect():
             addr = ip_conn_entry.get()
-            if addr: threading.Thread(target=lambda: self.run_adb_generic(f"connect {addr}")).start()
+            if addr: threading.Thread(target=lambda: self.run_adb_generic(f"connect {addr}", show_success=True)).start()
 
         ctk.CTkButton(frame_tools, text=self.T("btn_connect"), fg_color=self.accent_color, text_color=COLOR_BG, hover_color=COLOR_TEXT_MAIN,
                       command=do_connect).pack(fill="x", pady=5)
@@ -736,22 +736,22 @@ class TurboCoreApp(ctk.CTk):
         ctk.CTkLabel(f, text=pkg, font=FONT_MONO, text_color=COLOR_TEXT_MAIN, width=350, anchor="w").pack(side="left", padx=10)
 
         ctk.CTkButton(f, text=self.T("action_open"), width=60, fg_color=COLOR_SUCCESS, text_color="white", height=25,
-                      command=lambda: self.run_adb_generic(f"shell monkey -p {pkg} -c android.intent.category.LAUNCHER 1")).pack(side="right", padx=2)
+                      command=lambda: self.run_adb_generic(f"shell monkey -p {pkg} -c android.intent.category.LAUNCHER 1", show_success=False)).pack(side="right", padx=2)
 
         ctk.CTkButton(f, text=self.T("action_kill"), width=60, fg_color="orange", text_color="white", height=25,
-                      command=lambda: self.run_adb_generic(f"shell am force-stop {pkg}")).pack(side="right", padx=2)
+                      command=lambda: self.run_adb_generic(f"shell am force-stop {pkg}", show_success=False)).pack(side="right", padx=2)
 
         ctk.CTkButton(f, text=self.T("action_del"), width=60, fg_color=COLOR_ERROR, text_color="white", height=25,
                       command=lambda: self.uninstall_app(pkg)).pack(side="right", padx=2)
 
     def uninstall_app(self, pkg):
         if messagebox.askyesno("Uninstall", f"Uninstall {pkg}?"):
-            self.run_adb_cmd_string(f"pm uninstall {pkg}")
+            self.run_adb_cmd_string(f"pm uninstall {pkg}", show_success=True)
             self.after(1000, self.refresh_apps_list)
 
     def kill_all_processes(self):
         if not self.target_device: return
-        self.run_adb_cmd_string("am kill-all")
+        self.run_adb_cmd_string("am kill-all", show_success=False)
         messagebox.showinfo(self.T("msg_success"), self.T("msg_kill"))
 
     def ativar_free_fire(self):
@@ -760,9 +760,9 @@ class TurboCoreApp(ctk.CTk):
             return
         self.log(self.T("msg_ff_active"))
         cmds = MODOS_PERF["Gamer Ultimate (Mobile)"]["cmd"]
-        self.run_adb_cmd_string(cmds)
+        self.run_adb_cmd_string(cmds, show_success=True)
 
-    def run_adb_cmd_string(self, cmd_string):
+    def run_adb_cmd_string(self, cmd_string, show_success=True):
         if not self.target_device:
             messagebox.showerror(self.T("msg_conn_error"), self.T("msg_no_device"))
             return
@@ -791,8 +791,8 @@ class TurboCoreApp(ctk.CTk):
 
             if res.returncode == 0:
                 self.log("Batch Success.")
-                # Optional: Add small delay if we suspect UI needs to catch up, but V108 goal is speed.
-                self.after(0, lambda: messagebox.showinfo(self.T("msg_success"), self.T("msg_cmd_success")))
+                if show_success:
+                    self.after(0, lambda: messagebox.showinfo(self.T("msg_success"), self.T("msg_cmd_success")))
             else:
                 self.log(f"Batch Error: {res.stderr}")
                 self.after(0, lambda: messagebox.showerror(self.T("msg_error"), f"Failed:\n{res.stderr}"))
@@ -887,20 +887,20 @@ class TurboCoreApp(ctk.CTk):
         if not self.target_device:
             self.menu_PERF.set(self.T("select_default"))
             return
-        self.run_adb_cmd_string(MODOS_PERF[choice]["cmd"])
+        self.run_adb_cmd_string(MODOS_PERF[choice]["cmd"], show_success=True)
 
     def aplicar_bat(self, choice):
         if not self.target_device:
             self.menu_BAT.set(self.T("select_default"))
             return
-        self.run_adb_cmd_string(MODOS_BAT[choice]["cmd"])
+        self.run_adb_cmd_string(MODOS_BAT[choice]["cmd"], show_success=True)
 
     def restaurar_padrao(self):
         if not self.target_device: return
         self.log(self.T("msg_restored"))
         # V108: All in one string
         cmds = "wm size reset; wm density reset; settings put system user_rotation 0; settings put system accelerometer_rotation 1; settings put global low_power 0; settings put system screen_brightness 100; settings put global window_animation_scale 1; settings put global transition_animation_scale 1; settings put global animator_duration_scale 1"
-        self.run_adb_cmd_string(cmds)
+        self.run_adb_cmd_string(cmds, show_success=False) # Suppress generic success msg
         default_txt = self.T("select_default")
         self.menu_PC.set(default_txt)
         self.menu_PERF.set(default_txt)
@@ -1101,8 +1101,15 @@ class TurboCoreApp(ctk.CTk):
         cmd = self.term_input.get("0.0", "end").strip()
         if cmd: threading.Thread(target=lambda: subprocess.Popen(cmd, cwd=self.bin_dir, shell=True, startupinfo=self.si)).start()
 
-    def run_adb_generic(self, cmd):
-        subprocess.run([self.adb_exe] + cmd.split(), startupinfo=self.si)
+    def run_adb_generic(self, cmd, show_success=False):
+        # Optimized generic runner
+        if show_success:
+            def t():
+                subprocess.run([self.adb_exe] + cmd.split(), startupinfo=self.si)
+                self.after(0, lambda: messagebox.showinfo(self.T("msg_success"), self.T("msg_cmd_success")))
+            threading.Thread(target=t).start()
+        else:
+             subprocess.Popen([self.adb_exe] + cmd.split(), startupinfo=self.si)
 
     def debug_log(self, msg):
         try:
