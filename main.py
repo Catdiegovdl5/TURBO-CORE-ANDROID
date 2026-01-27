@@ -65,8 +65,8 @@ MODOS_BAT = {
 class TurboCoreApp(ctk.CTk):
     def __init__(self):
         super().__init__()
-        self.debug_log("--- INICIANDO TURBO CORE V90 - ELITE SUITE ---")
-        self.title("TURBO CORE V90 - ELITE SUITE")
+        self.debug_log("--- INICIANDO TURBO CORE V91 - STATUS INTERATIVO ---")
+        self.title("TURBO CORE V91 - STATUS INTERATIVO")
         self.geometry("540x980")
         self.resizable(False, False)
         self.configure(fg_color=COR_FUNDO)
@@ -176,8 +176,11 @@ class TurboCoreApp(ctk.CTk):
 
         self.frame_dev_info = ctk.CTkFrame(self.header, fg_color="transparent")
         self.frame_dev_info.pack(side="left", padx=15, pady=10)
-        self.lbl_device_name = ctk.CTkLabel(self.frame_dev_info, text="Buscando...", font=("Arial", 13, "bold"), text_color="gray")
-        self.lbl_device_name.pack(side="left", padx=(0, 10))
+
+        # V91 - Botão de Status Interativo
+        self.btn_device_status = ctk.CTkButton(self.frame_dev_info, text="Buscando...", font=("Arial", 12, "bold"),
+                                               fg_color="#333", width=200, command=self.abrir_gerenciador_conexao)
+        self.btn_device_status.pack(side="left", padx=(0, 10))
 
         # Monitoramento (BAT / TEMP)
         self.lbl_stats = ctk.CTkLabel(self.frame_dev_info, text="", font=("Consolas", 12, "bold"), text_color="gray")
@@ -220,6 +223,71 @@ class TurboCoreApp(ctk.CTk):
         self.lbl_system_status = ctk.CTkLabel(self, text="SISTEMA PRONTO", font=("Consolas", 11), text_color="#555", fg_color="black")
         self.lbl_system_status.pack(fill="x", side="bottom", ipady=2)
         self.debug_log("UI construída.")
+
+    def abrir_gerenciador_conexao(self):
+        # V91 - Assistente de Conexão
+        toplevel = ctk.CTkToplevel(self)
+        toplevel.title("Assistente de Conexão")
+        toplevel.geometry("600x450")
+        toplevel.attributes("-topmost", True)
+
+        # Layout 2 Colunas
+        frame_tools = ctk.CTkFrame(toplevel)
+        frame_tools.pack(side="left", fill="both", expand=True, padx=10, pady=10)
+
+        frame_tutorial = ctk.CTkFrame(toplevel, fg_color="#111")
+        frame_tutorial.pack(side="right", fill="both", expand=True, padx=10, pady=10)
+
+        # Coluna Ferramentas
+        ctk.CTkLabel(frame_tools, text="FERRAMENTAS", font=("Arial", 14, "bold")).pack(pady=10)
+
+        # Pareamento
+        ctk.CTkLabel(frame_tools, text="1. PAREAMENTO (Wireless Debugging)", text_color="#fbbf24").pack(pady=(10,5))
+        ip_pair_entry = ctk.CTkEntry(frame_tools, placeholder_text="IP:PORTA (Ex: 192.168.0.5:40000)")
+        ip_pair_entry.pack(fill="x", padx=10, pady=5)
+        code_entry = ctk.CTkEntry(frame_tools, placeholder_text="CÓDIGO (6 Dígitos)")
+        code_entry.pack(fill="x", padx=10, pady=5)
+
+        def do_pair():
+            addr = ip_pair_entry.get(); code = code_entry.get()
+            if addr and code: threading.Thread(target=lambda: self.run_adb_generic(f"pair {addr} {code}")).start()
+
+        ctk.CTkButton(frame_tools, text="PAREAR", fg_color="#fbbf24", text_color="black", command=do_pair).pack(pady=5)
+
+        # Conexão
+        ctk.CTkLabel(frame_tools, text="2. CONEXÃO (ADB Connect)", text_color=COR_PRIMARIA).pack(pady=(20,5))
+        ip_conn_entry = ctk.CTkEntry(frame_tools, placeholder_text="IP:PORTA (Ex: 192.168.0.5:5555)")
+        ip_conn_entry.pack(fill="x", padx=10, pady=5)
+
+        def do_connect():
+            addr = ip_conn_entry.get()
+            if addr: threading.Thread(target=lambda: self.run_adb_generic(f"connect {addr}")).start()
+
+        ctk.CTkButton(frame_tools, text="CONECTAR", fg_color=COR_PRIMARIA, command=do_connect).pack(pady=5)
+
+        # Coluna Tutorial
+        ctk.CTkLabel(frame_tutorial, text="COMO CONECTAR?", font=("Arial", 14, "bold")).pack(pady=10)
+        tut_text = """
+1. No Celular, ative as
+   'Opções do Desenvolvedor'.
+
+2. Ative a 'Depuração USB'.
+
+3. (Para Wi-Fi) Ative a
+   'Depuração por Wi-Fi'.
+
+4. Entre na opção 'Depuração por Wi-Fi'
+   e clique em 'Parear com Código'.
+
+5. Copie o IP, Porta e Código
+   para os campos ao lado.
+
+OBS: O IP de Pareamento e o IP
+de Conexão geralmente têm
+PORTAS DIFERENTES!
+        """
+        lbl_tut = ctk.CTkLabel(frame_tutorial, text=tut_text, justify="left", font=("Consolas", 11), text_color="#ccc")
+        lbl_tut.pack(padx=10, pady=10)
 
     def create_nav_btn(self, text, mode):
         btn = ctk.CTkButton(self.frame_nav, text=text, fg_color="transparent", width=80, font=("Arial", 11, "bold"), 
@@ -520,10 +588,10 @@ class TurboCoreApp(ctk.CTk):
 
     def update_status_ui(self, connected):
         if connected:
-            self.lbl_device_name.configure(text=f"📱 {self.device_model}", text_color=COR_SUCESSO)
+            self.btn_device_status.configure(text=f"📱 {self.device_model}", fg_color=COR_SUCESSO)
             self.btn_refresh.configure(fg_color="#14532d")
         else:
-            self.lbl_device_name.configure(text="❌ NENHUM DISPOSITIVO", text_color=COR_ERRO)
+            self.btn_device_status.configure(text="❌ DESCONECTADO (Clique aqui)", fg_color=COR_ERRO)
             self.btn_refresh.configure(fg_color="#222")
             self.lbl_stats.configure(text="")
 
@@ -536,7 +604,7 @@ class TurboCoreApp(ctk.CTk):
 
     def force_refresh(self):
         self.debug_log("Forçando refresh ADB...")
-        self.lbl_device_name.configure(text="Buscando...", text_color="orange")
+        self.btn_device_status.configure(text="Buscando...", fg_color="orange")
         threading.Thread(target=self.run_adb_generic, args=("kill-server",)).start()
         threading.Thread(target=self.run_adb_generic, args=("start-server",)).start()
 
