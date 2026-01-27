@@ -45,7 +45,7 @@ FONT_MONO = ("Consolas", 11)
 # --- TRADUÇÕES ---
 TRANSLATIONS = {
     "PT": {
-        "app_title": "TURBO CORE V97.1 - PERFORMANCE FIX",
+        "app_title": "TURBO CORE V98 - SPACE OPTIMIZATION",
         "sidebar_dash": "🖥️ DASHBOARD",
         "sidebar_game": "🎮 COMPETITIVO",
         "sidebar_apps": "📦 APPS",
@@ -64,7 +64,6 @@ TRANSLATIONS = {
         "btn_install": "Instalar APK 📥",
         "btn_send": "Enviar Arquivo 📤",
         "btn_reset": "Restaurar Original 🔄",
-        "btn_kill": "⚡ LIMPAR RAM",
         "select_default": "Selecionar...",
         "hero_ff": "ATIVAR MODO FREE FIRE MAX 🎯",
         "sw_keymap": "Ativar Keymapping (WASD)",
@@ -97,7 +96,7 @@ TRANSLATIONS = {
         "action_del": "Del"
     },
     "EN": {
-        "app_title": "TURBO CORE V97.1 - PERFORMANCE FIX",
+        "app_title": "TURBO CORE V98 - SPACE OPTIMIZATION",
         "sidebar_dash": "🖥️ DASHBOARD",
         "sidebar_game": "🎮 COMPETITIVE",
         "sidebar_apps": "📦 APPS",
@@ -116,7 +115,6 @@ TRANSLATIONS = {
         "btn_install": "Install APK 📥",
         "btn_send": "Send File 📤",
         "btn_reset": "Factory Reset 🔄",
-        "btn_kill": "⚡ KILL ALL",
         "select_default": "Select...",
         "hero_ff": "ACTIVATE FREE FIRE MODE 🎯",
         "sw_keymap": "Enable Keymapping (WASD)",
@@ -149,7 +147,7 @@ TRANSLATIONS = {
         "action_del": "Del"
     },
     "ES": {
-        "app_title": "TURBO CORE V97.1 - PERFORMANCE FIX",
+        "app_title": "TURBO CORE V98 - SPACE OPTIMIZATION",
         "sidebar_dash": "🖥️ PANEL",
         "sidebar_game": "🎮 COMPETITIVO",
         "sidebar_apps": "📦 APPS",
@@ -168,7 +166,6 @@ TRANSLATIONS = {
         "btn_install": "Instalar APK 📥",
         "btn_send": "Enviar Archivo 📤",
         "btn_reset": "Restaurar Original 🔄",
-        "btn_kill": "⚡ LIMPIAR RAM",
         "select_default": "Seleccionar...",
         "hero_ff": "ACTIVAR MODO FREE FIRE 🎯",
         "sw_keymap": "Activar Keymapping (WASD)",
@@ -238,8 +235,9 @@ class TurboCoreApp(ctk.CTk):
         self.current_lang = "PT"
         self.current_theme = "Studio Blue"
         self.accent_color = THEMES[self.current_theme]
+        self.all_apps_cache = []
 
-        self.debug_log(f"--- INICIANDO TURBO CORE V97.1 FIX [{self.current_lang}] ---")
+        self.debug_log(f"--- INICIANDO TURBO CORE V98 SPACE OPTIMIZATION [{self.current_lang}] ---")
         self.title(self.T("app_title"))
         self.geometry("900x750")
         self.resizable(False, True)
@@ -333,7 +331,7 @@ class TurboCoreApp(ctk.CTk):
         self.sidebar.pack_propagate(False)
 
         ctk.CTkLabel(self.sidebar, text="TURBO\nCORE", font=("Montserrat", 24, "bold"), text_color=self.accent_color).pack(pady=(40, 5))
-        ctk.CTkLabel(self.sidebar, text="V97.1 FIX", font=("Roboto", 10), text_color=COLOR_TEXT_DIM).pack(pady=(0, 20))
+        ctk.CTkLabel(self.sidebar, text="V98 SPACE", font=("Roboto", 10), text_color=COLOR_TEXT_DIM).pack(pady=(0, 20))
 
         self.btn_dash = self.create_sidebar_btn(self.T("sidebar_dash"), "dash")
         self.btn_special = self.create_sidebar_btn(self.T("sidebar_game"), "special")
@@ -384,10 +382,10 @@ class TurboCoreApp(ctk.CTk):
                                          command=self.force_refresh)
         self.btn_refresh.pack(side="left", padx=5)
 
-        # KILL BUTTON - Far Right
-        self.btn_kill = ctk.CTkButton(self.header, text=self.T("btn_kill"), width=120, height=36,
-                                      fg_color=COLOR_ERROR, text_color="white", hover_color="#991B1B",
-                                      corner_radius=18, font=FONT_BOLD, command=self.kill_all_processes)
+        # KILL BUTTON (Compact)
+        self.btn_kill = ctk.CTkButton(self.header, text="🚀", width=40, height=36,
+                                      fg_color="#EF4444", text_color="white", hover_color="#991B1B",
+                                      corner_radius=10, font=FONT_BOLD, command=self.kill_all_processes)
         self.btn_kill.pack(side="right", padx=10)
 
         self.main_area = ctk.CTkFrame(self.right_panel, fg_color="transparent")
@@ -580,11 +578,11 @@ class TurboCoreApp(ctk.CTk):
 
         self.ent_search = ctk.CTkEntry(head, placeholder_text=self.T("apps_search"), width=300, fg_color=COLOR_SURFACE, border_color=COLOR_BORDER)
         self.ent_search.pack(side="left", padx=(20, 10))
+        self.ent_search.bind("<KeyRelease>", self.filter_apps_ui) # FIX V98
 
         ctk.CTkButton(head, text=self.T("apps_refresh"), width=100, fg_color=COLOR_SURFACE, border_color=COLOR_BORDER, border_width=1,
                       command=self.refresh_apps_list).pack(side="left")
 
-        # Loading Label (UI Lag fix)
         self.lbl_loading = ctk.CTkLabel(p, text=self.T("apps_loading"), font=FONT_MAIN, text_color=COLOR_TEXT_DIM)
 
         self.scroll_apps = ctk.CTkScrollableFrame(p, fg_color=COLOR_SURFACE, corner_radius=12)
@@ -597,27 +595,31 @@ class TurboCoreApp(ctk.CTk):
             ctk.CTkLabel(self.scroll_apps, text="No Device").pack(pady=20)
             return
 
-        self.lbl_loading.place(relx=0.5, rely=0.5, anchor="center") # Show loading
+        self.lbl_loading.place(relx=0.5, rely=0.5, anchor="center")
 
         def load():
             si = subprocess.STARTUPINFO(); si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
             exe = os.path.join(self.bin_dir, "adb.exe")
             res = subprocess.run([exe, "-s", self.target_device, "shell", "pm", "list", "packages", "-3"], capture_output=True, text=True, startupinfo=si)
-            search = self.ent_search.get().lower()
 
             apps = []
             for line in res.stdout.splitlines():
                 pkg = line.replace("package:", "").strip()
-                if not pkg or (search and search not in pkg.lower()): continue
-                apps.append(pkg)
+                if pkg: apps.append(pkg)
 
-            # Pass data back to main thread
+            self.all_apps_cache = apps # FIX V98
             self.after(0, lambda: self.populate_apps_ui(apps))
 
         threading.Thread(target=load, daemon=True).start()
 
+    def filter_apps_ui(self, event=None):
+        search = self.ent_search.get().lower()
+        filtered = [pkg for pkg in self.all_apps_cache if search in pkg.lower()]
+        self.populate_apps_ui(filtered)
+
     def populate_apps_ui(self, apps):
-        self.lbl_loading.place_forget() # Hide loading
+        self.lbl_loading.place_forget()
+        for w in self.scroll_apps.winfo_children(): w.destroy()
         for pkg in apps:
             self.create_app_row(pkg)
 
