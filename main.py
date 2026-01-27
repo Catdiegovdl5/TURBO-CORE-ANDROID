@@ -19,66 +19,197 @@ from PIL import Image
 ctk.set_appearance_mode("Dark")
 
 # Paleta Minimalista & Neon
-COLOR_ACCENT = "#00E5FF"      # Ciano Neon (Destaque Principal)
+COLOR_ACCENT = "#00E5FF"      # Ciano Neon
 COLOR_BG = "#0A0A0A"          # Fundo Quase Preto
-COLOR_SURFACE = "#171717"     # Superfície de Painéis
-COLOR_BORDER = "#333333"      # Bordas Sutis
+COLOR_SURFACE = "#171717"     # Superfície
+COLOR_BORDER = "#333333"      # Bordas
 COLOR_TEXT_MAIN = "#FAFAFA"   # Texto Principal
 COLOR_TEXT_DIM = "#A1A1AA"    # Texto Secundário
-COLOR_SUCCESS = "#10B981"     # Verde Suave (Status)
-COLOR_ERROR = "#EF4444"       # Vermelho Suave (Status/Erro)
-COLOR_HOVER = "#262626"       # Hover em botões escuros
+COLOR_SUCCESS = "#10B981"     # Verde
+COLOR_ERROR = "#EF4444"       # Vermelho
+COLOR_HOVER = "#262626"       # Hover
 
-# Configuração Padrão de Fonte
+# Fontes
 FONT_MAIN = ("Roboto Medium", 13)
 FONT_BOLD = ("Roboto", 13, "bold")
 FONT_TITLE = ("Roboto", 20, "bold")
 FONT_MONO = ("Consolas", 11)
 
-# --- HELP TEXTS (SEGURANÇA E RESPONSABILIDADE) ---
-HELP_TEXTS = {
-    # MODO PC
-    "PC Lite (Econômico)": "[RISCO: BAIXO]\nFERRAMENTA: Scrcpy + ADB\n\nO QUE FAZ:\n1. Força resolução física para 960x540 (via ADB).\n2. Trava FPS em 30.\n3. Abre espelhamento sem bordas.\n\nEFEITO:\nReduz drasticamente o uso de CPU/GPU. Seguro para uso prolongado.",
-    "PC Soberano (Padrão)": "[RISCO: BAIXO]\nFERRAMENTA: Scrcpy + ADB + Rotation\n\nO QUE FAZ:\n1. Altera resolução para 1280x720 (HD).\n2. Força densidade 160 DPI.\n3. Força rotação Paisagem.\n\nEFEITO:\nTransforma o celular num monitor secundário. Uso padrão recomendado.",
-    "PC Gamer (Ultra)": "[RISCO: MÉDIO - AQUECIMENTO]\nFERRAMENTA: Scrcpy (Low Latency) + ADB\n\nO QUE FAZ:\n1. Resolução HD (720p).\n2. Remove limite de FPS.\n3. Reduz buffer de áudio para 20ms.\n\nALERTA:\nO uso contínuo pode causar aquecimento. Use por sua conta e risco.",
-    
-    # PERFORMANCE
-    "Gamer Ultimate (Mobile)": "[RISCO: ALTO - AQUECIMENTO]\nFERRAMENTA: ADB Shell (Package Manager)\n\nO QUE FAZ:\n1. Desabilita o GOS da Samsung.\n2. Altera resolução para 432x960.\n\nPERIGO CRÍTICO:\nRemove proteções térmicas de software. O dispositivo pode superaquecer. Use cooler externo.",
-    "Ultimate Desempenho (Bruto)": "[PERIGO CRÍTICO - HARDWARE]\nFERRAMENTA: ADB Shell (Settings Global)\n\nO QUE FAZ:\n1. Desliga proteção térmica (disable_thermal_control).\n2. Mata apps de fundo.\n\nALERTA MÁXIMO:\nO processador rodará no limite térmico. Risco real de danos ao hardware. Use por sua conta e risco.",
-    "Usual Turbo (Dia a Dia)": "[RISCO: BAIXO]\nFERRAMENTA: ADB Shell (Window Manager)\n\nO QUE FAZ:\n1. Define animações para 0.5x.\n2. Reseta resolução.\n\nEFEITO:\nMelhora a fluidez visual sem riscos ao hardware.",
-    
-    # BATERIA
-    "Economia Normal": "[RISCO: BAIXO]\nAtiva o 'Low Power Mode' nativo.",
-    "Super Economia": "[RISCO: BAIXO]\nDesativa Bluetooth e Sincronização. Reduz resolução.",
-    "Ultimate Economia (Deep)": "[RISCO: BAIXO - USABILIDADE]\nReduz brilho a zero e mata processos. O celular ficará difícil de usar."
+# --- TRADUÇÕES (I18N) ---
+TRANSLATIONS = {
+    "PT": {
+        "app_title": "TURBO CORE V95 - GLOBAL EDITION",
+        "sidebar_dash": "🖥️ DASHBOARD",
+        "sidebar_game": "🎮 COMPETITIVO",
+        "sidebar_term": "💻 TERMINAL",
+        "status_searching": "Buscando...",
+        "status_disconnected": "❌ DESCONECTADO (Clique aqui)",
+        "sys_ready": "SISTEMA PRONTO",
+        "launch_comp": "🚀 IR PARA MODOS COMPETITIVOS",
+        "card_pc": "EXPERIÊNCIA PC",
+        "card_perf": "CONTROLE DE PERFORMANCE",
+        "card_bat": "GERENCIADOR DE BATERIA",
+        "card_utils": "FERRAMENTAS DO SISTEMA",
+        "opt_video": "Gravar Vídeo",
+        "opt_audio": "Gravar Áudio",
+        "opt_ghost": "Modo Fantasma (Tela Off)",
+        "btn_install": "Instalar APK 📥",
+        "btn_reset": "Restaurar Original 🔄",
+        "select_default": "Selecionar...",
+        "hero_ff": "ATIVAR MODO FREE FIRE MAX 🎯",
+        "sw_keymap": "Ativar Keymapping (WASD)",
+        "coming_soon": "EM BREVE (Roadmap)",
+        "term_manual": "TERMINAL MANUAL",
+        "btn_exec": "EXECUTAR",
+        "conn_wizard": "Assistente de Conexão",
+        "tools": "FERRAMENTAS",
+        "pair_step": "1. PAREAMENTO (Wireless)",
+        "conn_step": "2. CONEXÃO (ADB Connect)",
+        "btn_pair": "PAREAR DISPOSITIVO",
+        "btn_connect": "CONECTAR",
+        "btn_scan": "ESCANEAR REDE 🔎",
+        "guide_title": "COMO CONECTAR?",
+        "guide_text": "1. Ative Opções do Desenvolvedor\n2. Ative Depuração USB\n3. Ative Depuração Sem Fio\n\nNo Wi-Fi:\nUse 'Parear com Código'.\nCopie IP, Porta e Código.",
+        "msg_success": "SUCESSO",
+        "msg_error": "ERRO",
+        "msg_restored": "Dispositivo restaurado!",
+        "msg_installed": "APK Instalado!",
+        "msg_ff_active": "MODO FREE FIRE ATIVADO!\nBom jogo!",
+        "help_pc_lite": "[RISCO: BAIXO]\nIdeal para PCs fracos. 540p/30fps.",
+        "help_pc_sob": "[RISCO: BAIXO]\nTransforma em monitor 720p. Uso padrão.",
+        "help_pc_gamer": "[RISCO: MÉDIO]\nFoco em latência zero. Pode aquecer.",
+        "help_perf_gos": "[RISCO: ALTO]\nDesativa GOS Samsung. Use cooler.",
+        "help_perf_ult": "[PERIGO CRÍTICO]\nDesliga proteção térmica. Risco de dano.",
+        "help_perf_std": "[RISCO: BAIXO]\nAnimações mais rápidas.",
+        "help_bat_eco": "[RISCO: BAIXO]\nEconomia nativa do Android.",
+        "help_bat_sup": "[RISCO: BAIXO]\nSem Bluetooth/Sync.",
+        "help_bat_ult": "[RISCO: BAIXO]\nBrilho zero. Difícil uso."
+    },
+    "EN": {
+        "app_title": "TURBO CORE V95 - GLOBAL EDITION",
+        "sidebar_dash": "🖥️ DASHBOARD",
+        "sidebar_game": "🎮 COMPETITIVE",
+        "sidebar_term": "💻 TERMINAL",
+        "status_searching": "Searching...",
+        "status_disconnected": "❌ DISCONNECTED (Click here)",
+        "sys_ready": "SYSTEM READY",
+        "launch_comp": "🚀 LAUNCH COMPETITIVE MODE",
+        "card_pc": "PC EXPERIENCE",
+        "card_perf": "PERFORMANCE CONTROL",
+        "card_bat": "BATTERY MANAGER",
+        "card_utils": "SYSTEM TOOLS",
+        "opt_video": "Record Video",
+        "opt_audio": "Record Audio",
+        "opt_ghost": "Ghost Mode (Screen Off)",
+        "btn_install": "Install APK 📥",
+        "btn_reset": "Factory Reset 🔄",
+        "select_default": "Select...",
+        "hero_ff": "ACTIVATE FREE FIRE MODE 🎯",
+        "sw_keymap": "Enable Keymapping (WASD)",
+        "coming_soon": "COMING SOON (Roadmap)",
+        "term_manual": "MANUAL TERMINAL",
+        "btn_exec": "EXECUTE",
+        "conn_wizard": "Connection Wizard",
+        "tools": "TOOLS",
+        "pair_step": "1. PAIRING (Wireless)",
+        "conn_step": "2. CONNECTION (ADB Connect)",
+        "btn_pair": "PAIR DEVICE",
+        "btn_connect": "CONNECT",
+        "btn_scan": "SCAN NETWORK 🔎",
+        "guide_title": "QUICK GUIDE",
+        "guide_text": "1. Enable Developer Options\n2. Enable USB Debugging\n3. Enable Wireless Debugging\n\nFor Wi-Fi:\nUse 'Pair with Code'.\nCopy IP, Port & Code.",
+        "msg_success": "SUCCESS",
+        "msg_error": "ERROR",
+        "msg_restored": "Device restored!",
+        "msg_installed": "APK Installed!",
+        "msg_ff_active": "FREE FIRE MODE ACTIVE!\nGood game!",
+        "help_pc_lite": "[RISK: LOW]\nFor weak PCs. 540p/30fps.",
+        "help_pc_sob": "[RISK: LOW]\n720p Monitor Mode. Standard use.",
+        "help_pc_gamer": "[RISK: MEDIUM]\nZero latency focus. May heat up.",
+        "help_perf_gos": "[RISK: HIGH]\nDisables Samsung GOS. Use cooler.",
+        "help_perf_ult": "[CRITICAL DANGER]\nDisables thermal guard. Hardware risk.",
+        "help_perf_std": "[RISK: LOW]\nFaster animations.",
+        "help_bat_eco": "[RISK: LOW]\nNative Android saver.",
+        "help_bat_sup": "[RISK: LOW]\nNo Bluetooth/Sync.",
+        "help_bat_ult": "[RISK: LOW]\nZero brightness. Hard to use."
+    },
+    "ES": {
+        "app_title": "TURBO CORE V95 - GLOBAL EDITION",
+        "sidebar_dash": "🖥️ PANEL",
+        "sidebar_game": "🎮 COMPETITIVO",
+        "sidebar_term": "💻 TERMINAL",
+        "status_searching": "Buscando...",
+        "status_disconnected": "❌ DESCONECTADO (Clic aquí)",
+        "sys_ready": "SISTEMA LISTO",
+        "launch_comp": "🚀 IR A MODO COMPETITIVO",
+        "card_pc": "EXPERIENCIA PC",
+        "card_perf": "CONTROL DE RENDIMIENTO",
+        "card_bat": "GESTOR DE BATERÍA",
+        "card_utils": "HERRAMIENTAS",
+        "opt_video": "Grabar Video",
+        "opt_audio": "Grabar Audio",
+        "opt_ghost": "Modo Fantasma (Pantalla Off)",
+        "btn_install": "Instalar APK 📥",
+        "btn_reset": "Restaurar Original 🔄",
+        "select_default": "Seleccionar...",
+        "hero_ff": "ACTIVAR MODO FREE FIRE 🎯",
+        "sw_keymap": "Activar Keymapping (WASD)",
+        "coming_soon": "PRÓXIMAMENTE (Roadmap)",
+        "term_manual": "TERMINAL MANUAL",
+        "btn_exec": "EJECUTAR",
+        "conn_wizard": "Asistente de Conexión",
+        "tools": "HERRAMIENTAS",
+        "pair_step": "1. VINCULACIÓN (Inalámbrica)",
+        "conn_step": "2. CONEXIÓN (ADB Connect)",
+        "btn_pair": "VINCULAR DISPOSITIVO",
+        "btn_connect": "CONECTAR",
+        "btn_scan": "ESCANEAR RED 🔎",
+        "guide_title": "GUÍA RÁPIDA",
+        "guide_text": "1. Activar Opciones Desarrollador\n2. Activar Depuración USB\n3. Activar Depuración Inalámbrica\n\nPara Wi-Fi:\nUsar 'Vincular con Código'.\nCopiar IP, Puerto y Código.",
+        "msg_success": "ÉXITO",
+        "msg_error": "ERROR",
+        "msg_restored": "¡Dispositivo restaurado!",
+        "msg_installed": "¡APK Instalado!",
+        "msg_ff_active": "¡MODO FREE FIRE ACTIVO!\n¡Buen juego!",
+        "help_pc_lite": "[RIESGO: BAJO]\nPara PCs básicos. 540p/30fps.",
+        "help_pc_sob": "[RIESGO: BAJO]\nMonitor 720p. Uso estándar.",
+        "help_pc_gamer": "[RIESGO: MEDIO]\nLatencia cero. Puede calentar.",
+        "help_perf_gos": "[RIESGO: ALTO]\nDesactiva GOS Samsung. Use cooler.",
+        "help_perf_ult": "[PELIGRO CRÍTICO]\nSin protección térmica. Riesgo hardware.",
+        "help_perf_std": "[RIESGO: BAJO]\nAnimaciones rápidas.",
+        "help_bat_eco": "[RIESGO: BAJO]\nAhorro nativo Android.",
+        "help_bat_sup": "[RIESGO: BAJO]\nSin Bluetooth/Sync.",
+        "help_bat_ult": "[RIESGO: BAJO]\nBrillo cero. Difícil uso."
+    }
 }
 
-# --- CONFIGS ---
+# --- CONFIGS TÉCNICAS (Não mudam com idioma) ---
 MODOS_PC = {
-    "PC Lite (Econômico)": {"size": "540x960", "density": "120", "scrcpy": ["--video-bit-rate=4M", "--max-fps=30", "--fullscreen", "--window-borderless", "--always-on-top", "--window-title=TURBO_LITE"]},
-    "PC Soberano (Padrão)": {"size": "720x1280", "density": "160", "scrcpy": ["--video-bit-rate=8M", "--max-fps=60", "--fullscreen", "--window-borderless", "--always-on-top", "--window-title=TURBO_SOBERANO"]},
-    "PC Gamer (Ultra)": {"size": "720x1280", "density": "160", "scrcpy": ["--video-bit-rate=16M", "--max-fps=0", "--fullscreen", "--window-borderless", "--audio-buffer=20", "--window-title=TURBO_GAMER"]}
+    "PC Lite (Econômico)": {"size": "540x960", "density": "120", "scrcpy": ["--video-bit-rate=4M", "--max-fps=30", "--fullscreen", "--window-borderless", "--always-on-top", "--window-title=TURBO_LITE"], "help_key": "help_pc_lite"},
+    "PC Soberano (Padrão)": {"size": "720x1280", "density": "160", "scrcpy": ["--video-bit-rate=8M", "--max-fps=60", "--fullscreen", "--window-borderless", "--always-on-top", "--window-title=TURBO_SOBERANO"], "help_key": "help_pc_sob"},
+    "PC Gamer (Ultra)": {"size": "720x1280", "density": "160", "scrcpy": ["--video-bit-rate=16M", "--max-fps=0", "--fullscreen", "--window-borderless", "--audio-buffer=20", "--window-title=TURBO_GAMER"], "help_key": "help_pc_gamer"}
 }
 
 MODOS_PERF = {
-    "Gamer Ultimate (Mobile)": "wm size 432x960; wm density 160; pm disable-user --user 0 com.samsung.android.game.gos",
-    "Ultimate Desempenho (Bruto)": "settings put global power_manager_constants disable_thermal_control=true; wm size 360x800; wm density 120; am kill-all",
-    "Usual Turbo (Dia a Dia)": "wm size reset; wm density reset; settings put global window_animation_scale 0.5; settings put global transition_animation_scale 0.5"
+    "Gamer Ultimate (Mobile)": {"cmd": "wm size 432x960; wm density 160; pm disable-user --user 0 com.samsung.android.game.gos", "help_key": "help_perf_gos"},
+    "Ultimate Desempenho (Bruto)": {"cmd": "settings put global power_manager_constants disable_thermal_control=true; wm size 360x800; wm density 120; am kill-all", "help_key": "help_perf_ult"},
+    "Usual Turbo (Dia a Dia)": {"cmd": "wm size reset; wm density reset; settings put global window_animation_scale 0.5; settings put global transition_animation_scale 0.5", "help_key": "help_perf_std"}
 }
 
 MODOS_BAT = {
-    "Economia Normal": "settings put global low_power 1; settings put global adaptive_battery_management_enabled 1",
-    "Super Economia": "wm size 576x1280; wm density 240; svc bluetooth disable; settings put global master_sync_enabled 0",
-    "Ultimate Economia (Deep)": "wm size 360x800; wm density 120; settings put system screen_brightness 0; am kill-all; settings put global low_power 1"
+    "Economia Normal": {"cmd": "settings put global low_power 1; settings put global adaptive_battery_management_enabled 1", "help_key": "help_bat_eco"},
+    "Super Economia": {"cmd": "wm size 576x1280; wm density 240; svc bluetooth disable; settings put global master_sync_enabled 0", "help_key": "help_bat_sup"},
+    "Ultimate Economia (Deep)": {"cmd": "wm size 360x800; wm density 120; settings put system screen_brightness 0; am kill-all; settings put global low_power 1", "help_key": "help_bat_ult"}
 }
 
 class TurboCoreApp(ctk.CTk):
     def __init__(self):
         super().__init__()
-        self.debug_log("--- INICIANDO TURBO CORE V94.1 - PREMIUM FIX ---")
-        self.title("TURBO CORE V94.1 - PREMIUM EDITION")
-        self.geometry("850x700") # Aumentado altura para acomodar cards extras
-        self.resizable(False, True) # Permitir scroll vertical se necessário futuramente
+        self.current_lang = "PT"
+        self.debug_log(f"--- INICIANDO TURBO CORE V95 GLOBAL [{self.current_lang}] ---")
+        self.title(self.T("app_title"))
+        self.geometry("850x700")
+        self.resizable(False, True)
         self.configure(fg_color=COLOR_BG)
         self.target_device = ""
         self.device_model = "Desconhecido"
@@ -103,49 +234,30 @@ class TurboCoreApp(ctk.CTk):
         self.setup_hotkeys()
         self.keymapping_active = False
 
+    def T(self, key):
+        return TRANSLATIONS[self.current_lang].get(key, key)
+
     def check_binaries(self):
         self.debug_log("Verificando binários...")
         if not os.path.exists(self.bin_dir):
-            self.debug_log("CRITICO: Pasta bin não encontrada!")
             messagebox.showwarning("ERRO CRITICO", "Pasta 'bin' não encontrada!")
             return
 
         adb_path = os.path.join(self.bin_dir, "adb.exe")
         scrcpy_path = os.path.join(self.bin_dir, "scrcpy.exe")
 
-        missing = []
-        if not os.path.exists(adb_path): missing.append("adb.exe")
-        if not os.path.exists(scrcpy_path): missing.append("scrcpy.exe")
-
-        if missing:
-            msg = f"Arquivos faltando na pasta bin:\n{', '.join(missing)}"
-            self.debug_log(f"CRITICO: {msg}")
-            messagebox.showwarning("ARQUIVOS FALTANDO", msg)
-        else:
-            self.debug_log("Binários verificados com sucesso.")
+        if not os.path.exists(adb_path) or not os.path.exists(scrcpy_path):
+            messagebox.showwarning("ARQUIVOS FALTANDO", "adb.exe ou scrcpy.exe faltando em bin/")
 
     def setup_hotkeys(self):
-        self.debug_log("Configurando Hotkeys...")
         if keyboard:
             try:
-                # Hotkeys Globais
                 keyboard.add_hotkey('f1', lambda: self.iniciar_pc("PC Soberano (Padrão)"))
                 keyboard.add_hotkey('f2', lambda: self.ativar_free_fire())
-
-                # Keymapping Básico
                 self.hook_space = keyboard.on_press_key("space", self.key_tap_handler, suppress=False)
-
-                # Keymapping Avançado (WASD - Swipe)
-                keyboard.on_press_key("w", lambda e: self.key_swipe_handler("w"), suppress=False)
-                keyboard.on_press_key("a", lambda e: self.key_swipe_handler("a"), suppress=False)
-                keyboard.on_press_key("s", lambda e: self.key_swipe_handler("s"), suppress=False)
-                keyboard.on_press_key("d", lambda e: self.key_swipe_handler("d"), suppress=False)
-
-                self.debug_log("Hotkeys configuradas.")
-            except Exception as e:
-                self.debug_log(f"ERRO ao configurar hotkeys: {e}")
-        else:
-            self.debug_log("Biblioteca 'keyboard' não encontrada. Hotkeys desativadas.")
+                for k in ["w", "a", "s", "d"]:
+                    keyboard.on_press_key(k, lambda e, key=k: self.key_swipe_handler(key), suppress=False)
+            except Exception as e: self.debug_log(f"Key error: {e}")
 
     def key_tap_handler(self, event):
         if self.keymapping_active and self.target_device:
@@ -153,57 +265,58 @@ class TurboCoreApp(ctk.CTk):
 
     def key_swipe_handler(self, key):
         if self.keymapping_active and self.target_device:
-            # Coordenadas do "Joystick Virtual" (Ex: Centro em 200, 500)
             cx, cy = 200, 500
-            dist = 100
-            duration = 200 # ms
-
-            x1, y1 = cx, cy
-            x2, y2 = cx, cy
-
+            dist, dur = 100, 200
+            x1, y1, x2, y2 = cx, cy, cx, cy
             if key == "w": y2 -= dist
             elif key == "s": y2 += dist
             elif key == "a": x2 -= dist
             elif key == "d": x2 += dist
-
-            cmd = f"shell input swipe {x1} {y1} {x2} {y2} {duration}"
-            threading.Thread(target=lambda: self.run_adb_generic(cmd)).start()
+            threading.Thread(target=lambda: self.run_adb_generic(f"shell input swipe {x1} {y1} {x2} {y2} {dur}")).start()
 
     def toggle_keymapping(self):
         self.keymapping_active = not self.keymapping_active
-        state = "ATIVADO" if self.keymapping_active else "DESATIVADO"
-        self.log(f"Keymapping (Espaço/WASD): {state}")
+        self.log(f"Keymapping: {self.keymapping_active}")
+
+    def change_language(self, lang):
+        self.current_lang = lang
+        self.debug_log(f"Language changed to {lang}")
+        # Limpa widgets principais para reconstruir
+        for widget in self.winfo_children():
+            if isinstance(widget, ctk.CTkToplevel): continue # Não fecha popups
+            widget.destroy()
+        self.setup_ui()
 
     def setup_ui(self):
-        self.debug_log("Iniciando construção da UI V94 Premium...")
-
-        # 1. SIDEBAR (Esquerda) - Estilo Dark Matte
         self.sidebar = ctk.CTkFrame(self, width=200, corner_radius=0, fg_color=COLOR_SURFACE, border_width=0)
         self.sidebar.pack(side="left", fill="y", expand=False)
         self.sidebar.pack_propagate(False)
 
-        # Logo / Título
         ctk.CTkLabel(self.sidebar, text="TURBO\nCORE", font=("Montserrat", 24, "bold"), text_color=COLOR_ACCENT).pack(pady=(40, 5))
-        ctk.CTkLabel(self.sidebar, text="V94 PREMIUM", font=("Roboto", 10), text_color=COLOR_TEXT_DIM).pack(pady=(0, 40))
+        ctk.CTkLabel(self.sidebar, text="V95 GLOBAL", font=("Roboto", 10), text_color=COLOR_TEXT_DIM).pack(pady=(0, 40))
 
-        # Botões Sidebar (Flat Style)
-        self.btn_dash = self.create_sidebar_btn("DASHBOARD", "dash")
-        self.btn_special = self.create_sidebar_btn("GAMING MODE", "special")
-        self.btn_term = self.create_sidebar_btn("TERMINAL", "term")
+        self.btn_dash = self.create_sidebar_btn(self.T("sidebar_dash"), "dash")
+        self.btn_special = self.create_sidebar_btn(self.T("sidebar_game"), "special")
+        self.btn_term = self.create_sidebar_btn(self.T("sidebar_term"), "term")
 
-        # 2. PAINEL DIREITO (Header + Conteúdo)
+        # Language Selector
+        ctk.CTkLabel(self.sidebar, text="Language / Idioma", font=("Roboto", 10), text_color=COLOR_TEXT_DIM).pack(side="bottom", pady=(0, 5))
+        lang_menu = ctk.CTkOptionMenu(self.sidebar, values=["PT", "EN", "ES"], width=140,
+                                      fg_color=COLOR_BG, button_color=COLOR_BORDER,
+                                      command=self.change_language)
+        lang_menu.set(self.current_lang)
+        lang_menu.pack(side="bottom", pady=(0, 20))
+
         self.right_panel = ctk.CTkFrame(self, fg_color="transparent")
         self.right_panel.pack(side="right", fill="both", expand=True)
 
-        # 2.1 HEADER (Transparente, integrado)
         self.header = ctk.CTkFrame(self.right_panel, height=70, corner_radius=0, fg_color="transparent")
         self.header.pack(fill="x", side="top", padx=30, pady=(20, 0))
 
         self.frame_dev_info = ctk.CTkFrame(self.header, fg_color="transparent")
         self.frame_dev_info.pack(side="left")
 
-        # Botão de Status (Estilo Pill)
-        self.btn_device_status = ctk.CTkButton(self.frame_dev_info, text="Buscando...", font=FONT_BOLD,
+        self.btn_device_status = ctk.CTkButton(self.frame_dev_info, text=self.T("status_searching"), font=FONT_BOLD,
                                                fg_color=COLOR_SURFACE, text_color=COLOR_TEXT_DIM,
                                                width=220, height=36, corner_radius=18,
                                                border_width=1, border_color=COLOR_BORDER,
@@ -211,7 +324,6 @@ class TurboCoreApp(ctk.CTk):
                                                command=self.abrir_gerenciador_conexao)
         self.btn_device_status.pack(side="left")
 
-        # Monitoramento (BAT / TEMP)
         self.lbl_stats = ctk.CTkLabel(self.frame_dev_info, text="", font=FONT_MONO, text_color=COLOR_TEXT_DIM)
         self.lbl_stats.pack(side="left", padx=15)
 
@@ -222,7 +334,6 @@ class TurboCoreApp(ctk.CTk):
                                          command=self.force_refresh)
         self.btn_refresh.pack(side="left", padx=5)
 
-        # 2.2 MAIN AREA
         self.main_area = ctk.CTkFrame(self.right_panel, fg_color="transparent")
         self.main_area.pack(fill="both", expand=True, padx=30, pady=20)
         
@@ -239,10 +350,8 @@ class TurboCoreApp(ctk.CTk):
         self.current_frame = None
         self.switch_tab("dash")
         
-        # Footer Minimalista
-        self.lbl_system_status = ctk.CTkLabel(self.right_panel, text="SYSTEM READY", font=("Roboto", 9), text_color="#333")
+        self.lbl_system_status = ctk.CTkLabel(self.right_panel, text=self.T("sys_ready"), font=("Roboto", 9), text_color="#333")
         self.lbl_system_status.pack(fill="x", side="bottom", pady=5)
-        self.debug_log("UI V94 construída.")
 
     def create_sidebar_btn(self, text, mode):
         btn = ctk.CTkButton(self.sidebar, text=text, fg_color="transparent", font=FONT_BOLD, anchor="w",
@@ -256,7 +365,6 @@ class TurboCoreApp(ctk.CTk):
         self.current_frame = self.frames[mode]
         self.current_frame.pack(fill="both", expand=True)
 
-        # Highlight Sidebar (Indicador de cor no texto ou fundo)
         btns = {"dash": self.btn_dash, "special": self.btn_special, "term": self.btn_term}
         for k, b in btns.items():
             if k == mode:
@@ -266,107 +374,90 @@ class TurboCoreApp(ctk.CTk):
 
     def abrir_gerenciador_conexao(self):
         toplevel = ctk.CTkToplevel(self)
-        toplevel.title("Connection Wizard")
+        toplevel.title(self.T("conn_wizard"))
         toplevel.geometry("650x450")
         toplevel.configure(fg_color=COLOR_BG)
         toplevel.attributes("-topmost", True)
 
-        # Estilo interno
         frame_tools = ctk.CTkFrame(toplevel, fg_color=COLOR_BG)
         frame_tools.pack(side="left", fill="both", expand=True, padx=20, pady=20)
 
         frame_tutorial = ctk.CTkFrame(toplevel, fg_color=COLOR_SURFACE, corner_radius=12)
         frame_tutorial.pack(side="right", fill="both", expand=True, padx=20, pady=20)
 
-        ctk.CTkLabel(frame_tools, text="Connection Tools", font=FONT_BOLD, text_color=COLOR_TEXT_MAIN).pack(pady=10, anchor="w")
+        ctk.CTkLabel(frame_tools, text=self.T("tools"), font=FONT_BOLD, text_color=COLOR_TEXT_MAIN).pack(pady=10, anchor="w")
 
-        # Wireless Pairing
-        ctk.CTkLabel(frame_tools, text="1. Wireless Pairing", font=FONT_MAIN, text_color=COLOR_ACCENT).pack(pady=(10,5), anchor="w")
-        ip_pair_entry = ctk.CTkEntry(frame_tools, placeholder_text="IP:PORT (Ex: 192.168.0.5:40000)",
-                                     fg_color=COLOR_SURFACE, border_color=COLOR_BORDER)
+        ctk.CTkLabel(frame_tools, text=self.T("pair_step"), font=FONT_MAIN, text_color=COLOR_ACCENT).pack(pady=(10,5), anchor="w")
+        ip_pair_entry = ctk.CTkEntry(frame_tools, placeholder_text="IP:PORT", fg_color=COLOR_SURFACE, border_color=COLOR_BORDER)
         ip_pair_entry.pack(fill="x", pady=5)
-        code_entry = ctk.CTkEntry(frame_tools, placeholder_text="Pairing Code (6 Digits)",
-                                  fg_color=COLOR_SURFACE, border_color=COLOR_BORDER)
+        code_entry = ctk.CTkEntry(frame_tools, placeholder_text="CODE", fg_color=COLOR_SURFACE, border_color=COLOR_BORDER)
         code_entry.pack(fill="x", pady=5)
 
         def do_pair():
             addr = ip_pair_entry.get(); code = code_entry.get()
             if addr and code: threading.Thread(target=lambda: self.run_adb_generic(f"pair {addr} {code}")).start()
 
-        ctk.CTkButton(frame_tools, text="Pair Device", fg_color="transparent", border_width=1, border_color=COLOR_ACCENT,
+        ctk.CTkButton(frame_tools, text=self.T("btn_pair"), fg_color="transparent", border_width=1, border_color=COLOR_ACCENT,
                       text_color=COLOR_ACCENT, hover_color=COLOR_HOVER, command=do_pair).pack(fill="x", pady=5)
 
-        # Connect
-        ctk.CTkLabel(frame_tools, text="2. ADB Connect", font=FONT_MAIN, text_color=COLOR_ACCENT).pack(pady=(20,5), anchor="w")
-        ip_conn_entry = ctk.CTkEntry(frame_tools, placeholder_text="IP:PORT (Ex: 192.168.0.5:5555)",
-                                     fg_color=COLOR_SURFACE, border_color=COLOR_BORDER)
+        ctk.CTkLabel(frame_tools, text=self.T("conn_step"), font=FONT_MAIN, text_color=COLOR_ACCENT).pack(pady=(20,5), anchor="w")
+        ip_conn_entry = ctk.CTkEntry(frame_tools, placeholder_text="IP:PORT", fg_color=COLOR_SURFACE, border_color=COLOR_BORDER)
         ip_conn_entry.pack(fill="x", pady=5)
 
         def do_connect():
             addr = ip_conn_entry.get()
             if addr: threading.Thread(target=lambda: self.run_adb_generic(f"connect {addr}")).start()
 
-        ctk.CTkButton(frame_tools, text="Connect", fg_color=COLOR_ACCENT, text_color=COLOR_BG, hover_color="#00C4D9",
+        ctk.CTkButton(frame_tools, text=self.T("btn_connect"), fg_color=COLOR_ACCENT, text_color=COLOR_BG, hover_color="#00C4D9",
                       command=do_connect).pack(fill="x", pady=5)
 
-        # Tutorial
-        ctk.CTkLabel(frame_tutorial, text="Quick Guide", font=FONT_BOLD, text_color=COLOR_TEXT_MAIN).pack(pady=10)
-        tut_text = "1. Enable Developer Options\n2. Enable USB Debugging\n3. Enable Wireless Debugging\n\nFor Wi-Fi:\nGo to Wireless Debugging >\nPair with pairing code.\n\nEnter IP, Port & Code."
-        ctk.CTkLabel(frame_tutorial, text=tut_text, justify="left", font=FONT_MAIN, text_color=COLOR_TEXT_DIM).pack(padx=15, pady=10)
+        ctk.CTkLabel(frame_tutorial, text=self.T("guide_title"), font=FONT_BOLD, text_color=COLOR_TEXT_MAIN).pack(pady=10)
+        ctk.CTkLabel(frame_tutorial, text=self.T("guide_text"), justify="left", font=FONT_MAIN, text_color=COLOR_TEXT_DIM).pack(padx=15, pady=10)
 
-    # --- DASHBOARD ---
     def build_dashboard(self, p):
-        # Atalho Competitivo - Card Style
-        btn_comp = ctk.CTkButton(p, text="LAUNCH COMPETITIVE MODE", font=FONT_BOLD,
+        btn_comp = ctk.CTkButton(p, text=self.T("launch_comp"), font=FONT_BOLD,
                       fg_color=COLOR_SURFACE, border_width=1, border_color=COLOR_ACCENT, text_color=COLOR_ACCENT,
                       hover_color=COLOR_HOVER, height=50, corner_radius=12,
                       command=lambda: self.switch_tab("special"))
         btn_comp.pack(fill="x", pady=(0, 15))
 
-        # 1. PC MODES - Card Frame
-        card_pc = self.create_card(p, "PC EXPERIENCE")
-        self.create_menu(card_pc, list(MODOS_PC.keys()), self.iniciar_pc)
+        card_pc = self.create_card(p, self.T("card_pc"))
+        self.menu_PC = self.create_menu(card_pc, list(MODOS_PC.keys()), self.iniciar_pc) # Salvar ref
 
-        # Launch Options
         frame_opts = ctk.CTkFrame(card_pc, fg_color="transparent")
         frame_opts.pack(fill="x", pady=(10, 0))
 
-        self.chk_video = ctk.CTkCheckBox(frame_opts, text="Record Video", font=FONT_MAIN,
+        self.chk_video = ctk.CTkCheckBox(frame_opts, text=self.T("opt_video"), font=FONT_MAIN,
                                          text_color=COLOR_TEXT_DIM, fg_color=COLOR_ACCENT, hover_color=COLOR_HOVER, corner_radius=6)
         self.chk_video.pack(side="left", padx=(0, 10))
 
-        self.chk_audio = ctk.CTkCheckBox(frame_opts, text="Record Audio", font=FONT_MAIN,
+        self.chk_audio = ctk.CTkCheckBox(frame_opts, text=self.T("opt_audio"), font=FONT_MAIN,
                                          text_color=COLOR_TEXT_DIM, fg_color=COLOR_ACCENT, hover_color=COLOR_HOVER, corner_radius=6)
         self.chk_audio.pack(side="left", padx=10)
         self.chk_audio.select()
 
-        self.chk_ghost = ctk.CTkCheckBox(frame_opts, text="Ghost Mode", font=FONT_MAIN,
+        self.chk_ghost = ctk.CTkCheckBox(frame_opts, text=self.T("opt_ghost"), font=FONT_MAIN,
                                          text_color=COLOR_TEXT_DIM, fg_color=COLOR_ACCENT, hover_color=COLOR_HOVER, corner_radius=6)
         self.chk_ghost.pack(side="left", padx=10)
 
-        # 2. PERFORMANCE CONTROL (RESTAURADO)
-        card_perf = self.create_card(p, "PERFORMANCE CONTROL")
-        self.create_menu(card_perf, list(MODOS_PERF.keys()), self.aplicar_perf)
+        card_perf = self.create_card(p, self.T("card_perf"))
+        self.menu_PERF = self.create_menu(card_perf, list(MODOS_PERF.keys()), self.aplicar_perf)
 
-        # 3. BATTERY MANAGER (RESTAURADO)
-        card_bat = self.create_card(p, "BATTERY MANAGER")
-        self.create_menu(card_bat, list(MODOS_BAT.keys()), self.aplicar_bat)
+        card_bat = self.create_card(p, self.T("card_bat"))
+        self.menu_BAT = self.create_menu(card_bat, list(MODOS_BAT.keys()), self.aplicar_bat)
 
-        # 4. UTILS - Card Frame
-        card_utils = self.create_card(p, "SYSTEM TOOLS")
-
+        card_utils = self.create_card(p, self.T("card_utils"))
         grid = ctk.CTkFrame(card_utils, fg_color="transparent")
         grid.pack(fill="x")
 
-        ctk.CTkButton(grid, text="Install APK", fg_color=COLOR_SURFACE, border_width=1, border_color=COLOR_BORDER,
+        ctk.CTkButton(grid, text=self.T("btn_install"), fg_color=COLOR_SURFACE, border_width=1, border_color=COLOR_BORDER,
                       text_color=COLOR_TEXT_DIM, hover_color=COLOR_HOVER, width=150, height=40, corner_radius=10,
                       command=self.install_apk).pack(side="left", padx=(0, 5), expand=True, fill="x")
 
-        ctk.CTkButton(grid, text="Factory Reset", fg_color=COLOR_SURFACE, border_width=1, border_color=COLOR_BORDER,
+        ctk.CTkButton(grid, text=self.T("btn_reset"), fg_color=COLOR_SURFACE, border_width=1, border_color=COLOR_BORDER,
                       text_color=COLOR_TEXT_DIM, hover_color=COLOR_HOVER, width=150, height=40, corner_radius=10,
                       command=self.restaurar_padrao).pack(side="left", padx=(5, 0), expand=True, fill="x")
         
-        # Log
         self.txt_log = ctk.CTkTextbox(p, height=80, fg_color=COLOR_SURFACE, text_color=COLOR_ACCENT,
                                       font=FONT_MONO, corner_radius=12, border_width=1, border_color=COLOR_BORDER)
         self.txt_log.pack(fill="x", pady=20)
@@ -381,7 +472,7 @@ class TurboCoreApp(ctk.CTk):
         f = ctk.CTkFrame(parent, fg_color="transparent")
         f.pack(fill="x")
 
-        m = ctk.CTkOptionMenu(f, values=["Select Mode..."] + values,
+        m = ctk.CTkOptionMenu(f, values=[self.T("select_default")] + values,
                               fg_color=COLOR_BG, button_color=COLOR_BORDER, button_hover_color=COLOR_HOVER,
                               text_color=COLOR_TEXT_MAIN, dropdown_fg_color=COLOR_SURFACE, dropdown_hover_color=COLOR_HOVER,
                               corner_radius=8, width=300,
@@ -391,48 +482,51 @@ class TurboCoreApp(ctk.CTk):
         ctk.CTkButton(f, text="?", width=30, fg_color="transparent", border_width=1, border_color=COLOR_BORDER,
                       text_color=COLOR_TEXT_DIM, hover_color=COLOR_HOVER, corner_radius=8,
                       command=lambda: self.show_info(m.get())).pack(side="right")
-        # Save ref logic simplified for this cleaner version
+        return m
 
     def on_menu_select(self, value, command_func, menu_widget):
-        if value != "Select Mode...":
+        if value != self.T("select_default"):
             menu_widget.set(value)
             command_func(value)
 
     def show_info(self, mode_name):
-        if mode_name == "Select Mode...": return
-        info = HELP_TEXTS.get(mode_name, "No description.")
+        if mode_name == self.T("select_default"): return
+
+        # Recuperar chave de ajuda do dicionário correspondente
+        help_key = None
+        if mode_name in MODOS_PC: help_key = MODOS_PC[mode_name]["help_key"]
+        elif mode_name in MODOS_PERF: help_key = MODOS_PERF[mode_name]["help_key"]
+        elif mode_name in MODOS_BAT: help_key = MODOS_BAT[mode_name]["help_key"]
+
+        info = self.T(help_key) if help_key else "No info."
         messagebox.showinfo(f"Info: {mode_name}", info)
 
-    # --- ABA ESPECIAL ---
     def build_special(self, p):
-        # Hero Section
-        c = self.create_card(p, "COMPETITIVE OPTIMIZATION")
+        c = self.create_card(p, self.T("sidebar_game"))
         
-        btn_ff = ctk.CTkButton(c, text="ACTIVATE FREE FIRE MODE", font=FONT_TITLE,
+        btn_ff = ctk.CTkButton(c, text=self.T("hero_ff"), font=FONT_TITLE,
                                fg_color=COLOR_ACCENT, text_color=COLOR_BG, hover_color="#00C4D9",
                                height=80, corner_radius=12,
                                command=self.ativar_free_fire)
         btn_ff.pack(fill="x", pady=10)
 
-        self.sw_keymap = ctk.CTkSwitch(c, text="Enable WASD Keymapping", command=self.toggle_keymapping,
+        self.sw_keymap = ctk.CTkSwitch(c, text=self.T("sw_keymap"), command=self.toggle_keymapping,
                                        font=FONT_BOLD, text_color=COLOR_TEXT_MAIN,
                                        progress_color=COLOR_ACCENT, button_color=COLOR_TEXT_MAIN, button_hover_color=COLOR_TEXT_MAIN)
         self.sw_keymap.pack(pady=10)
 
-        # Roadmap
-        c2 = self.create_card(p, "ROADMAP")
+        c2 = self.create_card(p, self.T("coming_soon"))
         future_games = ["COD Mobile", "PUBG New State", "Genshin Impact", "Wild Rift"]
         for game in future_games:
-            ctk.CTkLabel(c2, text=f"• {game} (Coming Soon)", font=FONT_MAIN, text_color=COLOR_TEXT_DIM).pack(anchor="w", pady=2)
+            ctk.CTkLabel(c2, text=f"• {game}", font=FONT_MAIN, text_color=COLOR_TEXT_DIM).pack(anchor="w", pady=2)
 
     def ativar_free_fire(self):
-        if not self.target_device: return messagebox.showerror("Error", "Connect device first!")
-        self.log("ACTIVATING FREE FIRE MODE...")
-        cmds = "wm size 540x1170; wm density 140; settings put global window_animation_scale 0; settings put global transition_animation_scale 0; settings put global animator_duration_scale 0; cmd power set-mode 1; am kill-all"
+        if not self.target_device: return messagebox.showerror(self.T("msg_error"), "No Device")
+        self.log(self.T("msg_ff_active"))
+        cmds = MODOS_PERF["Gamer Ultimate (Mobile)"]["cmd"] # Reusar cmd base + extras se necessário
         self.run_adb_cmd_string(cmds)
-        messagebox.showinfo("Success", "OPTIMIZATION APPLIED!")
+        messagebox.showinfo(self.T("msg_success"), self.T("msg_ff_active"))
 
-    # --- EXECUÇÃO (Mantida igual, apenas logs limpos) ---
     def run_adb_cmd_string(self, cmd_string):
         self.debug_log(f"CMD: {cmd_string}")
         def t():
@@ -487,36 +581,46 @@ class TurboCoreApp(ctk.CTk):
 
         threading.Thread(target=thread_pc, daemon=True).start()
 
-    def aplicar_perf(self, choice): self.run_adb_cmd_string(MODOS_PERF[choice])
-    def aplicar_bat(self, choice): self.run_adb_cmd_string(MODOS_BAT[choice])
+    def aplicar_perf(self, choice):
+        self.run_adb_cmd_string(MODOS_PERF[choice]["cmd"])
+
+    def aplicar_bat(self, choice):
+        self.run_adb_cmd_string(MODOS_BAT[choice]["cmd"])
 
     def restaurar_padrao(self):
         if not self.target_device: return
-        self.log("Restoring...")
+        self.log(self.T("msg_restored"))
         cmds = "wm size reset; wm density reset; settings put system user_rotation 0; settings put system accelerometer_rotation 1; settings put global low_power 0; settings put system screen_brightness 100; settings put global window_animation_scale 1; settings put global transition_animation_scale 1; settings put global animator_duration_scale 1"
         self.run_adb_cmd_string(cmds)
-        messagebox.showinfo("Success", "Restored!")
+
+        # Reset Visual dos Menus (Correção V95)
+        default_txt = self.T("select_default")
+        self.menu_PC.set(default_txt)
+        self.menu_PERF.set(default_txt)
+        self.menu_BAT.set(default_txt)
+
+        messagebox.showinfo(self.T("msg_success"), self.T("msg_restored"))
 
     def install_apk(self):
-        if not self.target_device: return messagebox.showerror("Error", "No Device")
+        if not self.target_device: return messagebox.showerror(self.T("msg_error"), "No Device")
         file_path = filedialog.askopenfilename(filetypes=[("Android Package", "*.apk")])
         if not file_path: return
-        self.log(f"Installing: {os.path.basename(file_path)}...")
+        self.log(f"Installing...")
         def run():
             si = subprocess.STARTUPINFO(); si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
             exe = os.path.join(self.bin_dir, "adb.exe")
             res = subprocess.run([exe, "-s", self.target_device, "install", "-r", file_path], capture_output=True, text=True, startupinfo=si)
             if "Success" in res.stdout:
-                self.log("Install Complete!")
-                self.after(0, lambda: messagebox.showinfo("Success", "Installed!"))
+                self.log(self.T("msg_installed"))
+                self.after(0, lambda: messagebox.showinfo(self.T("msg_success"), self.T("msg_installed")))
             else:
-                self.after(0, lambda: messagebox.showerror("Error", f"Failed:\n{res.stderr}"))
+                self.after(0, lambda: messagebox.showerror(self.T("msg_error"), f"Failed:\n{res.stderr}"))
         threading.Thread(target=run).start()
 
     def build_terminal(self, p):
         self.term_input = ctk.CTkTextbox(p, height=200, fg_color=COLOR_SURFACE, text_color=COLOR_TEXT_MAIN, font=FONT_MONO)
         self.term_input.pack(fill="x", padx=20, pady=20)
-        ctk.CTkButton(p, text="EXECUTE", fg_color=COLOR_ACCENT, text_color=COLOR_BG, hover_color="#00C4D9",
+        ctk.CTkButton(p, text=self.T("btn_exec"), fg_color=COLOR_ACCENT, text_color=COLOR_BG, hover_color="#00C4D9",
                       command=self.run_manual).pack(padx=20)
 
     # --- HELPERS ---
@@ -533,7 +637,7 @@ class TurboCoreApp(ctk.CTk):
             self.btn_device_status.configure(text=f"📱 {self.device_model}", fg_color=COLOR_SURFACE, border_color=COLOR_SUCCESS)
             self.btn_refresh.configure(text_color=COLOR_SUCCESS)
         else:
-            self.btn_device_status.configure(text="❌ DISCONNECTED", fg_color=COLOR_SURFACE, border_color=COLOR_ERROR)
+            self.btn_device_status.configure(text=self.T("status_disconnected"), fg_color=COLOR_SURFACE, border_color=COLOR_ERROR)
             self.btn_refresh.configure(text_color=COLOR_ERROR)
             self.lbl_stats.configure(text="")
 
@@ -543,7 +647,7 @@ class TurboCoreApp(ctk.CTk):
         self.lbl_stats.configure(text=f"BAT: {level}% | TEMP: {temp}°C", text_color=color)
 
     def force_refresh(self):
-        self.btn_device_status.configure(text="Scanning...", border_color=COLOR_ACCENT)
+        self.btn_device_status.configure(text=self.T("status_searching"), border_color=COLOR_ACCENT)
         threading.Thread(target=self.run_adb_generic, args=("kill-server",)).start()
         threading.Thread(target=self.run_adb_generic, args=("start-server",)).start()
 
