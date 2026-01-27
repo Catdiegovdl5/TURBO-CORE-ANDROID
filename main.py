@@ -45,7 +45,7 @@ FONT_MONO = ("Consolas", 11)
 # --- TRADUÇÕES ---
 TRANSLATIONS = {
     "PT": {
-        "app_title": "TURBO CORE V106 - STABILITY POLISH",
+        "app_title": "TURBO CORE V107.1 - FEATURE COMPLETE",
         "sidebar_dash": "🖥️ DASHBOARD",
         "sidebar_game": "🎮 COMPETITIVO",
         "sidebar_apps": "📦 APPS",
@@ -63,6 +63,7 @@ TRANSLATIONS = {
         "opt_ghost": "Modo Fantasma (Tela Off)",
         "btn_install": "Instalar APK 📥",
         "btn_send": "Enviar Arquivo 📤",
+        "btn_print": "Tirar Print 📸",
         "btn_reset": "Restaurar Original 🔄",
         "btn_kill": "⚡ LIMPAR RAM",
         "select_default": "Selecionar...",
@@ -114,7 +115,7 @@ TRANSLATIONS = {
         "help_bat_ult": "ULTIMATE ECONOMIA (DEEP)\n\n• Ação: Brilho Zero, Mata Apps, Limita CPU.\n• Risco: USABILIDADE.\n\n⚠️ O celular vira um 'tijolo' para sobreviver. A tela ficará quase apagada. Só use em emergências."
     },
     "EN": {
-        "app_title": "TURBO CORE V106 - STABILITY POLISH",
+        "app_title": "TURBO CORE V107.1 - FEATURE COMPLETE",
         "sidebar_dash": "🖥️ DASHBOARD",
         "sidebar_game": "🎮 COMPETITIVE",
         "sidebar_apps": "📦 APPS",
@@ -132,6 +133,7 @@ TRANSLATIONS = {
         "opt_ghost": "Ghost Mode (Screen Off)",
         "btn_install": "Install APK 📥",
         "btn_send": "Send File 📤",
+        "btn_print": "Screenshot 📸",
         "btn_reset": "Factory Reset 🔄",
         "btn_kill": "⚡ KILL ALL",
         "select_default": "Select...",
@@ -183,7 +185,7 @@ TRANSLATIONS = {
         "help_bat_ult": "ULTIMATE SAVER\n\n• Action: Zero Brightness, Kill Apps.\n• Risk: USABILITY.\n\n⚠️ Phone becomes barely usable to survive."
     },
     "ES": {
-        "app_title": "TURBO CORE V106 - STABILITY POLISH",
+        "app_title": "TURBO CORE V107.1 - FEATURE COMPLETE",
         "sidebar_dash": "🖥️ PANEL",
         "sidebar_game": "🎮 COMPETITIVO",
         "sidebar_apps": "📦 APPS",
@@ -201,6 +203,7 @@ TRANSLATIONS = {
         "opt_ghost": "Modo Fantasma (Pantalla Off)",
         "btn_install": "Instalar APK 📥",
         "btn_send": "Enviar Archivo 📤",
+        "btn_print": "Captura 📸",
         "btn_reset": "Restaurar Original 🔄",
         "btn_kill": "⚡ LIMPIAR RAM",
         "select_default": "Seleccionar...",
@@ -249,7 +252,7 @@ TRANSLATIONS = {
         "help_perf_std": "USUAL TURBO\n\n• Acción: Animaciones rápidas (0.5x).\n• Riesgo: NINGUNO.",
         "help_bat_eco": "AHORRO NORMAL\n\n• Acción: Low Power Mode nativo.\n• Riesgo: NINGUNO.",
         "help_bat_sup": "SUPER AHORRO\n\n• Acción: Sin Bluetooth/Sync.\n• Riesgo: BAJO.",
-        "help_bat_ult": "ULTIMATE AHORRO\n\n• Acción: Brillo Cero, Mata Apps.\n• Riesgo: USABILIDAD.\n\n⚠️ Casi inutilizable para sobrevivir."
+        "help_bat_ult": "ULTIMATE AHORRO\n\n• Acción: Brillo Cero, Mata Apps.\n• Riesgo: USABILITY.\n\n⚠️ Casi inutilizable para sobrevivir."
     }
 }
 
@@ -282,7 +285,7 @@ class TurboCoreApp(ctk.CTk):
         self.stop_logcat_flag = False
         self.last_ip = "" # V104 Smart Reconnect
 
-        self.debug_log(f"--- INICIANDO TURBO CORE V106 STABILITY POLISH [{self.current_lang}] ---")
+        self.debug_log(f"--- INICIANDO TURBO CORE V107.1 FEATURE COMPLETE [{self.current_lang}] ---")
         self.title(self.T("app_title"))
         self.geometry("900x750")
         self.resizable(False, True)
@@ -381,7 +384,7 @@ class TurboCoreApp(ctk.CTk):
         self.sidebar.pack_propagate(False)
 
         ctk.CTkLabel(self.sidebar, text="TURBO\nCORE", font=("Montserrat", 24, "bold"), text_color=self.accent_color).pack(pady=(40, 5))
-        ctk.CTkLabel(self.sidebar, text="V106 POLISH", font=("Roboto", 10), text_color=COLOR_TEXT_DIM).pack(pady=(0, 20))
+        ctk.CTkLabel(self.sidebar, text="V107.1 FINAL", font=("Roboto", 10), text_color=COLOR_TEXT_DIM).pack(pady=(0, 20))
 
         self.btn_dash = self.create_sidebar_btn(self.T("sidebar_dash"), "dash")
         self.btn_special = self.create_sidebar_btn(self.T("sidebar_game"), "special")
@@ -547,13 +550,10 @@ class TurboCoreApp(ctk.CTk):
 
                 if found:
                     self.log(f"Found: {', '.join(found)}")
-                    # Assuming ip_conn_entry exists in the toplevel scope? No, it's local.
-                    # We can't easily update the toplevel entry from here without refactoring.
-                    # Fallback: Just log it. User can copy.
-                    messagebox.showinfo("Scan Result", f"Devices Found:\n{', '.join(found)}\n\n(Copy IP to Connect field)")
+                    self.after(0, lambda: messagebox.showinfo("Scan Result", f"Devices Found:\n{', '.join(found)}\n\n(Copy IP to Connect field)"))
                 else:
                     self.log("No devices found.")
-                    messagebox.showinfo("Scan Result", "No devices found on port 5555.")
+                    self.after(0, lambda: messagebox.showinfo("Scan Result", "No devices found on port 5555."))
             except Exception as e:
                 self.debug_log(f"Scan Error: {e}")
 
@@ -612,10 +612,14 @@ class TurboCoreApp(ctk.CTk):
                       text_color=COLOR_TEXT_DIM, hover_color=COLOR_HOVER, width=120, height=40, corner_radius=10,
                       command=self.send_file).pack(side="left", padx=5, expand=True, fill="x")
 
+        ctk.CTkButton(grid, text=self.T("btn_print"), fg_color=COLOR_SURFACE, border_width=1, border_color=COLOR_BORDER,
+                      text_color=COLOR_TEXT_DIM, hover_color=COLOR_HOVER, width=120, height=40, corner_radius=10,
+                      command=self.take_screenshot).pack(side="left", padx=5, expand=True, fill="x")
+
         ctk.CTkButton(grid, text=self.T("btn_reset"), fg_color=COLOR_SURFACE, border_width=1, border_color=COLOR_BORDER,
                       text_color=COLOR_TEXT_DIM, hover_color=COLOR_HOVER, width=120, height=40, corner_radius=10,
                       command=self.restaurar_padrao).pack(side="left", padx=(5, 0), expand=True, fill="x")
-        
+
         self.txt_log = ctk.CTkTextbox(p, height=80, fg_color=COLOR_SURFACE, text_color=self.accent_color,
                                       font=FONT_MONO, corner_radius=12, border_width=1, border_color=COLOR_BORDER)
         self.txt_log.pack(fill="x", pady=20)
@@ -950,6 +954,26 @@ class TurboCoreApp(ctk.CTk):
                 self.after(0, lambda: messagebox.showerror(self.T("msg_error"), f"Failed:\n{res.stderr}"))
         threading.Thread(target=run).start()
 
+    def take_screenshot(self):
+        if not self.target_device: return messagebox.showerror(self.T("msg_error"), "No Device")
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        filename = f"SCREEN_{timestamp}.png"
+        filepath = os.path.join(self.caps_dir, filename)
+
+        def run():
+            si = subprocess.STARTUPINFO(); si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+            exe = os.path.join(self.bin_dir, "adb.exe")
+            try:
+                with open(filepath, "wb") as f:
+                    subprocess.run([exe, "-s", self.target_device, "exec-out", "screencap", "-p"], stdout=f, startupinfo=si)
+
+                self.log(f"Screenshot: {filename}")
+                self.after(0, lambda: messagebox.showinfo(self.T("msg_success"), f"Saved: {filename}"))
+            except Exception as e:
+                self.after(0, lambda: messagebox.showerror(self.T("msg_error"), f"Error: {e}"))
+
+        threading.Thread(target=run).start()
+
     def build_terminal(self, p):
         self.tab_term = ctk.CTkTabview(p, fg_color="transparent")
         self.tab_term.pack(fill="both", expand=True)
@@ -998,9 +1022,7 @@ class TurboCoreApp(ctk.CTk):
     def _safe_logcat_insert(self, line):
         self.txt_logcat.insert("end", line)
         self.txt_logcat.see("end")
-        # V106 Optimized Buffer
-        lines = int(self.txt_logcat.index('end-1c').split('.')[0])
-        if lines > 600:
+        if int(self.txt_logcat.index('end-1c').split('.')[0]) > 600:
             self.txt_logcat.delete("1.0", "100.0")
 
     # --- HELPERS ---
@@ -1053,6 +1075,12 @@ class TurboCoreApp(ctk.CTk):
                             if self.target_device:
                                 self.target_device = ""
                                 self.after(0, lambda: self.update_status_ui(False))
+
+                                # V107 AUTO-RECONNECT
+                                if self.last_ip:
+                                    self.debug_log(f"Auto-reconnecting to {self.last_ip}...")
+                                    subprocess.run([adb, "connect", self.last_ip], startupinfo=si)
+
                 except: pass
                 time.sleep(3)
         threading.Thread(target=loop, daemon=True).start()
@@ -1123,9 +1151,6 @@ class TurboCoreApp(ctk.CTk):
         self.txt_log.insert("end", f"[{ts}] {msg}\n")
         self.txt_log.see("end")
         self.txt_log.configure(state="disabled")
-
-    def validate_installation(self):
-        if not os.path.exists(self.bin_dir): messagebox.showwarning("ATENÇÃO", "Pasta 'bin' não encontrada!")
 
 if __name__ == "__main__":
     app = TurboCoreApp()
