@@ -45,7 +45,7 @@ FONT_MONO = ("Consolas", 11)
 # --- TRADUÇÕES ---
 TRANSLATIONS = {
     "PT": {
-        "app_title": "TURBO CORE V104 - SMART RECONNECT",
+        "app_title": "TURBO CORE V105.1 - HOTFIX",
         "sidebar_dash": "🖥️ DASHBOARD",
         "sidebar_game": "🎮 COMPETITIVO",
         "sidebar_apps": "📦 APPS",
@@ -114,7 +114,7 @@ TRANSLATIONS = {
         "help_bat_ult": "ULTIMATE ECONOMIA (DEEP)\n\n• Ação: Brilho Zero, Mata Apps, Limita CPU.\n• Risco: USABILIDADE.\n\n⚠️ O celular vira um 'tijolo' para sobreviver. A tela ficará quase apagada. Só use em emergências."
     },
     "EN": {
-        "app_title": "TURBO CORE V104 - SMART RECONNECT",
+        "app_title": "TURBO CORE V105.1 - HOTFIX",
         "sidebar_dash": "🖥️ DASHBOARD",
         "sidebar_game": "🎮 COMPETITIVE",
         "sidebar_apps": "📦 APPS",
@@ -183,7 +183,7 @@ TRANSLATIONS = {
         "help_bat_ult": "ULTIMATE SAVER\n\n• Action: Zero Brightness, Kill Apps.\n• Risk: USABILITY.\n\n⚠️ Phone becomes barely usable to survive."
     },
     "ES": {
-        "app_title": "TURBO CORE V104 - SMART RECONNECT",
+        "app_title": "TURBO CORE V105.1 - HOTFIX",
         "sidebar_dash": "🖥️ PANEL",
         "sidebar_game": "🎮 COMPETITIVO",
         "sidebar_apps": "📦 APPS",
@@ -282,7 +282,7 @@ class TurboCoreApp(ctk.CTk):
         self.stop_logcat_flag = False
         self.last_ip = "" # V104 Smart Reconnect
 
-        self.debug_log(f"--- INICIANDO TURBO CORE V104 SMART RECONNECT [{self.current_lang}] ---")
+        self.debug_log(f"--- INICIANDO TURBO CORE V105.1 HOTFIX [{self.current_lang}] ---")
         self.title(self.T("app_title"))
         self.geometry("900x750")
         self.resizable(False, True)
@@ -381,7 +381,7 @@ class TurboCoreApp(ctk.CTk):
         self.sidebar.pack_propagate(False)
 
         ctk.CTkLabel(self.sidebar, text="TURBO\nCORE", font=("Montserrat", 24, "bold"), text_color=self.accent_color).pack(pady=(40, 5))
-        ctk.CTkLabel(self.sidebar, text="V104 SMART", font=("Roboto", 10), text_color=COLOR_TEXT_DIM).pack(pady=(0, 20))
+        ctk.CTkLabel(self.sidebar, text="V105.1 HOTFIX", font=("Roboto", 10), text_color=COLOR_TEXT_DIM).pack(pady=(0, 20))
 
         self.btn_dash = self.create_sidebar_btn(self.T("sidebar_dash"), "dash")
         self.btn_special = self.create_sidebar_btn(self.T("sidebar_game"), "special")
@@ -868,6 +868,7 @@ class TurboCoreApp(ctk.CTk):
             return
         self.run_adb_cmd_string(MODOS_BAT[choice]["cmd"])
 
+    # V105.1 HOTFIX: RESTORED METHOD
     def restaurar_padrao(self):
         if not self.target_device: return
         self.log(self.T("msg_restored"))
@@ -877,6 +878,17 @@ class TurboCoreApp(ctk.CTk):
         self.menu_PC.set(default_txt)
         self.menu_PERF.set(default_txt)
         self.menu_BAT.set(default_txt)
+        # Messagebox handled by run_adb_cmd_string, but let's keep it consistent with the hotfix request
+        # Since run_adb_cmd_string is threaded, this box might appear before completion if not careful,
+        # but run_adb_cmd_string handles its own success msg.
+        # User requested specific code, so sticking to it, but aware of double popup possibility.
+        # Actually, run_adb_cmd_string logic shows popup. The user snippet shows popup too.
+        # I will rely on run_adb_cmd_string for the logic popup to avoid confusion,
+        # OR just insert the method as requested.
+        # The user snippet calls run_adb_cmd_string and then immediately shows popup.
+        # Since run_adb_cmd_string is threaded, the immediate popup is technically "Command Sent", not "Finished".
+        # I will strictly follow the user snippet for compliance.
+        messagebox.showinfo(self.T("msg_success"), self.T("msg_restored"))
 
     def install_apk(self):
         if not self.target_device: return messagebox.showerror(self.T("msg_error"), "No Device")
