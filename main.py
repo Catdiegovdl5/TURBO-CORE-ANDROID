@@ -45,7 +45,7 @@ FONT_MONO = ("Consolas", 11)
 # --- TRADUÇÕES ---
 TRANSLATIONS = {
     "PT": {
-        "app_title": "TURBO CORE V103 - SEQUENTIAL STABILITY",
+        "app_title": "TURBO CORE V104 - SMART RECONNECT",
         "sidebar_dash": "🖥️ DASHBOARD",
         "sidebar_game": "🎮 COMPETITIVO",
         "sidebar_apps": "📦 APPS",
@@ -114,7 +114,7 @@ TRANSLATIONS = {
         "help_bat_ult": "ULTIMATE ECONOMIA (DEEP)\n\n• Ação: Brilho Zero, Mata Apps, Limita CPU.\n• Risco: USABILIDADE.\n\n⚠️ O celular vira um 'tijolo' para sobreviver. A tela ficará quase apagada. Só use em emergências."
     },
     "EN": {
-        "app_title": "TURBO CORE V103 - SEQUENTIAL STABILITY",
+        "app_title": "TURBO CORE V104 - SMART RECONNECT",
         "sidebar_dash": "🖥️ DASHBOARD",
         "sidebar_game": "🎮 COMPETITIVE",
         "sidebar_apps": "📦 APPS",
@@ -183,7 +183,7 @@ TRANSLATIONS = {
         "help_bat_ult": "ULTIMATE SAVER\n\n• Action: Zero Brightness, Kill Apps.\n• Risk: USABILITY.\n\n⚠️ Phone becomes barely usable to survive."
     },
     "ES": {
-        "app_title": "TURBO CORE V103 - SEQUENTIAL STABILITY",
+        "app_title": "TURBO CORE V104 - SMART RECONNECT",
         "sidebar_dash": "🖥️ PANEL",
         "sidebar_game": "🎮 COMPETITIVO",
         "sidebar_apps": "📦 APPS",
@@ -280,8 +280,9 @@ class TurboCoreApp(ctk.CTk):
         self.all_apps_cache = []
         self.logcat_process = None
         self.stop_logcat_flag = False
+        self.last_ip = "" # V104 Smart Reconnect
 
-        self.debug_log(f"--- INICIANDO TURBO CORE V103 SEQUENTIAL [{self.current_lang}] ---")
+        self.debug_log(f"--- INICIANDO TURBO CORE V104 SMART RECONNECT [{self.current_lang}] ---")
         self.title(self.T("app_title"))
         self.geometry("900x750")
         self.resizable(False, True)
@@ -380,7 +381,7 @@ class TurboCoreApp(ctk.CTk):
         self.sidebar.pack_propagate(False)
 
         ctk.CTkLabel(self.sidebar, text="TURBO\nCORE", font=("Montserrat", 24, "bold"), text_color=self.accent_color).pack(pady=(40, 5))
-        ctk.CTkLabel(self.sidebar, text="V103 STABLE", font=("Roboto", 10), text_color=COLOR_TEXT_DIM).pack(pady=(0, 20))
+        ctk.CTkLabel(self.sidebar, text="V104 SMART", font=("Roboto", 10), text_color=COLOR_TEXT_DIM).pack(pady=(0, 20))
 
         self.btn_dash = self.create_sidebar_btn(self.T("sidebar_dash"), "dash")
         self.btn_special = self.create_sidebar_btn(self.T("sidebar_game"), "special")
@@ -728,6 +729,7 @@ class TurboCoreApp(ctk.CTk):
                     if not self._ping_device():
                         self.log("Device offline. Healing...")
                         self.heal_adb_connection()
+                        # V104: Break immediately if healing fails or let the outer loop retry
                         success = False
                         break
 
@@ -737,8 +739,8 @@ class TurboCoreApp(ctk.CTk):
                         self.log(f"CMD Fail: {c.strip()}")
                         break
 
-                    # V103 Smart Delays
-                    if "wm size" in c: time.sleep(2.5)
+                    # V103/V104 Tolerant Delays
+                    if "wm size" in c: time.sleep(4.0)
                     elif "wm density" in c: time.sleep(1.5)
                     else: time.sleep(0.5)
 
@@ -772,21 +774,17 @@ class TurboCoreApp(ctk.CTk):
             si = subprocess.STARTUPINFO(); si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
             self.log(f"Starting {choice}...")
 
-            # V103 Sequential Init
             try:
-                # 1. Size
                 if not self._ping_device(): self.heal_adb_connection()
                 subprocess.run([exe_adb, "-s", self.target_device, "shell", "wm size reset"], startupinfo=si)
                 subprocess.run([exe_adb, "-s", self.target_device, "shell", f"wm size {cfg['size']}"], startupinfo=si)
-                time.sleep(2.0)
+                time.sleep(4.0) # V104 Tolerance
 
-                # 2. Density
                 if not self._ping_device(): self.heal_adb_connection()
                 subprocess.run([exe_adb, "-s", self.target_device, "shell", "wm density reset"], startupinfo=si)
                 subprocess.run([exe_adb, "-s", self.target_device, "shell", f"wm density {cfg['density']}"], startupinfo=si)
                 time.sleep(1.0)
 
-                # 3. Rotation
                 subprocess.run([exe_adb, "-s", self.target_device, "shell", "settings put system user_rotation 1"], startupinfo=si)
                 subprocess.run([exe_adb, "-s", self.target_device, "shell", "settings put system accelerometer_rotation 0"], startupinfo=si)
                 time.sleep(1.0)
@@ -804,22 +802,22 @@ class TurboCoreApp(ctk.CTk):
             if not opt_audio: scrcpy_args += ["--no-audio"]
             if opt_ghost: scrcpy_args += ["--turn-screen-off"]
 
-            # V103 Retry with Ping
             for attempt in range(2):
                 if not self._ping_device(): self.heal_adb_connection()
                 try:
                     proc = subprocess.run([exe_scrcpy, "-s", self.target_device] + scrcpy_args, cwd=self.bin_dir, startupinfo=si, capture_output=True, text=True)
                     if proc.returncode == 0: break
 
+                    err = proc.stderr
                     if attempt == 0:
                         self.log("Scrcpy Error. Self-healing...")
                         self.heal_adb_connection()
                     else:
-                        self.after(0, lambda: messagebox.showerror("SCRCPY ERROR", f"Scrcpy Failed:\n{proc.stderr}"))
+                        self.after(0, lambda: messagebox.showerror("SCRCPY ERROR", f"Scrcpy Failed:\n{err}"))
+                        break # V104 No infinite loop
                 except Exception as e:
                     if attempt == 0: self.heal_adb_connection()
 
-            # Reset
             try:
                 cmds_reset = ["wm size reset", "wm density reset", "settings put system user_rotation 0", "settings put system accelerometer_rotation 1"]
                 for c in cmds_reset:
@@ -838,15 +836,25 @@ class TurboCoreApp(ctk.CTk):
         except: return False
 
     def heal_adb_connection(self):
-        self.debug_log("HEALING ADB CONNECTION...")
+        # V104 Smart Reconnect
+        self.debug_log("HEALING ADB CONNECTION (SMART)...")
         si = subprocess.STARTUPINFO(); si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
         exe = os.path.join(self.bin_dir, "adb.exe")
+
+        # Always disconnect first
         subprocess.run([exe, "disconnect"], startupinfo=si)
-        subprocess.run([exe, "kill-server"], startupinfo=si)
         time.sleep(1)
-        subprocess.run([exe, "start-server"], startupinfo=si)
-        time.sleep(2)
-        self.debug_log("ADB Healed.")
+
+        # If we have a known Wi-Fi IP, reconnect to it. NO KILL-SERVER.
+        if self.last_ip:
+            self.debug_log(f"Reconnecting to {self.last_ip}...")
+            subprocess.run([exe, "connect", self.last_ip], startupinfo=si)
+            time.sleep(3)
+        else:
+            self.debug_log("USB Mode: Waiting for auto-reconnect...")
+            time.sleep(2)
+
+        self.debug_log("Healing Complete.")
 
     def aplicar_perf(self, choice):
         if not self.target_device:
@@ -978,7 +986,7 @@ class TurboCoreApp(ctk.CTk):
 
     def force_refresh(self):
         self.btn_device_status.configure(text=self.T("status_searching"), border_color=self.accent_color)
-        threading.Thread(target=self.heal_adb_connection).start() # V102 Update
+        threading.Thread(target=self.heal_adb_connection).start()
 
     def start_monitor(self):
         def loop():
@@ -991,6 +999,10 @@ class TurboCoreApp(ctk.CTk):
                         lines = [l for l in res.stdout.split('\n') if 'device' in l and 'List' not in l]
                         if lines:
                             new_id = lines[0].split()[0]
+                            # V104 Smart Reconnect Memory
+                            if ":" in new_id and "." in new_id:
+                                self.last_ip = new_id
+
                             if self.target_device != new_id:
                                 self.target_device = new_id
                                 self.device_model = self.get_device_name()
