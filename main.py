@@ -63,7 +63,8 @@ MODOS_BAT = {
 class TurboCoreApp(ctk.CTk):
     def __init__(self):
         super().__init__()
-        self.title("TURBO CORE V66 - MASTER POLISH")
+        self.debug_log("--- INICIANDO TURBO CORE V71 DEBUG ---")
+        self.title("TURBO CORE V71 - MODO DEBUG")
         self.geometry("540x980")
         self.resizable(False, False)
         self.configure(fg_color=COR_FUNDO)
@@ -76,20 +77,47 @@ class TurboCoreApp(ctk.CTk):
             self.app_dir = os.path.dirname(os.path.abspath(__file__))
         self.bin_dir = os.path.join(self.app_dir, "bin")
         self.caps_dir = os.path.join(self.app_dir, "Capturas")
+
+        self.check_binaries()
+
         if not os.path.exists(self.caps_dir):
             os.makedirs(self.caps_dir)
 
         try:
             img_path = os.path.join(self.app_dir, "fundo_chip.jpg")
             self.img_bg = ctk.CTkImage(Image.open(img_path), size=(540, 980))
-        except: self.img_bg = None
+        except Exception as e:
+            self.debug_log(f"Erro ao carregar imagem de fundo: {e}")
+            self.img_bg = None
 
         self.setup_ui()
         self.start_monitor()
         self.setup_hotkeys()
         self.keymapping_active = False
 
+    def check_binaries(self):
+        self.debug_log("Verificando binários...")
+        if not os.path.exists(self.bin_dir):
+            self.debug_log("CRITICO: Pasta bin não encontrada!")
+            messagebox.showwarning("ERRO CRITICO", "Pasta 'bin' não encontrada!")
+            return
+
+        adb_path = os.path.join(self.bin_dir, "adb.exe")
+        scrcpy_path = os.path.join(self.bin_dir, "scrcpy.exe")
+
+        missing = []
+        if not os.path.exists(adb_path): missing.append("adb.exe")
+        if not os.path.exists(scrcpy_path): missing.append("scrcpy.exe")
+
+        if missing:
+            msg = f"Arquivos faltando na pasta bin:\n{', '.join(missing)}"
+            self.debug_log(f"CRITICO: {msg}")
+            messagebox.showwarning("ARQUIVOS FALTANDO", msg)
+        else:
+            self.debug_log("Binários verificados com sucesso.")
+
     def setup_hotkeys(self):
+        self.debug_log("Configurando Hotkeys...")
         if keyboard:
             try:
                 # Hotkeys Globais
@@ -98,8 +126,11 @@ class TurboCoreApp(ctk.CTk):
 
                 # Keymapping (Espaço) - Inicialmente inativo
                 self.hook_space = keyboard.on_press_key("space", self.key_handler, suppress=False)
+                self.debug_log("Hotkeys configuradas.")
             except Exception as e:
-                print(f"Erro ao configurar hotkeys: {e}")
+                self.debug_log(f"ERRO ao configurar hotkeys: {e}")
+        else:
+            self.debug_log("Biblioteca 'keyboard' não encontrada. Hotkeys desativadas.")
 
     def key_handler(self, event):
         if self.keymapping_active and self.target_device:
@@ -113,6 +144,7 @@ class TurboCoreApp(ctk.CTk):
         self.log(f"Keymapping (Espaço -> Pulo): {state}")
 
     def setup_ui(self):
+        self.debug_log("Iniciando construção da UI...")
         self.header = ctk.CTkFrame(self, height=60, corner_radius=0, fg_color="#080808")
         self.header.pack(fill="x", side="top")
 
@@ -156,6 +188,7 @@ class TurboCoreApp(ctk.CTk):
         
         self.lbl_system_status = ctk.CTkLabel(self, text="SISTEMA PRONTO", font=("Consolas", 11), text_color="#555", fg_color="black")
         self.lbl_system_status.pack(fill="x", side="bottom", ipady=2)
+        self.debug_log("UI construída.")
 
     def create_nav_btn(self, text, mode):
         btn = ctk.CTkButton(self.frame_nav, text=text, fg_color="transparent", width=80, font=("Arial", 11, "bold"), 
@@ -164,6 +197,7 @@ class TurboCoreApp(ctk.CTk):
         return btn
 
     def switch_tab(self, mode):
+        self.debug_log(f"Trocando aba para: {mode}")
         if self.current_frame: self.current_frame.place_forget()
         self.current_frame = self.frames[mode]
         self.current_frame.place(x=0, y=0, relwidth=1, relheight=1)
@@ -224,6 +258,7 @@ class TurboCoreApp(ctk.CTk):
 
     def on_menu_select(self, value, command_func, menu_widget):
         if value != "Selecionar...":
+            self.debug_log(f"Menu selecionado: {value}")
             menu_widget.set(value) # Atualiza o texto do botão para o modo escolhido
             command_func(value)    # Executa a função
 
@@ -276,6 +311,7 @@ class TurboCoreApp(ctk.CTk):
         parent.grid_columnconfigure(col, weight=1)
 
     def ativar_free_fire(self):
+        self.debug_log("Ativando modo Free Fire...")
         if not self.target_device: return messagebox.showerror("ERRO", "Conecte o celular!")
         self.log("ATIVANDO MODO FREE FIRE...")
         cmds = "wm size 540x1170; wm density 140; settings put global window_animation_scale 0; settings put global transition_animation_scale 0; settings put global animator_duration_scale 0; cmd power set-mode 1; am kill-all"
@@ -284,12 +320,14 @@ class TurboCoreApp(ctk.CTk):
 
     # --- EXECUÇÃO ---
     def run_adb_cmd_string(self, cmd_string):
+        self.debug_log(f"Executando comando ADB: {cmd_string}")
         def t():
             exe = os.path.join(self.bin_dir, "adb.exe")
             si = subprocess.STARTUPINFO(); si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
             for c in cmd_string.split(";"):
                 if c.strip(): subprocess.run([exe, "-s", self.target_device, "shell", c.strip()], startupinfo=si)
             self.log("Comandos aplicados.")
+            self.debug_log("Comandos finalizados.")
         threading.Thread(target=t).start()
 
     def iniciar_pc(self, choice):
@@ -302,6 +340,7 @@ class TurboCoreApp(ctk.CTk):
         def thread_pc():
             si = subprocess.STARTUPINFO(); si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
             self.log(f"Ativando {choice}...")
+            self.debug_log(f"Iniciando thread PC Mode: {choice}")
             
             cmds = [
                 "wm size reset", "wm density reset",
@@ -319,16 +358,27 @@ class TurboCoreApp(ctk.CTk):
                 filepath = os.path.join(self.caps_dir, filename)
                 scrcpy_args += ["--record", filepath, "--record-format=mp4"]
                 self.log(f"Gravando: {filename}")
+                self.debug_log(f"Configurando gravação: {filepath}")
 
-            subprocess.run([exe_scrcpy, "-s", self.target_device] + scrcpy_args, cwd=self.bin_dir, startupinfo=si)
+            self.debug_log(f"Executando Scrcpy com args: {scrcpy_args}")
+            try:
+                subprocess.run([exe_scrcpy, "-s", self.target_device] + scrcpy_args, cwd=self.bin_dir, startupinfo=si)
+            except Exception as e:
+                self.debug_log(f"ERRO CRITICO AO EXECUTAR SCRCPY: {e}")
             
             cmds_reset = ["wm size reset", "wm density reset", "settings put system user_rotation 0", "settings put system accelerometer_rotation 1"]
             for c in cmds_reset: subprocess.run([exe_adb, "-s", self.target_device, "shell", c], startupinfo=si)
+            self.debug_log("Modo PC encerrado.")
 
         threading.Thread(target=thread_pc, daemon=True).start()
 
-    def aplicar_perf(self, choice): self.run_adb_cmd_string(MODOS_PERF[choice])
-    def aplicar_bat(self, choice): self.run_adb_cmd_string(MODOS_BAT[choice])
+    def aplicar_perf(self, choice):
+        self.debug_log(f"Aplicando Perf: {choice}")
+        self.run_adb_cmd_string(MODOS_PERF[choice])
+
+    def aplicar_bat(self, choice):
+        self.debug_log(f"Aplicando Bateria: {choice}")
+        self.run_adb_cmd_string(MODOS_BAT[choice])
 
     def restaurar_padrao(self):
         if not self.target_device: return
@@ -378,11 +428,13 @@ class TurboCoreApp(ctk.CTk):
             self.btn_refresh.configure(fg_color="#222")
 
     def force_refresh(self):
+        self.debug_log("Forçando refresh ADB...")
         self.lbl_device_name.configure(text="Buscando...", text_color="orange")
         threading.Thread(target=self.run_adb_generic, args=("kill-server",)).start()
         threading.Thread(target=self.run_adb_generic, args=("start-server",)).start()
 
     def start_monitor(self):
+        self.debug_log("Iniciando monitor de dispositivos...")
         def loop():
             adb = os.path.join(self.bin_dir, "adb.exe")
             si = subprocess.STARTUPINFO(); si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
@@ -397,13 +449,17 @@ class TurboCoreApp(ctk.CTk):
                                 self.target_device = new_id
                                 self.device_model = self.get_device_name()
                                 self.log(f"Conectado: {self.device_model} ({new_id})")
+                                self.debug_log(f"Dispositivo detectado: {new_id}")
                                 self.after(0, lambda: self.update_status_ui(True))
                         else:
                             if self.target_device:
                                 self.target_device = ""
                                 self.log("Desconectado.")
+                                self.debug_log("Dispositivo desconectado.")
                                 self.after(0, lambda: self.update_status_ui(False))
-                except: pass
+                except Exception as e:
+                    print(f"Erro no monitor: {e}") # Usar print direto para evitar loop infinito de logs
+                    pass
                 time.sleep(3)
         threading.Thread(target=loop, daemon=True).start()
 
@@ -418,34 +474,42 @@ class TurboCoreApp(ctk.CTk):
 
     def wifi_connect(self):
         addr = self.ent_ip.get()
+        self.debug_log(f"Tentando conectar Wi-Fi: {addr}")
         if addr: threading.Thread(target=lambda: self.run_adb_generic(f"connect {addr}")).start()
 
     def wifi_pair(self):
         addr = self.ent_pair_ip.get(); code = self.ent_pair_code.get()
+        self.debug_log(f"Tentando parear: {addr} code={code}")
         if addr and code: threading.Thread(target=lambda: self.run_adb_generic(f"pair {addr} {code}")).start()
 
     def scan_network(self):
         self.log("Escaneando rede por dispositivos (Porta 5555)...")
+        self.debug_log("Iniciando scan de rede...")
 
         def run_scan():
-            local_ip = socket.gethostbyname(socket.gethostname())
-            subnet = '.'.join(local_ip.split('.')[:-1]) + '.'
-            found = []
+            try:
+                local_ip = socket.gethostbyname(socket.gethostname())
+                subnet = '.'.join(local_ip.split('.')[:-1]) + '.'
+                self.debug_log(f"Subnet detectada: {subnet}0/24")
+                found = []
 
-            with concurrent.futures.ThreadPoolExecutor(max_workers=50) as executor:
-                futures = {executor.submit(self._check_ip, f"{subnet}{i}"): f"{subnet}{i}" for i in range(1, 255)}
-                for future in concurrent.futures.as_completed(futures):
-                    ip = futures[future]
-                    if future.result():
-                        found.append(ip)
+                with concurrent.futures.ThreadPoolExecutor(max_workers=50) as executor:
+                    futures = {executor.submit(self._check_ip, f"{subnet}{i}"): f"{subnet}{i}" for i in range(1, 255)}
+                    for future in concurrent.futures.as_completed(futures):
+                        ip = futures[future]
+                        if future.result():
+                            found.append(ip)
+                            self.debug_log(f"SCAN: Encontrado {ip}")
 
-            if found:
-                self.log(f"Encontrados: {', '.join(found)}")
-                # Preenche o primeiro encontrado
-                self.after(0, lambda: self.ent_ip.delete(0, 'end'))
-                self.after(0, lambda: self.ent_ip.insert(0, f"{found[0]}:5555"))
-            else:
-                self.log("Nenhum dispositivo com porta 5555 aberta encontrado.")
+                if found:
+                    self.log(f"Encontrados: {', '.join(found)}")
+                    # Preenche o primeiro encontrado
+                    self.after(0, lambda: self.ent_ip.delete(0, 'end'))
+                    self.after(0, lambda: self.ent_ip.insert(0, f"{found[0]}:5555"))
+                else:
+                    self.log("Nenhum dispositivo com porta 5555 aberta encontrado.")
+            except Exception as e:
+                self.debug_log(f"ERRO NO SCANNER: {e}")
 
         threading.Thread(target=run_scan).start()
 
@@ -459,12 +523,22 @@ class TurboCoreApp(ctk.CTk):
         except:
             return False
 
+    def debug_log(self, msg):
+        # Escreve no console real do sistema (CMD) para debug
+        try:
+            sys.__stdout__.write(f"[DEBUG] {msg}\n")
+            sys.__stdout__.flush()
+        except: pass
+
     def log(self, msg):
         ts = datetime.datetime.now().strftime("%H:%M:%S")
-        self.txt_log.configure(state="normal")
-        self.txt_log.insert("end", f"[{ts}] {msg}\n")
-        self.txt_log.see("end")
-        self.txt_log.configure(state="disabled")
+        self.debug_log(f"GUI LOG: {msg}") # Espelha logs da GUI no console
+        try:
+            self.txt_log.configure(state="normal")
+            self.txt_log.insert("end", f"[{ts}] {msg}\n")
+            self.txt_log.see("end")
+            self.txt_log.configure(state="disabled")
+        except: pass
 
     def validate_installation(self):
         if not os.path.exists(self.bin_dir): messagebox.showwarning("ATENÇÃO", "Pasta 'bin' não encontrada!")
