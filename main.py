@@ -6,6 +6,12 @@ import os
 import sys
 import time
 import datetime
+import socket
+import concurrent.futures
+try:
+    import keyboard
+except ImportError:
+    keyboard = None
 from PIL import Image
 
 # --- CONFIGURAÇÃO GERAL ---
@@ -69,6 +75,9 @@ class TurboCoreApp(ctk.CTk):
         else:
             self.app_dir = os.path.dirname(os.path.abspath(__file__))
         self.bin_dir = os.path.join(self.app_dir, "bin")
+        self.caps_dir = os.path.join(self.app_dir, "Capturas")
+        if not os.path.exists(self.caps_dir):
+            os.makedirs(self.caps_dir)
 
         try:
             img_path = os.path.join(self.app_dir, "fundo_chip.jpg")
@@ -77,6 +86,31 @@ class TurboCoreApp(ctk.CTk):
 
         self.setup_ui()
         self.start_monitor()
+        self.setup_hotkeys()
+        self.keymapping_active = False
+
+    def setup_hotkeys(self):
+        if keyboard:
+            try:
+                # Hotkeys Globais
+                keyboard.add_hotkey('f1', lambda: self.iniciar_pc("PC Soberano (Padrão)"))
+                keyboard.add_hotkey('f2', lambda: self.ativar_free_fire())
+
+                # Keymapping (Espaço) - Inicialmente inativo
+                self.hook_space = keyboard.on_press_key("space", self.key_handler, suppress=False)
+            except Exception as e:
+                print(f"Erro ao configurar hotkeys: {e}")
+
+    def key_handler(self, event):
+        if self.keymapping_active and self.target_device:
+            # Simula toque no centro da tela (Hardcoded para 720x1280 landscape ~> x=640, y=360)
+            # Ajuste conforme necessidade ou obtenha resolução real
+            threading.Thread(target=lambda: self.run_adb_generic("shell input tap 640 360")).start()
+
+    def toggle_keymapping(self):
+        self.keymapping_active = not self.keymapping_active
+        state = "ATIVADO" if self.keymapping_active else "DESATIVADO"
+        self.log(f"Keymapping (Espaço -> Pulo): {state}")
 
     def setup_ui(self):
         self.header = ctk.CTkFrame(self, height=60, corner_radius=0, fg_color="#080808")
@@ -156,6 +190,8 @@ class TurboCoreApp(ctk.CTk):
 
         # 2. MODO PC
         self.create_menu(c, "🖥️ MODOS PC (MONITOR)", list(MODOS_PC.keys()), self.iniciar_pc, COR_PC)
+        self.chk_record = ctk.CTkCheckBox(c, text="Gravar Sessão (.mp4)", font=("Arial", 11, "bold"), text_color="#ccc", fg_color=COR_PC)
+        self.chk_record.pack(anchor="w", pady=(2, 10))
 
         # 3. BATERIA
         self.create_menu(c, "🔋 ECONOMIA DE BATERIA", list(MODOS_BAT.keys()), self.aplicar_bat, COR_BAT)
@@ -211,6 +247,11 @@ class TurboCoreApp(ctk.CTk):
                                command=self.ativar_free_fire)
         btn_ff.pack(fill="x", pady=10)
 
+        # Keymapping Toggle
+        self.sw_keymap = ctk.CTkSwitch(c, text="ATIVAR KEYMAPPING (Espaço -> Pulo)", command=self.toggle_keymapping,
+                                       font=("Arial", 12, "bold"), text_color="white", progress_color=COR_SUCESSO)
+        self.sw_keymap.pack(pady=15)
+
         ctk.CTkLabel(c, text="JOGOS ESPECÍFICOS (EM BREVE)", font=("Arial", 12, "bold"), text_color="gray").pack(pady=(30, 10))
         
         grid = ctk.CTkFrame(c, fg_color="transparent")
@@ -256,6 +297,7 @@ class TurboCoreApp(ctk.CTk):
         cfg = MODOS_PC[choice]
         exe_adb = os.path.join(self.bin_dir, "adb.exe")
         exe_scrcpy = os.path.join(self.bin_dir, "scrcpy.exe")
+        record = self.chk_record.get()
         
         def thread_pc():
             si = subprocess.STARTUPINFO(); si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
@@ -269,7 +311,16 @@ class TurboCoreApp(ctk.CTk):
             for c in cmds: subprocess.run([exe_adb, "-s", self.target_device, "shell", c], startupinfo=si)
             
             time.sleep(2.5)
-            subprocess.run([exe_scrcpy, "-s", self.target_device] + cfg['scrcpy'], cwd=self.bin_dir, startupinfo=si)
+
+            scrcpy_args = list(cfg['scrcpy'])
+            if record:
+                timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+                filename = f"REC_{timestamp}.mp4"
+                filepath = os.path.join(self.caps_dir, filename)
+                scrcpy_args += ["--record", filepath, "--record-format=mp4"]
+                self.log(f"Gravando: {filename}")
+
+            subprocess.run([exe_scrcpy, "-s", self.target_device] + scrcpy_args, cwd=self.bin_dir, startupinfo=si)
             
             cmds_reset = ["wm size reset", "wm density reset", "settings put system user_rotation 0", "settings put system accelerometer_rotation 1"]
             for c in cmds_reset: subprocess.run([exe_adb, "-s", self.target_device, "shell", c], startupinfo=si)
@@ -291,7 +342,11 @@ class TurboCoreApp(ctk.CTk):
         f1 = ctk.CTkFrame(p, fg_color="#111"); f1.pack(fill="x", padx=20, pady=20)
         ctk.CTkLabel(f1, text="🔗 CONEXÃO WI-FI", font=("Arial", 14, "bold")).pack(pady=10)
         self.ent_ip = ctk.CTkEntry(f1, placeholder_text="IP:PORTA", width=300); self.ent_ip.pack(pady=5)
-        ctk.CTkButton(f1, text="CONECTAR", fg_color=COR_PRIMARIA, command=self.wifi_connect).pack(pady=15)
+
+        btn_frame = ctk.CTkFrame(f1, fg_color="transparent")
+        btn_frame.pack(pady=15)
+        ctk.CTkButton(btn_frame, text="ESCANEAR REDE 🔎", fg_color="#333", width=140, command=self.scan_network).pack(side="left", padx=5)
+        ctk.CTkButton(btn_frame, text="CONECTAR", fg_color=COR_PRIMARIA, width=140, command=self.wifi_connect).pack(side="left", padx=5)
 
         f2 = ctk.CTkFrame(p, fg_color="#111"); f2.pack(fill="x", padx=20, pady=10)
         ctk.CTkLabel(f2, text="🔑 PAREAMENTO", font=("Arial", 14, "bold"), text_color="#fbbf24").pack(pady=10)
@@ -368,6 +423,41 @@ class TurboCoreApp(ctk.CTk):
     def wifi_pair(self):
         addr = self.ent_pair_ip.get(); code = self.ent_pair_code.get()
         if addr and code: threading.Thread(target=lambda: self.run_adb_generic(f"pair {addr} {code}")).start()
+
+    def scan_network(self):
+        self.log("Escaneando rede por dispositivos (Porta 5555)...")
+
+        def run_scan():
+            local_ip = socket.gethostbyname(socket.gethostname())
+            subnet = '.'.join(local_ip.split('.')[:-1]) + '.'
+            found = []
+
+            with concurrent.futures.ThreadPoolExecutor(max_workers=50) as executor:
+                futures = {executor.submit(self._check_ip, f"{subnet}{i}"): f"{subnet}{i}" for i in range(1, 255)}
+                for future in concurrent.futures.as_completed(futures):
+                    ip = futures[future]
+                    if future.result():
+                        found.append(ip)
+
+            if found:
+                self.log(f"Encontrados: {', '.join(found)}")
+                # Preenche o primeiro encontrado
+                self.after(0, lambda: self.ent_ip.delete(0, 'end'))
+                self.after(0, lambda: self.ent_ip.insert(0, f"{found[0]}:5555"))
+            else:
+                self.log("Nenhum dispositivo com porta 5555 aberta encontrado.")
+
+        threading.Thread(target=run_scan).start()
+
+    def _check_ip(self, ip):
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(0.5)
+            result = sock.connect_ex((ip, 5555))
+            sock.close()
+            return result == 0
+        except:
+            return False
 
     def log(self, msg):
         ts = datetime.datetime.now().strftime("%H:%M:%S")
