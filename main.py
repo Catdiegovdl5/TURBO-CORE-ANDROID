@@ -45,7 +45,7 @@ FONT_MONO = ("Consolas", 11)
 # --- TRADUÇÕES ---
 TRANSLATIONS = {
     "PT": {
-        "app_title": "TURBO CORE V105.1 - HOTFIX",
+        "app_title": "TURBO CORE V106 - STABILITY POLISH",
         "sidebar_dash": "🖥️ DASHBOARD",
         "sidebar_game": "🎮 COMPETITIVO",
         "sidebar_apps": "📦 APPS",
@@ -114,7 +114,7 @@ TRANSLATIONS = {
         "help_bat_ult": "ULTIMATE ECONOMIA (DEEP)\n\n• Ação: Brilho Zero, Mata Apps, Limita CPU.\n• Risco: USABILIDADE.\n\n⚠️ O celular vira um 'tijolo' para sobreviver. A tela ficará quase apagada. Só use em emergências."
     },
     "EN": {
-        "app_title": "TURBO CORE V105.1 - HOTFIX",
+        "app_title": "TURBO CORE V106 - STABILITY POLISH",
         "sidebar_dash": "🖥️ DASHBOARD",
         "sidebar_game": "🎮 COMPETITIVE",
         "sidebar_apps": "📦 APPS",
@@ -183,7 +183,7 @@ TRANSLATIONS = {
         "help_bat_ult": "ULTIMATE SAVER\n\n• Action: Zero Brightness, Kill Apps.\n• Risk: USABILITY.\n\n⚠️ Phone becomes barely usable to survive."
     },
     "ES": {
-        "app_title": "TURBO CORE V105.1 - HOTFIX",
+        "app_title": "TURBO CORE V106 - STABILITY POLISH",
         "sidebar_dash": "🖥️ PANEL",
         "sidebar_game": "🎮 COMPETITIVO",
         "sidebar_apps": "📦 APPS",
@@ -282,7 +282,7 @@ class TurboCoreApp(ctk.CTk):
         self.stop_logcat_flag = False
         self.last_ip = "" # V104 Smart Reconnect
 
-        self.debug_log(f"--- INICIANDO TURBO CORE V105.1 HOTFIX [{self.current_lang}] ---")
+        self.debug_log(f"--- INICIANDO TURBO CORE V106 STABILITY POLISH [{self.current_lang}] ---")
         self.title(self.T("app_title"))
         self.geometry("900x750")
         self.resizable(False, True)
@@ -381,7 +381,7 @@ class TurboCoreApp(ctk.CTk):
         self.sidebar.pack_propagate(False)
 
         ctk.CTkLabel(self.sidebar, text="TURBO\nCORE", font=("Montserrat", 24, "bold"), text_color=self.accent_color).pack(pady=(40, 5))
-        ctk.CTkLabel(self.sidebar, text="V105.1 HOTFIX", font=("Roboto", 10), text_color=COLOR_TEXT_DIM).pack(pady=(0, 20))
+        ctk.CTkLabel(self.sidebar, text="V106 POLISH", font=("Roboto", 10), text_color=COLOR_TEXT_DIM).pack(pady=(0, 20))
 
         self.btn_dash = self.create_sidebar_btn(self.T("sidebar_dash"), "dash")
         self.btn_special = self.create_sidebar_btn(self.T("sidebar_game"), "special")
@@ -520,8 +520,53 @@ class TurboCoreApp(ctk.CTk):
         ctk.CTkButton(frame_tools, text=self.T("btn_connect"), fg_color=self.accent_color, text_color=COLOR_BG, hover_color=COLOR_TEXT_MAIN,
                       command=do_connect).pack(fill="x", pady=5)
 
+        # RESTORED V106: Network Scan
+        ctk.CTkLabel(frame_tools, text="3. AUTO-SCAN", font=FONT_MAIN, text_color=self.accent_color).pack(pady=(20,5), anchor="w")
+        ctk.CTkButton(frame_tools, text=self.T("btn_scan"), fg_color="transparent", border_width=1, border_color=COLOR_TEXT_DIM,
+                      text_color=COLOR_TEXT_DIM, hover_color=COLOR_HOVER, command=self.scan_network).pack(fill="x", pady=5)
+
         ctk.CTkLabel(frame_tutorial, text=self.T("guide_title"), font=FONT_BOLD, text_color=COLOR_TEXT_MAIN).pack(pady=10)
         ctk.CTkLabel(frame_tutorial, text=self.T("guide_text"), justify="left", font=FONT_MAIN, text_color=COLOR_TEXT_DIM).pack(padx=15, pady=10)
+
+    # V106 RESTORED METHOD
+    def scan_network(self):
+        self.log("Scanning local network for ADB devices (Port 5555)...")
+
+        def run_scan():
+            try:
+                local_ip = socket.gethostbyname(socket.gethostname())
+                subnet = '.'.join(local_ip.split('.')[:-1]) + '.'
+                found = []
+
+                with concurrent.futures.ThreadPoolExecutor(max_workers=50) as executor:
+                    futures = {executor.submit(self._check_ip, f"{subnet}{i}"): f"{subnet}{i}" for i in range(1, 255)}
+                    for future in concurrent.futures.as_completed(futures):
+                        ip = futures[future]
+                        if future.result():
+                            found.append(ip)
+
+                if found:
+                    self.log(f"Found: {', '.join(found)}")
+                    # Assuming ip_conn_entry exists in the toplevel scope? No, it's local.
+                    # We can't easily update the toplevel entry from here without refactoring.
+                    # Fallback: Just log it. User can copy.
+                    messagebox.showinfo("Scan Result", f"Devices Found:\n{', '.join(found)}\n\n(Copy IP to Connect field)")
+                else:
+                    self.log("No devices found.")
+                    messagebox.showinfo("Scan Result", "No devices found on port 5555.")
+            except Exception as e:
+                self.debug_log(f"Scan Error: {e}")
+
+        threading.Thread(target=run_scan).start()
+
+    def _check_ip(self, ip):
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(0.2) # Fast timeout
+            result = sock.connect_ex((ip, 5555))
+            sock.close()
+            return result == 0
+        except: return False
 
     def build_dashboard(self, p):
         btn_comp = ctk.CTkButton(p, text=self.T("launch_comp"), font=FONT_BOLD,
@@ -725,11 +770,9 @@ class TurboCoreApp(ctk.CTk):
                 success = True
                 for c in cmds:
                     if not c.strip(): continue
-                    # V103 Ping Check
                     if not self._ping_device():
                         self.log("Device offline. Healing...")
                         self.heal_adb_connection()
-                        # V104: Break immediately if healing fails or let the outer loop retry
                         success = False
                         break
 
@@ -739,7 +782,6 @@ class TurboCoreApp(ctk.CTk):
                         self.log(f"CMD Fail: {c.strip()}")
                         break
 
-                    # V103/V104 Tolerant Delays
                     if "wm size" in c: time.sleep(4.0)
                     elif "wm density" in c: time.sleep(1.5)
                     else: time.sleep(0.5)
@@ -778,7 +820,7 @@ class TurboCoreApp(ctk.CTk):
                 if not self._ping_device(): self.heal_adb_connection()
                 subprocess.run([exe_adb, "-s", self.target_device, "shell", "wm size reset"], startupinfo=si)
                 subprocess.run([exe_adb, "-s", self.target_device, "shell", f"wm size {cfg['size']}"], startupinfo=si)
-                time.sleep(4.0) # V104 Tolerance
+                time.sleep(4.0)
 
                 if not self._ping_device(): self.heal_adb_connection()
                 subprocess.run([exe_adb, "-s", self.target_device, "shell", "wm density reset"], startupinfo=si)
@@ -814,7 +856,7 @@ class TurboCoreApp(ctk.CTk):
                         self.heal_adb_connection()
                     else:
                         self.after(0, lambda: messagebox.showerror("SCRCPY ERROR", f"Scrcpy Failed:\n{err}"))
-                        break # V104 No infinite loop
+                        break
                 except Exception as e:
                     if attempt == 0: self.heal_adb_connection()
 
@@ -836,16 +878,13 @@ class TurboCoreApp(ctk.CTk):
         except: return False
 
     def heal_adb_connection(self):
-        # V104 Smart Reconnect
         self.debug_log("HEALING ADB CONNECTION (SMART)...")
         si = subprocess.STARTUPINFO(); si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
         exe = os.path.join(self.bin_dir, "adb.exe")
 
-        # Always disconnect first
         subprocess.run([exe, "disconnect"], startupinfo=si)
         time.sleep(1)
 
-        # If we have a known Wi-Fi IP, reconnect to it. NO KILL-SERVER.
         if self.last_ip:
             self.debug_log(f"Reconnecting to {self.last_ip}...")
             subprocess.run([exe, "connect", self.last_ip], startupinfo=si)
@@ -868,7 +907,6 @@ class TurboCoreApp(ctk.CTk):
             return
         self.run_adb_cmd_string(MODOS_BAT[choice]["cmd"])
 
-    # V105.1 HOTFIX: RESTORED METHOD
     def restaurar_padrao(self):
         if not self.target_device: return
         self.log(self.T("msg_restored"))
@@ -878,16 +916,6 @@ class TurboCoreApp(ctk.CTk):
         self.menu_PC.set(default_txt)
         self.menu_PERF.set(default_txt)
         self.menu_BAT.set(default_txt)
-        # Messagebox handled by run_adb_cmd_string, but let's keep it consistent with the hotfix request
-        # Since run_adb_cmd_string is threaded, this box might appear before completion if not careful,
-        # but run_adb_cmd_string handles its own success msg.
-        # User requested specific code, so sticking to it, but aware of double popup possibility.
-        # Actually, run_adb_cmd_string logic shows popup. The user snippet shows popup too.
-        # I will rely on run_adb_cmd_string for the logic popup to avoid confusion,
-        # OR just insert the method as requested.
-        # The user snippet calls run_adb_cmd_string and then immediately shows popup.
-        # Since run_adb_cmd_string is threaded, the immediate popup is technically "Command Sent", not "Finished".
-        # I will strictly follow the user snippet for compliance.
         messagebox.showinfo(self.T("msg_success"), self.T("msg_restored"))
 
     def install_apk(self):
@@ -970,8 +998,10 @@ class TurboCoreApp(ctk.CTk):
     def _safe_logcat_insert(self, line):
         self.txt_logcat.insert("end", line)
         self.txt_logcat.see("end")
-        if int(self.txt_logcat.index('end-1c').split('.')[0]) > 500:
-            self.txt_logcat.delete("1.0", "2.0")
+        # V106 Optimized Buffer
+        lines = int(self.txt_logcat.index('end-1c').split('.')[0])
+        if lines > 600:
+            self.txt_logcat.delete("1.0", "100.0")
 
     # --- HELPERS ---
     def get_device_name(self):
@@ -1048,7 +1078,7 @@ class TurboCoreApp(ctk.CTk):
                                 parts = lines[1].split()
                                 if len(parts) >= 4: avail = parts[3]
 
-                        # RAM (/proc/meminfo) V100 FIX
+                        # RAM (/proc/meminfo)
                         res_mem = subprocess.run([adb, "-s", self.target_device, "shell", "cat", "/proc/meminfo"], capture_output=True, text=True, startupinfo=si)
                         ram_str = "RAM: N/A"
                         if res_mem.stdout:
@@ -1093,6 +1123,9 @@ class TurboCoreApp(ctk.CTk):
         self.txt_log.insert("end", f"[{ts}] {msg}\n")
         self.txt_log.see("end")
         self.txt_log.configure(state="disabled")
+
+    def validate_installation(self):
+        if not os.path.exists(self.bin_dir): messagebox.showwarning("ATENÇÃO", "Pasta 'bin' não encontrada!")
 
 if __name__ == "__main__":
     app = TurboCoreApp()
