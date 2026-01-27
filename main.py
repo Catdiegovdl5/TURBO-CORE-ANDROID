@@ -45,7 +45,7 @@ FONT_MONO = ("Consolas", 11)
 # --- TRADUÇÕES ---
 TRANSLATIONS = {
     "PT": {
-        "app_title": "TURBO CORE V102 - IRONCLAD CONNECTION",
+        "app_title": "TURBO CORE V103 - SEQUENTIAL STABILITY",
         "sidebar_dash": "🖥️ DASHBOARD",
         "sidebar_game": "🎮 COMPETITIVO",
         "sidebar_apps": "📦 APPS",
@@ -114,7 +114,7 @@ TRANSLATIONS = {
         "help_bat_ult": "ULTIMATE ECONOMIA (DEEP)\n\n• Ação: Brilho Zero, Mata Apps, Limita CPU.\n• Risco: USABILIDADE.\n\n⚠️ O celular vira um 'tijolo' para sobreviver. A tela ficará quase apagada. Só use em emergências."
     },
     "EN": {
-        "app_title": "TURBO CORE V102 - IRONCLAD CONNECTION",
+        "app_title": "TURBO CORE V103 - SEQUENTIAL STABILITY",
         "sidebar_dash": "🖥️ DASHBOARD",
         "sidebar_game": "🎮 COMPETITIVE",
         "sidebar_apps": "📦 APPS",
@@ -183,7 +183,7 @@ TRANSLATIONS = {
         "help_bat_ult": "ULTIMATE SAVER\n\n• Action: Zero Brightness, Kill Apps.\n• Risk: USABILITY.\n\n⚠️ Phone becomes barely usable to survive."
     },
     "ES": {
-        "app_title": "TURBO CORE V102 - IRONCLAD CONNECTION",
+        "app_title": "TURBO CORE V103 - SEQUENTIAL STABILITY",
         "sidebar_dash": "🖥️ PANEL",
         "sidebar_game": "🎮 COMPETITIVO",
         "sidebar_apps": "📦 APPS",
@@ -281,7 +281,7 @@ class TurboCoreApp(ctk.CTk):
         self.logcat_process = None
         self.stop_logcat_flag = False
 
-        self.debug_log(f"--- INICIANDO TURBO CORE V102 IRONCLAD [{self.current_lang}] ---")
+        self.debug_log(f"--- INICIANDO TURBO CORE V103 SEQUENTIAL [{self.current_lang}] ---")
         self.title(self.T("app_title"))
         self.geometry("900x750")
         self.resizable(False, True)
@@ -380,7 +380,7 @@ class TurboCoreApp(ctk.CTk):
         self.sidebar.pack_propagate(False)
 
         ctk.CTkLabel(self.sidebar, text="TURBO\nCORE", font=("Montserrat", 24, "bold"), text_color=self.accent_color).pack(pady=(40, 5))
-        ctk.CTkLabel(self.sidebar, text="V102 IRONCLAD", font=("Roboto", 10), text_color=COLOR_TEXT_DIM).pack(pady=(0, 20))
+        ctk.CTkLabel(self.sidebar, text="V103 STABLE", font=("Roboto", 10), text_color=COLOR_TEXT_DIM).pack(pady=(0, 20))
 
         self.btn_dash = self.create_sidebar_btn(self.T("sidebar_dash"), "dash")
         self.btn_special = self.create_sidebar_btn(self.T("sidebar_game"), "special")
@@ -428,7 +428,7 @@ class TurboCoreApp(ctk.CTk):
                                          fg_color=COLOR_SURFACE, text_color=COLOR_TEXT_MAIN,
                                          hover_color=COLOR_HOVER, corner_radius=18,
                                          border_width=1, border_color=COLOR_BORDER,
-                                         command=self.force_refresh) # V102 Uses Threaded Heal
+                                         command=self.force_refresh)
         self.btn_refresh.pack(side="left", padx=5)
 
         self.btn_kill = ctk.CTkButton(self.header, text="🚀", width=40, height=36,
@@ -684,7 +684,7 @@ class TurboCoreApp(ctk.CTk):
         ctk.CTkButton(f, text=self.T("action_open"), width=60, fg_color=COLOR_SUCCESS, text_color="white", height=25,
                       command=lambda: self.run_adb_generic(f"shell monkey -p {pkg} -c android.intent.category.LAUNCHER 1")).pack(side="right", padx=2)
 
-        ctk.CTkButton(f, text=self.T("action_kill"), width=60, fg_color=COLOR_ERROR, text_color="white", height=25,
+        ctk.CTkButton(f, text=self.T("action_kill"), width=60, fg_color="orange", text_color="white", height=25,
                       command=lambda: self.run_adb_generic(f"shell am force-stop {pkg}")).pack(side="right", padx=2)
 
         ctk.CTkButton(f, text=self.T("action_del"), width=60, fg_color=COLOR_ERROR, text_color="white", height=25,
@@ -718,29 +718,38 @@ class TurboCoreApp(ctk.CTk):
         def t():
             exe = os.path.join(self.bin_dir, "adb.exe")
             si = subprocess.STARTUPINFO(); si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-            # V102: Split cmds logic inside the retry loop
             cmds = cmd_string.split(";")
 
             for attempt in range(2):
                 success = True
                 for c in cmds:
                     if not c.strip(): continue
+                    # V103 Ping Check
+                    if not self._ping_device():
+                        self.log("Device offline. Healing...")
+                        self.heal_adb_connection()
+                        success = False
+                        break
+
                     res = subprocess.run([exe, "-s", self.target_device, "shell", c.strip()], startupinfo=si, capture_output=True, text=True)
                     if res.returncode != 0:
                         success = False
                         self.log(f"CMD Fail: {c.strip()}")
-                        self.debug_log(f"ADB Error: {res.stderr}")
-                        break # Break inner command loop
+                        break
+
+                    # V103 Smart Delays
+                    if "wm size" in c: time.sleep(2.5)
+                    elif "wm density" in c: time.sleep(1.5)
+                    else: time.sleep(0.5)
 
                 if success:
                     self.log("Commands applied.")
                     self.after(0, lambda: messagebox.showinfo(self.T("msg_success"), self.T("msg_cmd_success")))
-                    return # Done
+                    return
                 else:
                     if attempt == 0:
-                        self.log("Error detected. Self-healing ADB...")
+                        self.log("Retry attempt...")
                         self.heal_adb_connection()
-                        # Loop continues to attempt 1
                     else:
                         self.after(0, lambda: messagebox.showerror(self.T("msg_error"), "Failed after retry."))
 
@@ -763,16 +772,28 @@ class TurboCoreApp(ctk.CTk):
             si = subprocess.STARTUPINFO(); si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
             self.log(f"Starting {choice}...")
 
+            # V103 Sequential Init
             try:
-                cmds = [
-                    "wm size reset", "wm density reset",
-                    f"wm size {cfg['size']}", f"wm density {cfg['density']}",
-                    "settings put system user_rotation 1", "settings put system accelerometer_rotation 0"
-                ]
-                for c in cmds: subprocess.run([exe_adb, "-s", self.target_device, "shell", c], startupinfo=si)
-            except: pass
+                # 1. Size
+                if not self._ping_device(): self.heal_adb_connection()
+                subprocess.run([exe_adb, "-s", self.target_device, "shell", "wm size reset"], startupinfo=si)
+                subprocess.run([exe_adb, "-s", self.target_device, "shell", f"wm size {cfg['size']}"], startupinfo=si)
+                time.sleep(2.0)
 
-            time.sleep(2.5)
+                # 2. Density
+                if not self._ping_device(): self.heal_adb_connection()
+                subprocess.run([exe_adb, "-s", self.target_device, "shell", "wm density reset"], startupinfo=si)
+                subprocess.run([exe_adb, "-s", self.target_device, "shell", f"wm density {cfg['density']}"], startupinfo=si)
+                time.sleep(1.0)
+
+                # 3. Rotation
+                subprocess.run([exe_adb, "-s", self.target_device, "shell", "settings put system user_rotation 1"], startupinfo=si)
+                subprocess.run([exe_adb, "-s", self.target_device, "shell", "settings put system accelerometer_rotation 0"], startupinfo=si)
+                time.sleep(1.0)
+
+            except Exception as e:
+                self.debug_log(f"Setup warning: {e}")
+
             scrcpy_args = list(cfg['scrcpy'])
             if opt_video:
                 timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -783,32 +804,38 @@ class TurboCoreApp(ctk.CTk):
             if not opt_audio: scrcpy_args += ["--no-audio"]
             if opt_ghost: scrcpy_args += ["--turn-screen-off"]
 
-            # V102: Retry Loop
+            # V103 Retry with Ping
             for attempt in range(2):
+                if not self._ping_device(): self.heal_adb_connection()
                 try:
                     proc = subprocess.run([exe_scrcpy, "-s", self.target_device] + scrcpy_args, cwd=self.bin_dir, startupinfo=si, capture_output=True, text=True)
+                    if proc.returncode == 0: break
 
-                    if proc.returncode == 0:
-                        break # Success
-
-                    # If failed
-                    err = proc.stderr
                     if attempt == 0:
                         self.log("Scrcpy Error. Self-healing...")
                         self.heal_adb_connection()
                     else:
-                        self.after(0, lambda: messagebox.showerror("SCRCPY ERROR", f"Scrcpy Failed:\n{err}"))
-
+                        self.after(0, lambda: messagebox.showerror("SCRCPY ERROR", f"Scrcpy Failed:\n{proc.stderr}"))
                 except Exception as e:
-                    self.debug_log(f"SCRCPY CRITICAL: {e}")
                     if attempt == 0: self.heal_adb_connection()
 
+            # Reset
             try:
                 cmds_reset = ["wm size reset", "wm density reset", "settings put system user_rotation 0", "settings put system accelerometer_rotation 1"]
-                for c in cmds_reset: subprocess.run([exe_adb, "-s", self.target_device, "shell", c], startupinfo=si)
+                for c in cmds_reset:
+                    subprocess.run([exe_adb, "-s", self.target_device, "shell", c], startupinfo=si)
+                    time.sleep(0.5)
             except: pass
 
         threading.Thread(target=thread_pc, daemon=True).start()
+
+    def _ping_device(self):
+        try:
+            si = subprocess.STARTUPINFO(); si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+            exe = os.path.join(self.bin_dir, "adb.exe")
+            res = subprocess.run([exe, "-s", self.target_device, "get-state"], capture_output=True, text=True, startupinfo=si)
+            return "device" in res.stdout
+        except: return False
 
     def heal_adb_connection(self):
         self.debug_log("HEALING ADB CONNECTION...")
