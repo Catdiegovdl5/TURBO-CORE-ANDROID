@@ -45,13 +45,13 @@ FONT_MONO = ("Consolas", 11)
 # --- TRADUÇÕES ---
 TRANSLATIONS = {
     "PT": {
-        "app_title": "TURBO CORE V97 - GOD MODE",
+        "app_title": "TURBO CORE V97.1 - PERFORMANCE FIX",
         "sidebar_dash": "🖥️ DASHBOARD",
         "sidebar_game": "🎮 COMPETITIVO",
         "sidebar_apps": "📦 APPS",
         "sidebar_term": "💻 TERMINAL",
         "status_searching": "Buscando...",
-        "status_disconnected": "❌ DESCONECTADO (Clique)",
+        "status_disconnected": "❌ DESCONECTADO",
         "sys_ready": "SISTEMA PRONTO",
         "launch_comp": "🚀 IR PARA MODOS COMPETITIVOS",
         "card_pc": "EXPERIÊNCIA PC",
@@ -64,7 +64,7 @@ TRANSLATIONS = {
         "btn_install": "Instalar APK 📥",
         "btn_send": "Enviar Arquivo 📤",
         "btn_reset": "Restaurar Original 🔄",
-        "btn_kill": "⚡ KILL ALL",
+        "btn_kill": "⚡ LIMPAR RAM",
         "select_default": "Selecionar...",
         "hero_ff": "ATIVAR MODO FREE FIRE MAX 🎯",
         "sw_keymap": "Ativar Keymapping (WASD)",
@@ -97,13 +97,13 @@ TRANSLATIONS = {
         "action_del": "Del"
     },
     "EN": {
-        "app_title": "TURBO CORE V97 - GOD MODE",
+        "app_title": "TURBO CORE V97.1 - PERFORMANCE FIX",
         "sidebar_dash": "🖥️ DASHBOARD",
         "sidebar_game": "🎮 COMPETITIVE",
         "sidebar_apps": "📦 APPS",
         "sidebar_term": "💻 TERMINAL",
         "status_searching": "Searching...",
-        "status_disconnected": "❌ DISCONNECTED (Click)",
+        "status_disconnected": "❌ DISCONNECTED",
         "sys_ready": "SYSTEM READY",
         "launch_comp": "🚀 LAUNCH COMPETITIVE MODE",
         "card_pc": "PC EXPERIENCE",
@@ -149,13 +149,13 @@ TRANSLATIONS = {
         "action_del": "Del"
     },
     "ES": {
-        "app_title": "TURBO CORE V97 - GOD MODE",
+        "app_title": "TURBO CORE V97.1 - PERFORMANCE FIX",
         "sidebar_dash": "🖥️ PANEL",
         "sidebar_game": "🎮 COMPETITIVO",
         "sidebar_apps": "📦 APPS",
         "sidebar_term": "💻 TERMINAL",
         "status_searching": "Buscando...",
-        "status_disconnected": "❌ DESCONECTADO (Clic)",
+        "status_disconnected": "❌ DESCONECTADO",
         "sys_ready": "SISTEMA LISTO",
         "launch_comp": "🚀 IR A MODO COMPETITIVO",
         "card_pc": "EXPERIENCIA PC",
@@ -168,7 +168,7 @@ TRANSLATIONS = {
         "btn_install": "Instalar APK 📥",
         "btn_send": "Enviar Archivo 📤",
         "btn_reset": "Restaurar Original 🔄",
-        "btn_kill": "⚡ KILL ALL",
+        "btn_kill": "⚡ LIMPIAR RAM",
         "select_default": "Seleccionar...",
         "hero_ff": "ACTIVAR MODO FREE FIRE 🎯",
         "sw_keymap": "Activar Keymapping (WASD)",
@@ -239,7 +239,7 @@ class TurboCoreApp(ctk.CTk):
         self.current_theme = "Studio Blue"
         self.accent_color = THEMES[self.current_theme]
 
-        self.debug_log(f"--- INICIANDO TURBO CORE V97 GOD MODE [{self.current_lang}] ---")
+        self.debug_log(f"--- INICIANDO TURBO CORE V97.1 FIX [{self.current_lang}] ---")
         self.title(self.T("app_title"))
         self.geometry("900x750")
         self.resizable(False, True)
@@ -333,14 +333,13 @@ class TurboCoreApp(ctk.CTk):
         self.sidebar.pack_propagate(False)
 
         ctk.CTkLabel(self.sidebar, text="TURBO\nCORE", font=("Montserrat", 24, "bold"), text_color=self.accent_color).pack(pady=(40, 5))
-        ctk.CTkLabel(self.sidebar, text="V97 GOD MODE", font=("Roboto", 10), text_color=COLOR_TEXT_DIM).pack(pady=(0, 20))
+        ctk.CTkLabel(self.sidebar, text="V97.1 FIX", font=("Roboto", 10), text_color=COLOR_TEXT_DIM).pack(pady=(0, 20))
 
         self.btn_dash = self.create_sidebar_btn(self.T("sidebar_dash"), "dash")
         self.btn_special = self.create_sidebar_btn(self.T("sidebar_game"), "special")
         self.btn_apps = self.create_sidebar_btn(self.T("sidebar_apps"), "apps")
         self.btn_term = self.create_sidebar_btn(self.T("sidebar_term"), "term")
 
-        # Selectors
         f_sels = ctk.CTkFrame(self.sidebar, fg_color="transparent")
         f_sels.pack(side="bottom", pady=20)
 
@@ -369,7 +368,7 @@ class TurboCoreApp(ctk.CTk):
 
         self.btn_device_status = ctk.CTkButton(self.frame_dev_info, text=self.T("status_searching"), font=FONT_BOLD,
                                                fg_color=COLOR_SURFACE, text_color=COLOR_TEXT_DIM,
-                                               width=200, height=36, corner_radius=18,
+                                               width=180, height=36, corner_radius=18,
                                                border_width=1, border_color=COLOR_BORDER,
                                                hover_color=COLOR_HOVER,
                                                command=self.abrir_gerenciador_conexao)
@@ -385,10 +384,11 @@ class TurboCoreApp(ctk.CTk):
                                          command=self.force_refresh)
         self.btn_refresh.pack(side="left", padx=5)
 
-        self.btn_kill = ctk.CTkButton(self.frame_dev_info, text=self.T("btn_kill"), width=100, height=36,
+        # KILL BUTTON - Far Right
+        self.btn_kill = ctk.CTkButton(self.header, text=self.T("btn_kill"), width=120, height=36,
                                       fg_color=COLOR_ERROR, text_color="white", hover_color="#991B1B",
-                                      corner_radius=18, command=self.kill_all_processes)
-        self.btn_kill.pack(side="left", padx=5)
+                                      corner_radius=18, font=FONT_BOLD, command=self.kill_all_processes)
+        self.btn_kill.pack(side="right", padx=10)
 
         self.main_area = ctk.CTkFrame(self.right_panel, fg_color="transparent")
         self.main_area.pack(fill="both", expand=True, padx=30, pady=20)
@@ -533,14 +533,12 @@ class TurboCoreApp(ctk.CTk):
     def create_menu(self, parent, values, cmd):
         f = ctk.CTkFrame(parent, fg_color="transparent")
         f.pack(fill="x")
-
         m = ctk.CTkOptionMenu(f, values=[self.T("select_default")] + values,
                               fg_color=COLOR_BG, button_color=COLOR_BORDER, button_hover_color=COLOR_HOVER,
                               text_color=COLOR_TEXT_MAIN, dropdown_fg_color=COLOR_SURFACE, dropdown_hover_color=COLOR_HOVER,
                               corner_radius=8, width=300,
                               command=lambda v: self.on_menu_select(v, cmd, m))
         m.pack(side="left", fill="x", expand=True, padx=(0, 5))
-
         ctk.CTkButton(f, text="?", width=30, fg_color="transparent", border_width=1, border_color=COLOR_BORDER,
                       text_color=COLOR_TEXT_DIM, hover_color=COLOR_HOVER, corner_radius=8,
                       command=lambda: self.show_info(m.get())).pack(side="right")
@@ -562,25 +560,21 @@ class TurboCoreApp(ctk.CTk):
 
     def build_special(self, p):
         c = self.create_card(p, self.T("sidebar_game"))
-        
         btn_ff = ctk.CTkButton(c, text=self.T("hero_ff"), font=FONT_TITLE,
                                fg_color=self.accent_color, text_color=COLOR_BG, hover_color=COLOR_TEXT_MAIN,
                                height=80, corner_radius=12,
                                command=self.ativar_free_fire)
         btn_ff.pack(fill="x", pady=10)
-
         self.sw_keymap = ctk.CTkSwitch(c, text=self.T("sw_keymap"), command=self.toggle_keymapping,
                                        font=FONT_BOLD, text_color=COLOR_TEXT_MAIN,
                                        progress_color=self.accent_color, button_color=COLOR_TEXT_MAIN, button_hover_color=COLOR_TEXT_MAIN)
         self.sw_keymap.pack(pady=10)
-
         c2 = self.create_card(p, self.T("coming_soon"))
         future_games = ["COD Mobile", "PUBG New State", "Genshin Impact", "Wild Rift"]
         for game in future_games:
             ctk.CTkLabel(c2, text=f"• {game}", font=FONT_MAIN, text_color=COLOR_TEXT_DIM).pack(anchor="w", pady=2)
 
     def build_apps(self, p):
-        # Header: Search & Refresh
         head = ctk.CTkFrame(p, fg_color="transparent")
         head.pack(fill="x", pady=10)
 
@@ -590,35 +584,42 @@ class TurboCoreApp(ctk.CTk):
         ctk.CTkButton(head, text=self.T("apps_refresh"), width=100, fg_color=COLOR_SURFACE, border_color=COLOR_BORDER, border_width=1,
                       command=self.refresh_apps_list).pack(side="left")
 
-        # Scrollable List
+        # Loading Label (UI Lag fix)
+        self.lbl_loading = ctk.CTkLabel(p, text=self.T("apps_loading"), font=FONT_MAIN, text_color=COLOR_TEXT_DIM)
+
         self.scroll_apps = ctk.CTkScrollableFrame(p, fg_color=COLOR_SURFACE, corner_radius=12)
         self.scroll_apps.pack(fill="both", expand=True, padx=20, pady=10)
-
-        # Initial Load
         self.refresh_apps_list()
 
     def refresh_apps_list(self):
         for w in self.scroll_apps.winfo_children(): w.destroy()
-
         if not self.target_device:
             ctk.CTkLabel(self.scroll_apps, text="No Device").pack(pady=20)
             return
 
+        self.lbl_loading.place(relx=0.5, rely=0.5, anchor="center") # Show loading
+
         def load():
-            self.debug_log("Loading Apps...")
             si = subprocess.STARTUPINFO(); si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
             exe = os.path.join(self.bin_dir, "adb.exe")
             res = subprocess.run([exe, "-s", self.target_device, "shell", "pm", "list", "packages", "-3"], capture_output=True, text=True, startupinfo=si)
-
             search = self.ent_search.get().lower()
 
+            apps = []
             for line in res.stdout.splitlines():
                 pkg = line.replace("package:", "").strip()
                 if not pkg or (search and search not in pkg.lower()): continue
+                apps.append(pkg)
 
-                self.after(0, lambda p=pkg: self.create_app_row(p))
+            # Pass data back to main thread
+            self.after(0, lambda: self.populate_apps_ui(apps))
 
-        threading.Thread(target=load).start()
+        threading.Thread(target=load, daemon=True).start()
+
+    def populate_apps_ui(self, apps):
+        self.lbl_loading.place_forget() # Hide loading
+        for pkg in apps:
+            self.create_app_row(pkg)
 
     def create_app_row(self, pkg):
         f = ctk.CTkFrame(self.scroll_apps, fg_color="transparent", height=40)
@@ -626,14 +627,13 @@ class TurboCoreApp(ctk.CTk):
 
         ctk.CTkLabel(f, text=pkg, font=FONT_MONO, text_color=COLOR_TEXT_MAIN, width=350, anchor="w").pack(side="left", padx=10)
 
-        # Actions
-        ctk.CTkButton(f, text="▶", width=40, fg_color=COLOR_SUCCESS, text_color="white",
+        ctk.CTkButton(f, text=self.T("action_open"), width=60, fg_color=COLOR_SUCCESS, text_color="white", height=25,
                       command=lambda: self.run_adb_generic(f"shell monkey -p {pkg} -c android.intent.category.LAUNCHER 1")).pack(side="right", padx=2)
 
-        ctk.CTkButton(f, text="🛑", width=40, fg_color="orange", text_color="white",
+        ctk.CTkButton(f, text=self.T("action_kill"), width=60, fg_color="orange", text_color="white", height=25,
                       command=lambda: self.run_adb_generic(f"shell am force-stop {pkg}")).pack(side="right", padx=2)
 
-        ctk.CTkButton(f, text="🗑️", width=40, fg_color=COLOR_ERROR, text_color="white",
+        ctk.CTkButton(f, text=self.T("action_del"), width=60, fg_color=COLOR_ERROR, text_color="white", height=25,
                       command=lambda: self.uninstall_app(pkg)).pack(side="right", padx=2)
 
     def uninstall_app(self, pkg):
@@ -668,7 +668,6 @@ class TurboCoreApp(ctk.CTk):
         cfg = MODOS_PC[choice]
         exe_adb = os.path.join(self.bin_dir, "adb.exe")
         exe_scrcpy = os.path.join(self.bin_dir, "scrcpy.exe")
-        
         opt_video = self.chk_video.get()
         opt_audio = self.chk_audio.get()
         opt_ghost = self.chk_ghost.get()
@@ -676,32 +675,25 @@ class TurboCoreApp(ctk.CTk):
         def thread_pc():
             si = subprocess.STARTUPINFO(); si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
             self.log(f"Starting {choice}...")
-            
             cmds = [
                 "wm size reset", "wm density reset",
                 f"wm size {cfg['size']}", f"wm density {cfg['density']}",
                 "settings put system user_rotation 1", "settings put system accelerometer_rotation 0"
             ]
             for c in cmds: subprocess.run([exe_adb, "-s", self.target_device, "shell", c], startupinfo=si)
-            
             time.sleep(2.5)
-
             scrcpy_args = list(cfg['scrcpy'])
-
             if opt_video:
                 timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
                 filename = f"REC_{timestamp}.mp4"
                 filepath = os.path.join(self.caps_dir, filename)
                 scrcpy_args += ["--record", filepath, "--record-format=mp4"]
                 self.log(f"Recording: {filename}")
-
             if not opt_audio: scrcpy_args += ["--no-audio"]
             if opt_ghost: scrcpy_args += ["--turn-screen-off"]
-
             try:
                 subprocess.run([exe_scrcpy, "-s", self.target_device] + scrcpy_args, cwd=self.bin_dir, startupinfo=si)
             except Exception as e: self.debug_log(f"SCRCPY ERROR: {e}")
-            
             cmds_reset = ["wm size reset", "wm density reset", "settings put system user_rotation 0", "settings put system accelerometer_rotation 1"]
             for c in cmds_reset: subprocess.run([exe_adb, "-s", self.target_device, "shell", c], startupinfo=si)
 
@@ -718,12 +710,10 @@ class TurboCoreApp(ctk.CTk):
         self.log(self.T("msg_restored"))
         cmds = "wm size reset; wm density reset; settings put system user_rotation 0; settings put system accelerometer_rotation 1; settings put global low_power 0; settings put system screen_brightness 100; settings put global window_animation_scale 1; settings put global transition_animation_scale 1; settings put global animator_duration_scale 1"
         self.run_adb_cmd_string(cmds)
-
         default_txt = self.T("select_default")
         self.menu_PC.set(default_txt)
         self.menu_PERF.set(default_txt)
         self.menu_BAT.set(default_txt)
-
         messagebox.showinfo(self.T("msg_success"), self.T("msg_restored"))
 
     def install_apk(self):
@@ -822,12 +812,10 @@ class TurboCoreApp(ctk.CTk):
             while True:
                 if self.target_device:
                     try:
-                        # Battery
                         res = subprocess.run([adb, "-s", self.target_device, "shell", "dumpsys", "battery"], capture_output=True, text=True, startupinfo=si)
                         level = re.search(r'level: (\d+)', res.stdout)
                         temp = re.search(r'temperature: (\d+)', res.stdout)
 
-                        # Storage (df -h /data)
                         res_st = subprocess.run([adb, "-s", self.target_device, "shell", "df", "-h", "/data"], capture_output=True, text=True, startupinfo=si)
                         avail = "N/A"
                         if res_st.stdout:
@@ -836,7 +824,6 @@ class TurboCoreApp(ctk.CTk):
                                 parts = lines[1].split()
                                 if len(parts) >= 4: avail = parts[3]
 
-                        # RAM (/proc/meminfo)
                         res_mem = subprocess.run([adb, "-s", self.target_device, "shell", "cat", "/proc/meminfo"], capture_output=True, text=True, startupinfo=si)
                         ram_str = ""
                         if res_mem.stdout:
