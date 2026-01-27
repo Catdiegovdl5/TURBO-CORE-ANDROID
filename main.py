@@ -65,8 +65,8 @@ MODOS_BAT = {
 class TurboCoreApp(ctk.CTk):
     def __init__(self):
         super().__init__()
-        self.debug_log("--- INICIANDO TURBO CORE V91 - STATUS INTERATIVO ---")
-        self.title("TURBO CORE V91 - STATUS INTERATIVO")
+        self.debug_log("--- INICIANDO TURBO CORE V92 - NAVEGAÇÃO UNIFICADA ---")
+        self.title("TURBO CORE V92 - NAVEGAÇÃO UNIFICADA")
         self.geometry("540x980")
         self.resizable(False, False)
         self.configure(fg_color=COR_FUNDO)
@@ -317,6 +317,11 @@ PORTAS DIFERENTES!
     # --- DASHBOARD ---
     def build_dashboard(self, p):
         c = ctk.CTkFrame(p, fg_color="transparent"); c.pack(fill="both", padx=20, pady=20)
+
+        # V92 - ATALHO COMPETITIVO
+        ctk.CTkButton(c, text="🚀 IR PARA MODOS COMPETITIVOS (Free Fire / Jogos)",
+                      font=("Arial", 12, "bold"), fg_color=COR_PRIMARIA, height=45,
+                      command=lambda: self.switch_tab("special")).pack(fill="x", pady=(0, 20))
         
         # 1. PERFORMANCE
         self.create_menu(c, "🔥 DESEMPENHO MÁXIMO", list(MODOS_PERF.keys()), self.aplicar_perf, COR_PRIMARIA)
@@ -403,13 +408,15 @@ PORTAS DIFERENTES!
                                        font=("Arial", 12, "bold"), text_color="white", progress_color=COR_SUCESSO)
         self.sw_keymap.pack(pady=15)
 
-        ctk.CTkLabel(c, text="JOGOS ESPECÍFICOS (EM BREVE)", font=("Arial", 12, "bold"), text_color="gray").pack(pady=(30, 10))
+        ctk.CTkLabel(c, text="EM BREVE (Desenvolvimento)", font=("Arial", 12, "bold"), text_color="gray").pack(pady=(30, 10))
         
-        grid = ctk.CTkFrame(c, fg_color="transparent")
-        grid.pack(fill="x")
-        self.create_placeholder_btn(grid, "COD MOBILE 💀", 0)
-        self.create_placeholder_btn(grid, "PUBG 🔫", 1)
-        self.create_placeholder_btn(grid, "GENSHIN ⚔️", 2)
+        # V92 - Lista de Jogos Futuros
+        games_frame = ctk.CTkFrame(c, fg_color="transparent")
+        games_frame.pack(fill="x", padx=10)
+
+        future_games = ["COD Mobile 💀", "PUBG New State 🔫", "Genshin Impact ⚔️", "Roblox / Minecraft 🧱", "League of Legends: Wild Rift 🐉"]
+        for game in future_games:
+            ctk.CTkButton(games_frame, text=game, fg_color="#222", text_color="#555", state="disabled", height=35).pack(fill="x", pady=2)
 
         ctk.CTkLabel(c, text="Detalhes do Modo Free Fire:", font=("Arial", 14, "bold")).pack(anchor="w", pady=(30,5))
         desc = """
