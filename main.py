@@ -1,5 +1,5 @@
 import customtkinter as ctk
-from tkinter import messagebox
+from tkinter import messagebox, filedialog
 import subprocess
 import threading
 import os
@@ -8,6 +8,7 @@ import time
 import datetime
 import socket
 import concurrent.futures
+import re
 try:
     import keyboard
 except ImportError:
@@ -22,6 +23,7 @@ COR_BAT = "#15803d"
 COR_FUNDO = "#000000"
 COR_SUCESSO = "#22c55e"
 COR_ERRO = "#ef4444"
+COR_ALERTA = "#f59e0b"
 
 # --- HELP TEXTS (PROFISSIONAL & TÉCNICO) ---
 HELP_TEXTS = {
@@ -63,8 +65,8 @@ MODOS_BAT = {
 class TurboCoreApp(ctk.CTk):
     def __init__(self):
         super().__init__()
-        self.debug_log("--- INICIANDO TURBO CORE V71 DEBUG ---")
-        self.title("TURBO CORE V71 - MODO DEBUG")
+        self.debug_log("--- INICIANDO TURBO CORE V80 - ULTIMATE MONITOR ---")
+        self.title("TURBO CORE V80 - ULTIMATE MONITOR")
         self.geometry("540x980")
         self.resizable(False, False)
         self.configure(fg_color=COR_FUNDO)
@@ -92,6 +94,7 @@ class TurboCoreApp(ctk.CTk):
 
         self.setup_ui()
         self.start_monitor()
+        self.start_battery_monitor()
         self.setup_hotkeys()
         self.keymapping_active = False
 
@@ -124,24 +127,47 @@ class TurboCoreApp(ctk.CTk):
                 keyboard.add_hotkey('f1', lambda: self.iniciar_pc("PC Soberano (Padrão)"))
                 keyboard.add_hotkey('f2', lambda: self.ativar_free_fire())
 
-                # Keymapping (Espaço) - Inicialmente inativo
-                self.hook_space = keyboard.on_press_key("space", self.key_handler, suppress=False)
+                # Keymapping Básico
+                self.hook_space = keyboard.on_press_key("space", self.key_tap_handler, suppress=False)
+
+                # Keymapping Avançado (WASD - Swipe)
+                keyboard.on_press_key("w", lambda e: self.key_swipe_handler("w"), suppress=False)
+                keyboard.on_press_key("a", lambda e: self.key_swipe_handler("a"), suppress=False)
+                keyboard.on_press_key("s", lambda e: self.key_swipe_handler("s"), suppress=False)
+                keyboard.on_press_key("d", lambda e: self.key_swipe_handler("d"), suppress=False)
+
                 self.debug_log("Hotkeys configuradas.")
             except Exception as e:
                 self.debug_log(f"ERRO ao configurar hotkeys: {e}")
         else:
             self.debug_log("Biblioteca 'keyboard' não encontrada. Hotkeys desativadas.")
 
-    def key_handler(self, event):
+    def key_tap_handler(self, event):
         if self.keymapping_active and self.target_device:
-            # Simula toque no centro da tela (Hardcoded para 720x1280 landscape ~> x=640, y=360)
-            # Ajuste conforme necessidade ou obtenha resolução real
             threading.Thread(target=lambda: self.run_adb_generic("shell input tap 640 360")).start()
+
+    def key_swipe_handler(self, key):
+        if self.keymapping_active and self.target_device:
+            # Coordenadas do "Joystick Virtual" (Ex: Centro em 200, 500)
+            cx, cy = 200, 500
+            dist = 100
+            duration = 200 # ms
+
+            x1, y1 = cx, cy
+            x2, y2 = cx, cy
+
+            if key == "w": y2 -= dist
+            elif key == "s": y2 += dist
+            elif key == "a": x2 -= dist
+            elif key == "d": x2 += dist
+
+            cmd = f"shell input swipe {x1} {y1} {x2} {y2} {duration}"
+            threading.Thread(target=lambda: self.run_adb_generic(cmd)).start()
 
     def toggle_keymapping(self):
         self.keymapping_active = not self.keymapping_active
         state = "ATIVADO" if self.keymapping_active else "DESATIVADO"
-        self.log(f"Keymapping (Espaço -> Pulo): {state}")
+        self.log(f"Keymapping (Espaço/WASD): {state}")
 
     def setup_ui(self):
         self.debug_log("Iniciando construção da UI...")
@@ -152,8 +178,13 @@ class TurboCoreApp(ctk.CTk):
         self.frame_dev_info.pack(side="left", padx=15, pady=10)
         self.lbl_device_name = ctk.CTkLabel(self.frame_dev_info, text="Buscando...", font=("Arial", 13, "bold"), text_color="gray")
         self.lbl_device_name.pack(side="left", padx=(0, 10))
+
+        # Monitoramento (BAT / TEMP)
+        self.lbl_stats = ctk.CTkLabel(self.frame_dev_info, text="", font=("Consolas", 12, "bold"), text_color="gray")
+        self.lbl_stats.pack(side="left", padx=(10, 0))
+
         self.btn_refresh = ctk.CTkButton(self.frame_dev_info, text="🔄", width=30, height=30, fg_color="#222", command=self.force_refresh)
-        self.btn_refresh.pack(side="left")
+        self.btn_refresh.pack(side="left", padx=10)
 
         self.frame_nav = ctk.CTkFrame(self.header, fg_color="transparent")
         self.frame_nav.pack(side="right", padx=10)
@@ -232,6 +263,10 @@ class TurboCoreApp(ctk.CTk):
             
         # UTILITÁRIOS
         ctk.CTkLabel(c, text="FERRAMENTAS GERAIS", font=("Arial", 12, "bold")).pack(anchor="w", pady=(30,5))
+
+        # Instalador de APK
+        ctk.CTkButton(c, text="INSTALAR APK 📥", fg_color="#fbbf24", text_color="black", height=40, font=("Arial", 11, "bold"), command=self.install_apk).pack(fill="x", pady=5)
+
         ctk.CTkButton(c, text="RESTAURAR ORIGINAL 🔄", fg_color="#333", height=40, font=("Arial", 11, "bold"), command=self.restaurar_padrao).pack(fill="x", pady=5)
         
         self.txt_log = ctk.CTkTextbox(c, height=120, fg_color="#050505", text_color="#0f0", font=("Consolas", 10))
@@ -283,7 +318,7 @@ class TurboCoreApp(ctk.CTk):
         btn_ff.pack(fill="x", pady=10)
 
         # Keymapping Toggle
-        self.sw_keymap = ctk.CTkSwitch(c, text="ATIVAR KEYMAPPING (Espaço -> Pulo)", command=self.toggle_keymapping,
+        self.sw_keymap = ctk.CTkSwitch(c, text="ATIVAR KEYMAPPING (Espaço + WASD)", command=self.toggle_keymapping,
                                        font=("Arial", 12, "bold"), text_color="white", progress_color=COR_SUCESSO)
         self.sw_keymap.pack(pady=15)
 
@@ -387,6 +422,33 @@ class TurboCoreApp(ctk.CTk):
         self.run_adb_cmd_string(cmds)
         messagebox.showinfo("Sucesso", "Celular restaurado!")
 
+    def install_apk(self):
+        if not self.target_device: return messagebox.showerror("Erro", "Conecte o dispositivo primeiro!")
+
+        file_path = filedialog.askopenfilename(filetypes=[("Android Package", "*.apk")])
+        if not file_path: return
+
+        self.log(f"Instalando: {os.path.basename(file_path)}...")
+        self.debug_log(f"Iniciando instalação de APK: {file_path}")
+
+        def run_install():
+            si = subprocess.STARTUPINFO(); si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+            exe = os.path.join(self.bin_dir, "adb.exe")
+
+            try:
+                res = subprocess.run([exe, "-s", self.target_device, "install", "-r", file_path], capture_output=True, text=True, startupinfo=si)
+                if "Success" in res.stdout:
+                    self.log("Instalação Concluída!")
+                    self.after(0, lambda: messagebox.showinfo("Sucesso", "APK Instalado com Sucesso!"))
+                else:
+                    self.log(f"Erro na instalação: {res.stderr}")
+                    self.debug_log(f"Erro install: {res.stderr}")
+                    self.after(0, lambda: messagebox.showerror("Erro", f"Falha ao instalar:\n{res.stderr}"))
+            except Exception as e:
+                self.debug_log(f"Exceção install: {e}")
+
+        threading.Thread(target=run_install).start()
+
     # --- CONEXÃO ---
     def build_connection(self, p):
         f1 = ctk.CTkFrame(p, fg_color="#111"); f1.pack(fill="x", padx=20, pady=20)
@@ -426,6 +488,14 @@ class TurboCoreApp(ctk.CTk):
         else:
             self.lbl_device_name.configure(text="❌ NENHUM DISPOSITIVO", text_color=COR_ERRO)
             self.btn_refresh.configure(fg_color="#222")
+            self.lbl_stats.configure(text="")
+
+    def update_stats_ui(self, level, temp):
+        if not self.target_device: return
+
+        temp_color = COR_ERRO if temp > 40.0 else "gray"
+        text = f" | 🔋 {level}% | 🌡️ {temp}°C"
+        self.lbl_stats.configure(text=text, text_color=temp_color)
 
     def force_refresh(self):
         self.debug_log("Forçando refresh ADB...")
@@ -458,9 +528,32 @@ class TurboCoreApp(ctk.CTk):
                                 self.debug_log("Dispositivo desconectado.")
                                 self.after(0, lambda: self.update_status_ui(False))
                 except Exception as e:
-                    print(f"Erro no monitor: {e}") # Usar print direto para evitar loop infinito de logs
+                    print(f"Erro no monitor: {e}")
                     pass
                 time.sleep(3)
+        threading.Thread(target=loop, daemon=True).start()
+
+    def start_battery_monitor(self):
+        self.debug_log("Iniciando monitor de bateria/temp...")
+        def loop():
+            adb = os.path.join(self.bin_dir, "adb.exe")
+            si = subprocess.STARTUPINFO(); si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+            while True:
+                if self.target_device:
+                    try:
+                        res = subprocess.run([adb, "-s", self.target_device, "shell", "dumpsys", "battery"], capture_output=True, text=True, startupinfo=si)
+                        output = res.stdout
+
+                        level = re.search(r'level: (\d+)', output)
+                        temp = re.search(r'temperature: (\d+)', output)
+
+                        if level and temp:
+                            l_val = int(level.group(1))
+                            t_val = int(temp.group(1)) / 10.0 # Converte 370 para 37.0
+                            self.after(0, lambda: self.update_stats_ui(l_val, t_val))
+                    except Exception as e:
+                        self.debug_log(f"Erro Battery Monitor: {e}")
+                time.sleep(5)
         threading.Thread(target=loop, daemon=True).start()
 
     def run_manual(self):
