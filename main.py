@@ -25,22 +25,22 @@ COR_SUCESSO = "#22c55e"
 COR_ERRO = "#ef4444"
 COR_ALERTA = "#f59e0b"
 
-# --- HELP TEXTS (PROFISSIONAL & TÉCNICO) ---
+# --- HELP TEXTS (SEGURANÇA E RESPONSABILIDADE) ---
 HELP_TEXTS = {
     # MODO PC
-    "PC Lite (Econômico)": "FERRAMENTA: Scrcpy + ADB\n\nO QUE FAZ:\n1. Força resolução física para 960x540 (via ADB).\n2. Trava FPS em 30.\n3. Abre espelhamento sem bordas.\n\nEFEITO:\nReduz drasticamente o uso de CPU/GPU do PC e do Celular. Ideal para ler textos ou usar em notebooks antigos.",
-    "PC Soberano (Padrão)": "FERRAMENTA: Scrcpy + ADB + Rotation\n\nO QUE FAZ:\n1. Altera resolução para 1280x720 (HD).\n2. Força densidade 160 DPI (Interface Desktop).\n3. Força rotação Paisagem (Deitado).\n\nEFEITO:\nTransforma o celular num monitor secundário real. A interface do Android muda para modo Tablet/Desktop.",
-    "PC Gamer (Ultra)": "FERRAMENTA: Scrcpy (Low Latency) + ADB\n\nO QUE FAZ:\n1. Resolução HD (720p).\n2. Remove limite de FPS (vai até onde a tela aguentar).\n3. Reduz buffer de áudio para 20ms (quase zero delay).\n\nEFEITO:\nMelhor resposta possível para jogar via teclado/mouse. Exige cabo USB 3.0 para não ter lag.",
+    "PC Lite (Econômico)": "[RISCO: BAIXO]\nFERRAMENTA: Scrcpy + ADB\n\nO QUE FAZ:\n1. Força resolução física para 960x540 (via ADB).\n2. Trava FPS em 30.\n3. Abre espelhamento sem bordas.\n\nEFEITO:\nReduz drasticamente o uso de CPU/GPU. Seguro para uso prolongado.",
+    "PC Soberano (Padrão)": "[RISCO: BAIXO]\nFERRAMENTA: Scrcpy + ADB + Rotation\n\nO QUE FAZ:\n1. Altera resolução para 1280x720 (HD).\n2. Força densidade 160 DPI.\n3. Força rotação Paisagem.\n\nEFEITO:\nTransforma o celular num monitor secundário. Uso padrão recomendado.",
+    "PC Gamer (Ultra)": "[RISCO: MÉDIO - AQUECIMENTO]\nFERRAMENTA: Scrcpy (Low Latency) + ADB\n\nO QUE FAZ:\n1. Resolução HD (720p).\n2. Remove limite de FPS.\n3. Reduz buffer de áudio para 20ms.\n\nALERTA:\nO uso contínuo pode causar aquecimento. Use por sua conta e risco.",
     
     # PERFORMANCE
-    "Gamer Ultimate (Mobile)": "FERRAMENTA: ADB Shell (Package Manager)\n\nO QUE FAZ:\n1. Desabilita o 'Game Optimizing Service' (GOS) da Samsung.\n2. Altera resolução para 432x960.\n\nEFEITO:\nRemove o 'freio de mão' que a Samsung coloca em jogos. O celular esquenta mais, mas mantém o FPS estável.",
-    "Ultimate Desempenho (Bruto)": "FERRAMENTA: ADB Shell (Settings Global)\n\nO QUE FAZ:\n1. 'disable_thermal_control=true' (Desliga proteção térmica).\n2. Mata todos os apps de fundo.\n\nEFEITO:\nO processador roda no clock máximo o tempo todo. PERIGO: Use cooler, pois o celular não vai reduzir a velocidade para esfriar.",
-    "Usual Turbo (Dia a Dia)": "FERRAMENTA: ADB Shell (Window Manager)\n\nO QUE FAZ:\n1. Define escala de animação para 0.5x.\n2. Reseta resolução para nativa.\n\nEFEITO:\nFaz o celular parecer mais rápido (snappy) nas transições de menus, sem gastar mais bateria.",
+    "Gamer Ultimate (Mobile)": "[RISCO: ALTO - AQUECIMENTO]\nFERRAMENTA: ADB Shell (Package Manager)\n\nO QUE FAZ:\n1. Desabilita o GOS da Samsung.\n2. Altera resolução para 432x960.\n\nPERIGO CRÍTICO:\nRemove proteções térmicas de software. O dispositivo pode superaquecer. Use cooler externo.",
+    "Ultimate Desempenho (Bruto)": "[PERIGO CRÍTICO - HARDWARE]\nFERRAMENTA: ADB Shell (Settings Global)\n\nO QUE FAZ:\n1. Desliga proteção térmica (disable_thermal_control).\n2. Mata apps de fundo.\n\nALERTA MÁXIMO:\nO processador rodará no limite térmico. Risco real de danos ao hardware. Use por sua conta e risco.",
+    "Usual Turbo (Dia a Dia)": "[RISCO: BAIXO]\nFERRAMENTA: ADB Shell (Window Manager)\n\nO QUE FAZ:\n1. Define animações para 0.5x.\n2. Reseta resolução.\n\nEFEITO:\nMelhora a fluidez visual sem riscos ao hardware.",
     
     # BATERIA
-    "Economia Normal": "FERRAMENTA: ADB Shell (Power Manager)\n\nO QUE FAZ:\nAtiva o 'Low Power Mode' nativo do Android e força o gerenciamento adaptativo.\n\nEFEITO:\nEconomia padrão, sem afetar muito a usabilidade.",
-    "Super Economia": "FERRAMENTA: ADB Shell (Service Manager)\n\nO QUE FAZ:\n1. Resolução 720p.\n2. Desativa Bluetooth via comando de serviço.\n3. Desativa Sincronização automática.\n\nEFEITO:\nBom para viagens longas onde você só precisa do básico.",
-    "Ultimate Economia (Deep)": "FERRAMENTA: ADB Shell (System + AM)\n\nO QUE FAZ:\n1. Resolução 360p (Pixelada).\n2. Brilho da tela = 0.\n3. Mata todos os processos (kill-all).\n\nEFEITO:\nModo de sobrevivência. O celular fica 'feio' e escuro, mas dura o máximo possível."
+    "Economia Normal": "[RISCO: BAIXO]\nAtiva o 'Low Power Mode' nativo.",
+    "Super Economia": "[RISCO: BAIXO]\nDesativa Bluetooth e Sincronização. Reduz resolução.",
+    "Ultimate Economia (Deep)": "[RISCO: BAIXO - USABILIDADE]\nReduz brilho a zero e mata processos. O celular ficará difícil de usar."
 }
 
 # --- CONFIGS ---
@@ -65,8 +65,8 @@ MODOS_BAT = {
 class TurboCoreApp(ctk.CTk):
     def __init__(self):
         super().__init__()
-        self.debug_log("--- INICIANDO TURBO CORE V80 - ULTIMATE MONITOR ---")
-        self.title("TURBO CORE V80 - ULTIMATE MONITOR")
+        self.debug_log("--- INICIANDO TURBO CORE V90 - ELITE SUITE ---")
+        self.title("TURBO CORE V90 - ELITE SUITE")
         self.geometry("540x980")
         self.resizable(False, False)
         self.configure(fg_color=COR_FUNDO)
@@ -255,8 +255,21 @@ class TurboCoreApp(ctk.CTk):
 
         # 2. MODO PC
         self.create_menu(c, "🖥️ MODOS PC (MONITOR)", list(MODOS_PC.keys()), self.iniciar_pc, COR_PC)
-        self.chk_record = ctk.CTkCheckBox(c, text="Gravar Sessão (.mp4)", font=("Arial", 11, "bold"), text_color="#ccc", fg_color=COR_PC)
-        self.chk_record.pack(anchor="w", pady=(2, 10))
+
+        # Opções de Lançamento (NOVO V90)
+        frame_opts = ctk.CTkFrame(c, fg_color="#111", border_width=1, border_color="#333")
+        frame_opts.pack(fill="x", pady=(5, 15))
+        ctk.CTkLabel(frame_opts, text="OPÇÕES DE LANÇAMENTO", font=("Arial", 10, "bold"), text_color="gray").pack(pady=(5,2))
+
+        self.chk_video = ctk.CTkCheckBox(frame_opts, text="Gravar Vídeo", font=("Arial", 11), text_color="#ccc", fg_color=COR_PC)
+        self.chk_video.pack(side="left", padx=10, pady=10)
+
+        self.chk_audio = ctk.CTkCheckBox(frame_opts, text="Gravar Áudio", font=("Arial", 11), text_color="#ccc", fg_color=COR_PC)
+        self.chk_audio.pack(side="left", padx=10, pady=10)
+        self.chk_audio.select() # Padrão: Ativado
+
+        self.chk_ghost = ctk.CTkCheckBox(frame_opts, text="Modo Fantasma (Tela Off)", font=("Arial", 11), text_color="#ccc", fg_color=COR_PC)
+        self.chk_ghost.pack(side="left", padx=10, pady=10)
 
         # 3. BATERIA
         self.create_menu(c, "🔋 ECONOMIA DE BATERIA", list(MODOS_BAT.keys()), self.aplicar_bat, COR_BAT)
@@ -370,8 +383,12 @@ class TurboCoreApp(ctk.CTk):
         cfg = MODOS_PC[choice]
         exe_adb = os.path.join(self.bin_dir, "adb.exe")
         exe_scrcpy = os.path.join(self.bin_dir, "scrcpy.exe")
-        record = self.chk_record.get()
         
+        # Lê opções do V90
+        opt_video = self.chk_video.get()
+        opt_audio = self.chk_audio.get()
+        opt_ghost = self.chk_ghost.get()
+
         def thread_pc():
             si = subprocess.STARTUPINFO(); si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
             self.log(f"Ativando {choice}...")
@@ -387,13 +404,23 @@ class TurboCoreApp(ctk.CTk):
             time.sleep(2.5)
 
             scrcpy_args = list(cfg['scrcpy'])
-            if record:
+
+            # Aplica flags V90
+            if opt_video:
                 timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
                 filename = f"REC_{timestamp}.mp4"
                 filepath = os.path.join(self.caps_dir, filename)
                 scrcpy_args += ["--record", filepath, "--record-format=mp4"]
                 self.log(f"Gravando: {filename}")
                 self.debug_log(f"Configurando gravação: {filepath}")
+
+            if not opt_audio:
+                scrcpy_args += ["--no-audio"]
+                self.debug_log("Audio desativado.")
+
+            if opt_ghost:
+                scrcpy_args += ["--turn-screen-off"]
+                self.debug_log("Modo Fantasma (Tela Off) ativado.")
 
             self.debug_log(f"Executando Scrcpy com args: {scrcpy_args}")
             try:
@@ -451,20 +478,30 @@ class TurboCoreApp(ctk.CTk):
 
     # --- CONEXÃO ---
     def build_connection(self, p):
-        f1 = ctk.CTkFrame(p, fg_color="#111"); f1.pack(fill="x", padx=20, pady=20)
-        ctk.CTkLabel(f1, text="🔗 CONEXÃO WI-FI", font=("Arial", 14, "bold")).pack(pady=10)
-        self.ent_ip = ctk.CTkEntry(f1, placeholder_text="IP:PORTA", width=300); self.ent_ip.pack(pady=5)
+        # Passo 1: Pareamento
+        frame_pair = ctk.CTkFrame(p, fg_color="#111", border_width=1, border_color="#333")
+        frame_pair.pack(fill="x", padx=20, pady=(20, 10))
+        ctk.CTkLabel(frame_pair, text="PASSO 1: PAREAMENTO (Wireless Debugging)", font=("Arial", 12, "bold"), text_color="#fbbf24").pack(pady=10)
 
-        btn_frame = ctk.CTkFrame(f1, fg_color="transparent")
+        self.ent_pair_ip = ctk.CTkEntry(frame_pair, placeholder_text="IP:PORTA (Ex: 192.168.1.5:40000)", width=300)
+        self.ent_pair_ip.pack(pady=5)
+        self.ent_pair_code = ctk.CTkEntry(frame_pair, placeholder_text="CÓDIGO DE PAREAMENTO", width=300)
+        self.ent_pair_code.pack(pady=5)
+        ctk.CTkButton(frame_pair, text="PAREAR DISPOSITIVO", fg_color="#fbbf24", text_color="black", command=self.wifi_pair).pack(pady=15)
+
+        # Passo 2: Conexão
+        frame_conn = ctk.CTkFrame(p, fg_color="#111", border_width=1, border_color="#333")
+        frame_conn.pack(fill="x", padx=20, pady=10)
+        ctk.CTkLabel(frame_conn, text="PASSO 2: CONEXÃO (ADB)", font=("Arial", 12, "bold"), text_color=COR_PRIMARIA).pack(pady=10)
+
+        self.ent_ip = ctk.CTkEntry(frame_conn, placeholder_text="IP:PORTA (Ex: 192.168.1.5:5555)", width=300)
+        self.ent_ip.pack(pady=5)
+
+        btn_frame = ctk.CTkFrame(frame_conn, fg_color="transparent")
         btn_frame.pack(pady=15)
         ctk.CTkButton(btn_frame, text="ESCANEAR REDE 🔎", fg_color="#333", width=140, command=self.scan_network).pack(side="left", padx=5)
         ctk.CTkButton(btn_frame, text="CONECTAR", fg_color=COR_PRIMARIA, width=140, command=self.wifi_connect).pack(side="left", padx=5)
 
-        f2 = ctk.CTkFrame(p, fg_color="#111"); f2.pack(fill="x", padx=20, pady=10)
-        ctk.CTkLabel(f2, text="🔑 PAREAMENTO", font=("Arial", 14, "bold"), text_color="#fbbf24").pack(pady=10)
-        self.ent_pair_ip = ctk.CTkEntry(f2, placeholder_text="IP:PORTA", width=300); self.ent_pair_ip.pack(pady=5)
-        self.ent_pair_code = ctk.CTkEntry(f2, placeholder_text="CÓDIGO", width=300); self.ent_pair_code.pack(pady=5)
-        ctk.CTkButton(f2, text="PAREAR", fg_color="#fbbf24", text_color="black", command=self.wifi_pair).pack(pady=15)
 
     def build_terminal(self, p):
         ctk.CTkLabel(p, text="TERMINAL MANUAL", font=("Arial", 14, "bold")).pack(pady=10)
