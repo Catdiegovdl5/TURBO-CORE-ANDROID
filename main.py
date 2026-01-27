@@ -45,7 +45,7 @@ FONT_MONO = ("Consolas", 11)
 # --- TRADUÇÕES ---
 TRANSLATIONS = {
     "PT": {
-        "app_title": "TURBO CORE V98 - SPACE OPTIMIZATION",
+        "app_title": "TURBO CORE V99 - VISUAL POLISH",
         "sidebar_dash": "🖥️ DASHBOARD",
         "sidebar_game": "🎮 COMPETITIVO",
         "sidebar_apps": "📦 APPS",
@@ -64,6 +64,7 @@ TRANSLATIONS = {
         "btn_install": "Instalar APK 📥",
         "btn_send": "Enviar Arquivo 📤",
         "btn_reset": "Restaurar Original 🔄",
+        "btn_kill": "⚡ LIMPAR RAM",
         "select_default": "Selecionar...",
         "hero_ff": "ATIVAR MODO FREE FIRE MAX 🎯",
         "sw_keymap": "Ativar Keymapping (WASD)",
@@ -96,7 +97,7 @@ TRANSLATIONS = {
         "action_del": "Del"
     },
     "EN": {
-        "app_title": "TURBO CORE V98 - SPACE OPTIMIZATION",
+        "app_title": "TURBO CORE V99 - VISUAL POLISH",
         "sidebar_dash": "🖥️ DASHBOARD",
         "sidebar_game": "🎮 COMPETITIVE",
         "sidebar_apps": "📦 APPS",
@@ -115,6 +116,7 @@ TRANSLATIONS = {
         "btn_install": "Install APK 📥",
         "btn_send": "Send File 📤",
         "btn_reset": "Factory Reset 🔄",
+        "btn_kill": "⚡ KILL ALL",
         "select_default": "Select...",
         "hero_ff": "ACTIVATE FREE FIRE MODE 🎯",
         "sw_keymap": "Enable Keymapping (WASD)",
@@ -147,7 +149,7 @@ TRANSLATIONS = {
         "action_del": "Del"
     },
     "ES": {
-        "app_title": "TURBO CORE V98 - SPACE OPTIMIZATION",
+        "app_title": "TURBO CORE V99 - VISUAL POLISH",
         "sidebar_dash": "🖥️ PANEL",
         "sidebar_game": "🎮 COMPETITIVO",
         "sidebar_apps": "📦 APPS",
@@ -166,6 +168,7 @@ TRANSLATIONS = {
         "btn_install": "Instalar APK 📥",
         "btn_send": "Enviar Archivo 📤",
         "btn_reset": "Restaurar Original 🔄",
+        "btn_kill": "⚡ LIMPIAR RAM",
         "select_default": "Seleccionar...",
         "hero_ff": "ACTIVAR MODO FREE FIRE 🎯",
         "sw_keymap": "Activar Keymapping (WASD)",
@@ -237,7 +240,7 @@ class TurboCoreApp(ctk.CTk):
         self.accent_color = THEMES[self.current_theme]
         self.all_apps_cache = []
 
-        self.debug_log(f"--- INICIANDO TURBO CORE V98 SPACE OPTIMIZATION [{self.current_lang}] ---")
+        self.debug_log(f"--- INICIANDO TURBO CORE V99 VISUAL POLISH [{self.current_lang}] ---")
         self.title(self.T("app_title"))
         self.geometry("900x750")
         self.resizable(False, True)
@@ -331,29 +334,30 @@ class TurboCoreApp(ctk.CTk):
         self.sidebar.pack_propagate(False)
 
         ctk.CTkLabel(self.sidebar, text="TURBO\nCORE", font=("Montserrat", 24, "bold"), text_color=self.accent_color).pack(pady=(40, 5))
-        ctk.CTkLabel(self.sidebar, text="V98 SPACE", font=("Roboto", 10), text_color=COLOR_TEXT_DIM).pack(pady=(0, 20))
+        ctk.CTkLabel(self.sidebar, text="V99 POLISH", font=("Roboto", 10), text_color=COLOR_TEXT_DIM).pack(pady=(0, 20))
 
         self.btn_dash = self.create_sidebar_btn(self.T("sidebar_dash"), "dash")
         self.btn_special = self.create_sidebar_btn(self.T("sidebar_game"), "special")
         self.btn_apps = self.create_sidebar_btn(self.T("sidebar_apps"), "apps")
         self.btn_term = self.create_sidebar_btn(self.T("sidebar_term"), "term")
 
-        f_sels = ctk.CTkFrame(self.sidebar, fg_color="transparent")
-        f_sels.pack(side="bottom", pady=20)
+        # Sidebar Footer (V99 FIX)
+        self.sidebar_footer = ctk.CTkFrame(self.sidebar, fg_color="transparent")
+        self.sidebar_footer.pack(side="bottom", fill="x", padx=10, pady=20)
 
-        ctk.CTkLabel(f_sels, text=self.T("lang_label"), font=("Roboto", 9), text_color=COLOR_TEXT_DIM).pack()
-        lang_menu = ctk.CTkOptionMenu(f_sels, values=["PT", "EN", "ES"], width=140,
-                                      fg_color=COLOR_BG, button_color=COLOR_BORDER,
-                                      command=self.change_language)
-        lang_menu.set(self.current_lang)
-        lang_menu.pack(pady=(0, 10))
-
-        ctk.CTkLabel(f_sels, text=self.T("theme_label"), font=("Roboto", 9), text_color=COLOR_TEXT_DIM).pack()
-        theme_menu = ctk.CTkOptionMenu(f_sels, values=list(THEMES.keys()), width=140,
+        ctk.CTkLabel(self.sidebar_footer, text=self.T("theme_label"), font=("Roboto", 9), text_color=COLOR_TEXT_DIM).pack(pady=(0, 2))
+        theme_menu = ctk.CTkOptionMenu(self.sidebar_footer, values=list(THEMES.keys()), width=160,
                                        fg_color=COLOR_BG, button_color=COLOR_BORDER,
                                        command=self.change_theme)
         theme_menu.set(self.current_theme)
-        theme_menu.pack()
+        theme_menu.pack(pady=(0, 15)) # Spacer
+
+        ctk.CTkLabel(self.sidebar_footer, text=self.T("lang_label"), font=("Roboto", 9), text_color=COLOR_TEXT_DIM).pack(pady=(0, 2))
+        lang_menu = ctk.CTkOptionMenu(self.sidebar_footer, values=["PT", "EN", "ES"], width=160,
+                                      fg_color=COLOR_BG, button_color=COLOR_BORDER,
+                                      command=self.change_language)
+        lang_menu.set(self.current_lang)
+        lang_menu.pack(pady=(0, 5))
 
         self.right_panel = ctk.CTkFrame(self, fg_color="transparent")
         self.right_panel.pack(side="right", fill="both", expand=True)
@@ -382,7 +386,6 @@ class TurboCoreApp(ctk.CTk):
                                          command=self.force_refresh)
         self.btn_refresh.pack(side="left", padx=5)
 
-        # KILL BUTTON (Compact)
         self.btn_kill = ctk.CTkButton(self.header, text="🚀", width=40, height=36,
                                       fg_color="#EF4444", text_color="white", hover_color="#991B1B",
                                       corner_radius=10, font=FONT_BOLD, command=self.kill_all_processes)
@@ -578,7 +581,7 @@ class TurboCoreApp(ctk.CTk):
 
         self.ent_search = ctk.CTkEntry(head, placeholder_text=self.T("apps_search"), width=300, fg_color=COLOR_SURFACE, border_color=COLOR_BORDER)
         self.ent_search.pack(side="left", padx=(20, 10))
-        self.ent_search.bind("<KeyRelease>", self.filter_apps_ui) # FIX V98
+        self.ent_search.bind("<KeyRelease>", self.filter_apps_ui)
 
         ctk.CTkButton(head, text=self.T("apps_refresh"), width=100, fg_color=COLOR_SURFACE, border_color=COLOR_BORDER, border_width=1,
                       command=self.refresh_apps_list).pack(side="left")
@@ -607,7 +610,7 @@ class TurboCoreApp(ctk.CTk):
                 pkg = line.replace("package:", "").strip()
                 if pkg: apps.append(pkg)
 
-            self.all_apps_cache = apps # FIX V98
+            self.all_apps_cache = apps
             self.after(0, lambda: self.populate_apps_ui(apps))
 
         threading.Thread(target=load, daemon=True).start()
