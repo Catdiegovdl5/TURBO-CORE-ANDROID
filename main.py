@@ -45,7 +45,7 @@ FONT_MONO = ("Consolas", 11)
 # --- TRADUÇÕES ---
 TRANSLATIONS = {
     "PT": {
-        "app_title": "TURBO CORE V100 - GOLD EDITION",
+        "app_title": "TURBO CORE V100.1 - HELP FIX",
         "sidebar_dash": "🖥️ DASHBOARD",
         "sidebar_game": "🎮 COMPETITIVO",
         "sidebar_apps": "📦 APPS",
@@ -94,10 +94,20 @@ TRANSLATIONS = {
         "apps_loading": "Carregando apps...",
         "action_open": "Abrir",
         "action_kill": "Parar",
-        "action_del": "Del"
+        "action_del": "Del",
+        # HELP TEXTS
+        "help_pc_lite": "MODO ECONÔMICO (SAFE)\n\n• Resolução: 540p (Baixa)\n• FPS: 30 Travado\n• Risco: NENHUM.\n\nIdeal para leitura e tarefas simples. Economiza bateria e mantém o celular frio.",
+        "help_pc_sob": "MODO SOBERANO (PADRÃO)\n\n• Resolução: 720p (HD)\n• Densidade: 160 DPI\n• Risco: BAIXO.\n\nTransforma o celular em um monitor secundário funcional. Melhor equilíbrio entre qualidade e performance.",
+        "help_pc_gamer": "MODO GAMER (ULTRA)\n\n• Resolução: 720p (Destravada)\n• FPS: Ilimitado (Máximo)\n• Latência: Mínima (Buffer Reduzido)\n\n⚠️ ALERTA DE AQUECIMENTO: O processador vai rodar no máximo. Monitoramento de temperatura recomendado.",
+        "help_perf_gos": "GAMER ULTIMATE (MOBILE)\n\n• Ação: Desabilita GOS (Samsung Game Optimizing Service)\n• Risco: MÉDIO/ALTO.\n\n⚠️ Remove limitadores de software da fabricante. Pode causar aquecimento excessivo em sessões longas.",
+        "help_perf_ult": "ULTIMATE DESEMPENHO (BRUTO)\n\n• Ação: DESLIGA SENSORES TÉRMICOS e mata processos.\n• Risco: CRÍTICO ☠️\n\n⚠️ PERIGO: O celular NÃO vai desligar se superaquecer. Risco real de dano físico ao processador/bateria. Use cooler externo obrigatoriamente.",
+        "help_perf_std": "USUAL TURBO\n\n• Ação: Acelera animações do Android (0.5x).\n• Risco: NENHUM.\n\nDeixa a navegação mais rápida visualmente sem forçar o hardware.",
+        "help_bat_eco": "ECONOMIA NORMAL\n\n• Ação: Ativa modo Low Power nativo.\n• Risco: NENHUM.\n\nGerenciamento padrão do Android.",
+        "help_bat_sup": "SUPER ECONOMIA\n\n• Ação: Desliga Bluetooth, Sync e reduz resolução.\n• Risco: BAIXO.\n\nVocê deixará de receber notificações de alguns apps.",
+        "help_bat_ult": "ULTIMATE ECONOMIA (DEEP)\n\n• Ação: Brilho Zero, Mata Apps, Limita CPU.\n• Risco: USABILIDADE.\n\n⚠️ O celular vira um 'tijolo' para sobreviver. A tela ficará quase apagada. Só use em emergências."
     },
     "EN": {
-        "app_title": "TURBO CORE V100 - GOLD EDITION",
+        "app_title": "TURBO CORE V100.1 - HELP FIX",
         "sidebar_dash": "🖥️ DASHBOARD",
         "sidebar_game": "🎮 COMPETITIVE",
         "sidebar_apps": "📦 APPS",
@@ -146,10 +156,20 @@ TRANSLATIONS = {
         "apps_loading": "Loading apps...",
         "action_open": "Open",
         "action_kill": "Kill",
-        "action_del": "Del"
+        "action_del": "Del",
+        # HELP TEXTS EN
+        "help_pc_lite": "ECONOMY MODE (SAFE)\n\n• Res: 540p\n• FPS: 30 Locked\n• Risk: NONE.\n\nSaves battery, keeps device cool.",
+        "help_pc_sob": "SOVEREIGN MODE (STD)\n\n• Res: 720p\n• Density: 160 DPI\n• Risk: LOW.\n\nTurns phone into a functional secondary monitor.",
+        "help_pc_gamer": "GAMER MODE (ULTRA)\n\n• Res: 720p Unlocked\n• FPS: Max\n• Latency: Min\n\n⚠️ HEATING ALERT: Processor runs at max. Monitor temps.",
+        "help_perf_gos": "GAMER ULTIMATE\n\n• Action: Disables Samsung GOS\n• Risk: MED/HIGH.\n\n⚠️ Removes software limits. May cause heating.",
+        "help_perf_ult": "ULTIMATE PERFORMANCE\n\n• Action: DISABLES THERMAL SENSORS.\n• Risk: CRITICAL ☠️\n\n⚠️ DANGER: Phone will NOT shutdown on overheat. Real hardware risk.",
+        "help_perf_std": "USUAL TURBO\n\n• Action: Faster animations (0.5x).\n• Risk: NONE.",
+        "help_bat_eco": "NORMAL SAVER\n\n• Action: Native Low Power Mode.\n• Risk: NONE.",
+        "help_bat_sup": "SUPER SAVER\n\n• Action: No Bluetooth/Sync.\n• Risk: LOW.",
+        "help_bat_ult": "ULTIMATE SAVER\n\n• Action: Zero Brightness, Kill Apps.\n• Risk: USABILITY.\n\n⚠️ Phone becomes barely usable to survive."
     },
     "ES": {
-        "app_title": "TURBO CORE V100 - GOLD EDITION",
+        "app_title": "TURBO CORE V100.1 - HELP FIX",
         "sidebar_dash": "🖥️ PANEL",
         "sidebar_game": "🎮 COMPETITIVO",
         "sidebar_apps": "📦 APPS",
@@ -198,20 +218,18 @@ TRANSLATIONS = {
         "apps_loading": "Cargando apps...",
         "action_open": "Abrir",
         "action_kill": "Parar",
-        "action_del": "Del"
+        "action_del": "Del",
+        # HELP TEXTS ES
+        "help_pc_lite": "MODO ECONÓMICO (SAFE)\n\n• Res: 540p\n• FPS: 30 Fijo\n• Riesgo: NINGUNO.\n\nAhorra batería, mantiene frío.",
+        "help_pc_sob": "MODO SOBERANO (STD)\n\n• Res: 720p\n• Densidad: 160 DPI\n• Riesgo: BAJO.\n\nMonitor secundario funcional.",
+        "help_pc_gamer": "MODO GAMER (ULTRA)\n\n• Res: 720p Desbloq.\n• FPS: Max\n• Latencia: Min\n\n⚠️ ALERTA CALOR: CPU al máximo. Monitorear temp.",
+        "help_perf_gos": "GAMER ULTIMATE\n\n• Acción: Desactiva Samsung GOS\n• Riesgo: MEDIO/ALTO.\n\n⚠️ Quita límites de software. Puede calentar.",
+        "help_perf_ult": "ULTIMATE RENDIMIENTO\n\n• Acción: DESACTIVA SENSORES TÉRMICOS.\n• Riesgo: CRÍTICO ☠️\n\n⚠️ PELIGRO: No se apagará por calor. Riesgo físico.",
+        "help_perf_std": "USUAL TURBO\n\n• Acción: Animaciones rápidas (0.5x).\n• Riesgo: NINGUNO.",
+        "help_bat_eco": "AHORRO NORMAL\n\n• Acción: Low Power Mode nativo.\n• Riesgo: NINGUNO.",
+        "help_bat_sup": "SUPER AHORRO\n\n• Acción: Sin Bluetooth/Sync.\n• Riesgo: BAJO.",
+        "help_bat_ult": "ULTIMATE AHORRO\n\n• Acción: Brillo Cero, Mata Apps.\n• Riesgo: USABILIDAD.\n\n⚠️ Casi inutilizable para sobrevivir."
     }
-}
-
-HELP_TEXTS = {
-    "PC Lite (Econômico)": "[RISCO: BAIXO]\nFERRAMENTA: Scrcpy + ADB\n\nO QUE FAZ:\n1. Força resolução física para 960x540 (via ADB).\n2. Trava FPS em 30.\n3. Abre espelhamento sem bordas.\n\nEFEITO:\nReduz drasticamente o uso de CPU/GPU. Seguro para uso prolongado.",
-    "PC Soberano (Padrão)": "[RISCO: BAIXO]\nFERRAMENTA: Scrcpy + ADB + Rotation\n\nO QUE FAZ:\n1. Altera resolução para 1280x720 (HD).\n2. Força densidade 160 DPI.\n3. Força rotação Paisagem.\n\nEFEITO:\nTransforma o celular num monitor secundário. Uso padrão recomendado.",
-    "PC Gamer (Ultra)": "[RISCO: MÉDIO - AQUECIMENTO]\nFERRAMENTA: Scrcpy (Low Latency) + ADB\n\nO QUE FAZ:\n1. Resolução HD (720p).\n2. Remove limite de FPS.\n3. Reduz buffer de áudio para 20ms.\n\nALERTA:\nO uso contínuo pode causar aquecimento moderado. Monitore a temperatura.",
-    "Gamer Ultimate (Mobile)": "[PERIGO CRÍTICO DE HARDWARE]\nFERRAMENTA: ADB Shell (Package Manager)\n\nO QUE FAZ:\n1. Desabilita o Game Optimizing Service (GOS).\n2. Remove proteções térmicas do fabricante.\n\nRISCO EXTREMO:\nEste modo remove as travas de segurança. Risco real de superaquecimento e danos permanentes à bateria/CPU. Use cooler obrigatório.",
-    "Ultimate Desempenho (Bruto)": "[ANULAÇÃO DE GARANTIA - PERIGO]\nFERRAMENTA: ADB Shell (Settings Global)\n\nO QUE FAZ:\n1. Desliga o sensor térmico (disable_thermal_control).\n2. Força clock máximo.\n\nALERTA FINAL:\nO celular não irá desligar se superaquecer. Risco de derretimento de componentes internos. Use por sua conta e risco absoluto.",
-    "Usual Turbo (Dia a Dia)": "[RISCO: BAIXO]\nFERRAMENTA: ADB Shell (Window Manager)\n\nO QUE FAZ:\n1. Acelera animações de janela (0.5x).\n\nEFEITO:\nSensação de fluidez sem forçar o hardware.",
-    "Economia Normal": "[RISCO: BAIXO]\nAtiva o 'Low Power Mode' oficial do Android.",
-    "Super Economia": "[RISCO: BAIXO]\nDesativa serviços de rádio (Bluetooth/Sync) e reduz resolução.",
-    "Ultimate Economia (Deep)": "[RISCO: BAIXO - USABILIDADE]\nReduz brilho a 0, mata processos e limita CPU. O aparelho ficará extremamente lento e escuro."
 }
 
 MODOS_PC = {
@@ -240,7 +258,7 @@ class TurboCoreApp(ctk.CTk):
         self.accent_color = THEMES[self.current_theme]
         self.all_apps_cache = []
 
-        self.debug_log(f"--- INICIANDO TURBO CORE V100 GOLD [{self.current_lang}] ---")
+        self.debug_log(f"--- INICIANDO TURBO CORE V100.1 HELP FIX [{self.current_lang}] ---")
         self.title(self.T("app_title"))
         self.geometry("900x750")
         self.resizable(False, True)
@@ -340,7 +358,7 @@ class TurboCoreApp(ctk.CTk):
         self.sidebar.pack_propagate(False)
 
         ctk.CTkLabel(self.sidebar, text="TURBO\nCORE", font=("Montserrat", 24, "bold"), text_color=self.accent_color).pack(pady=(40, 5))
-        ctk.CTkLabel(self.sidebar, text="V100 GOLD", font=("Roboto", 10), text_color=COLOR_TEXT_DIM).pack(pady=(0, 20))
+        ctk.CTkLabel(self.sidebar, text="V100.1 FIX", font=("Roboto", 10), text_color=COLOR_TEXT_DIM).pack(pady=(0, 20))
 
         self.btn_dash = self.create_sidebar_btn(self.T("sidebar_dash"), "dash")
         self.btn_special = self.create_sidebar_btn(self.T("sidebar_game"), "special")
@@ -878,7 +896,6 @@ class TurboCoreApp(ctk.CTk):
     def log(self, msg):
         ts = datetime.datetime.now().strftime("%H:%M")
         try:
-            # V100 Thread Safety Fix
             self.after(0, lambda: self._safe_log_insert(ts, msg))
         except: pass
 
