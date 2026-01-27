@@ -45,7 +45,7 @@ FONT_MONO = ("Consolas", 11)
 # --- TRADUÇÕES ---
 TRANSLATIONS = {
     "PT": {
-        "app_title": "TURBO CORE V99 - VISUAL POLISH",
+        "app_title": "TURBO CORE V100 - GOLD EDITION",
         "sidebar_dash": "🖥️ DASHBOARD",
         "sidebar_game": "🎮 COMPETITIVO",
         "sidebar_apps": "📦 APPS",
@@ -97,7 +97,7 @@ TRANSLATIONS = {
         "action_del": "Del"
     },
     "EN": {
-        "app_title": "TURBO CORE V99 - VISUAL POLISH",
+        "app_title": "TURBO CORE V100 - GOLD EDITION",
         "sidebar_dash": "🖥️ DASHBOARD",
         "sidebar_game": "🎮 COMPETITIVE",
         "sidebar_apps": "📦 APPS",
@@ -149,7 +149,7 @@ TRANSLATIONS = {
         "action_del": "Del"
     },
     "ES": {
-        "app_title": "TURBO CORE V99 - VISUAL POLISH",
+        "app_title": "TURBO CORE V100 - GOLD EDITION",
         "sidebar_dash": "🖥️ PANEL",
         "sidebar_game": "🎮 COMPETITIVO",
         "sidebar_apps": "📦 APPS",
@@ -205,13 +205,13 @@ TRANSLATIONS = {
 HELP_TEXTS = {
     "PC Lite (Econômico)": "[RISCO: BAIXO]\nFERRAMENTA: Scrcpy + ADB\n\nO QUE FAZ:\n1. Força resolução física para 960x540 (via ADB).\n2. Trava FPS em 30.\n3. Abre espelhamento sem bordas.\n\nEFEITO:\nReduz drasticamente o uso de CPU/GPU. Seguro para uso prolongado.",
     "PC Soberano (Padrão)": "[RISCO: BAIXO]\nFERRAMENTA: Scrcpy + ADB + Rotation\n\nO QUE FAZ:\n1. Altera resolução para 1280x720 (HD).\n2. Força densidade 160 DPI.\n3. Força rotação Paisagem.\n\nEFEITO:\nTransforma o celular num monitor secundário. Uso padrão recomendado.",
-    "PC Gamer (Ultra)": "[RISCO: MÉDIO - AQUECIMENTO]\nFERRAMENTA: Scrcpy (Low Latency) + ADB\n\nO QUE FAZ:\n1. Resolução HD (720p).\n2. Remove limite de FPS.\n3. Reduz buffer de áudio para 20ms.\n\nALERTA:\nO uso contínuo pode causar aquecimento. Use por sua conta e risco.",
-    "Gamer Ultimate (Mobile)": "[RISCO: ALTO - AQUECIMENTO]\nFERRAMENTA: ADB Shell (Package Manager)\n\nO QUE FAZ:\n1. Desabilita o GOS da Samsung.\n2. Altera resolução para 432x960.\n\nPERIGO CRÍTICO:\nRemove proteções térmicas de software. O dispositivo pode superaquecer. Use cooler externo.",
-    "Ultimate Desempenho (Bruto)": "[PERIGO CRÍTICO - HARDWARE]\nFERRAMENTA: ADB Shell (Settings Global)\n\nO QUE FAZ:\n1. Desliga proteção térmica (disable_thermal_control).\n2. Mata apps de fundo.\n\nALERTA MÁXIMO:\nO processador rodará no limite térmico. Risco real de danos ao hardware. Use por sua conta e risco.",
-    "Usual Turbo (Dia a Dia)": "[RISCO: BAIXO]\nFERRAMENTA: ADB Shell (Window Manager)\n\nO QUE FAZ:\n1. Define animações para 0.5x.\n2. Reseta resolução.\n\nEFEITO:\nMelhora a fluidez visual sem riscos ao hardware.",
-    "Economia Normal": "[RISCO: BAIXO]\nAtiva o 'Low Power Mode' nativo.",
-    "Super Economia": "[RISCO: BAIXO]\nDesativa Bluetooth e Sincronização. Reduz resolução.",
-    "Ultimate Economia (Deep)": "[RISCO: BAIXO - USABILIDADE]\nReduz brilho a zero e mata processos. O celular ficará difícil de usar."
+    "PC Gamer (Ultra)": "[RISCO: MÉDIO - AQUECIMENTO]\nFERRAMENTA: Scrcpy (Low Latency) + ADB\n\nO QUE FAZ:\n1. Resolução HD (720p).\n2. Remove limite de FPS.\n3. Reduz buffer de áudio para 20ms.\n\nALERTA:\nO uso contínuo pode causar aquecimento moderado. Monitore a temperatura.",
+    "Gamer Ultimate (Mobile)": "[PERIGO CRÍTICO DE HARDWARE]\nFERRAMENTA: ADB Shell (Package Manager)\n\nO QUE FAZ:\n1. Desabilita o Game Optimizing Service (GOS).\n2. Remove proteções térmicas do fabricante.\n\nRISCO EXTREMO:\nEste modo remove as travas de segurança. Risco real de superaquecimento e danos permanentes à bateria/CPU. Use cooler obrigatório.",
+    "Ultimate Desempenho (Bruto)": "[ANULAÇÃO DE GARANTIA - PERIGO]\nFERRAMENTA: ADB Shell (Settings Global)\n\nO QUE FAZ:\n1. Desliga o sensor térmico (disable_thermal_control).\n2. Força clock máximo.\n\nALERTA FINAL:\nO celular não irá desligar se superaquecer. Risco de derretimento de componentes internos. Use por sua conta e risco absoluto.",
+    "Usual Turbo (Dia a Dia)": "[RISCO: BAIXO]\nFERRAMENTA: ADB Shell (Window Manager)\n\nO QUE FAZ:\n1. Acelera animações de janela (0.5x).\n\nEFEITO:\nSensação de fluidez sem forçar o hardware.",
+    "Economia Normal": "[RISCO: BAIXO]\nAtiva o 'Low Power Mode' oficial do Android.",
+    "Super Economia": "[RISCO: BAIXO]\nDesativa serviços de rádio (Bluetooth/Sync) e reduz resolução.",
+    "Ultimate Economia (Deep)": "[RISCO: BAIXO - USABILIDADE]\nReduz brilho a 0, mata processos e limita CPU. O aparelho ficará extremamente lento e escuro."
 }
 
 MODOS_PC = {
@@ -240,7 +240,7 @@ class TurboCoreApp(ctk.CTk):
         self.accent_color = THEMES[self.current_theme]
         self.all_apps_cache = []
 
-        self.debug_log(f"--- INICIANDO TURBO CORE V99 VISUAL POLISH [{self.current_lang}] ---")
+        self.debug_log(f"--- INICIANDO TURBO CORE V100 GOLD [{self.current_lang}] ---")
         self.title(self.T("app_title"))
         self.geometry("900x750")
         self.resizable(False, True)
@@ -260,7 +260,13 @@ class TurboCoreApp(ctk.CTk):
         if not os.path.exists(self.caps_dir):
             os.makedirs(self.caps_dir)
 
-        self.img_bg = None
+        # Carregamento de Imagem V100 (Restaurado)
+        try:
+            img_path = os.path.join(self.app_dir, "fundo_chip.jpg")
+            self.img_bg = ctk.CTkImage(Image.open(img_path), size=(900, 750))
+        except Exception as e:
+            self.debug_log(f"Erro imagem fundo: {e}")
+            self.img_bg = None
 
         self.setup_ui()
         self.start_monitor()
@@ -334,23 +340,23 @@ class TurboCoreApp(ctk.CTk):
         self.sidebar.pack_propagate(False)
 
         ctk.CTkLabel(self.sidebar, text="TURBO\nCORE", font=("Montserrat", 24, "bold"), text_color=self.accent_color).pack(pady=(40, 5))
-        ctk.CTkLabel(self.sidebar, text="V99 POLISH", font=("Roboto", 10), text_color=COLOR_TEXT_DIM).pack(pady=(0, 20))
+        ctk.CTkLabel(self.sidebar, text="V100 GOLD", font=("Roboto", 10), text_color=COLOR_TEXT_DIM).pack(pady=(0, 20))
 
         self.btn_dash = self.create_sidebar_btn(self.T("sidebar_dash"), "dash")
         self.btn_special = self.create_sidebar_btn(self.T("sidebar_game"), "special")
         self.btn_apps = self.create_sidebar_btn(self.T("sidebar_apps"), "apps")
         self.btn_term = self.create_sidebar_btn(self.T("sidebar_term"), "term")
 
-        # Sidebar Footer (V99 FIX)
+        # Sidebar Footer Fix V100
         self.sidebar_footer = ctk.CTkFrame(self.sidebar, fg_color="transparent")
-        self.sidebar_footer.pack(side="bottom", fill="x", padx=10, pady=20)
+        self.sidebar_footer.pack(side="bottom", fill="x", padx=10, pady=(20, 60))
 
         ctk.CTkLabel(self.sidebar_footer, text=self.T("theme_label"), font=("Roboto", 9), text_color=COLOR_TEXT_DIM).pack(pady=(0, 2))
         theme_menu = ctk.CTkOptionMenu(self.sidebar_footer, values=list(THEMES.keys()), width=160,
                                        fg_color=COLOR_BG, button_color=COLOR_BORDER,
                                        command=self.change_theme)
         theme_menu.set(self.current_theme)
-        theme_menu.pack(pady=(0, 15)) # Spacer
+        theme_menu.pack(pady=(0, 15))
 
         ctk.CTkLabel(self.sidebar_footer, text=self.T("lang_label"), font=("Roboto", 9), text_color=COLOR_TEXT_DIM).pack(pady=(0, 2))
         lang_menu = ctk.CTkOptionMenu(self.sidebar_footer, values=["PT", "EN", "ES"], width=160,
@@ -401,6 +407,10 @@ class TurboCoreApp(ctk.CTk):
             "term": ctk.CTkFrame(self.main_area, fg_color="transparent")
         }
         
+        if self.img_bg:
+            for f in self.frames.values():
+                ctk.CTkLabel(f, text="", image=self.img_bg).place(x=0, y=0, relwidth=1, relheight=1)
+
         self.build_dashboard(self.frames["dash"])
         self.build_special(self.frames["special"])
         self.build_apps(self.frames["apps"])
@@ -817,10 +827,12 @@ class TurboCoreApp(ctk.CTk):
             while True:
                 if self.target_device:
                     try:
+                        # Battery
                         res = subprocess.run([adb, "-s", self.target_device, "shell", "dumpsys", "battery"], capture_output=True, text=True, startupinfo=si)
                         level = re.search(r'level: (\d+)', res.stdout)
                         temp = re.search(r'temperature: (\d+)', res.stdout)
 
+                        # Storage (df -h /data)
                         res_st = subprocess.run([adb, "-s", self.target_device, "shell", "df", "-h", "/data"], capture_output=True, text=True, startupinfo=si)
                         avail = "N/A"
                         if res_st.stdout:
@@ -829,8 +841,9 @@ class TurboCoreApp(ctk.CTk):
                                 parts = lines[1].split()
                                 if len(parts) >= 4: avail = parts[3]
 
+                        # RAM (/proc/meminfo) V100 FIX
                         res_mem = subprocess.run([adb, "-s", self.target_device, "shell", "cat", "/proc/meminfo"], capture_output=True, text=True, startupinfo=si)
-                        ram_str = ""
+                        ram_str = "RAM: N/A"
                         if res_mem.stdout:
                             mt = re.search(r'MemTotal:\s+(\d+)', res_mem.stdout)
                             ma = re.search(r'MemAvailable:\s+(\d+)', res_mem.stdout)
@@ -865,11 +878,15 @@ class TurboCoreApp(ctk.CTk):
     def log(self, msg):
         ts = datetime.datetime.now().strftime("%H:%M")
         try:
-            self.txt_log.configure(state="normal")
-            self.txt_log.insert("end", f"[{ts}] {msg}\n")
-            self.txt_log.see("end")
-            self.txt_log.configure(state="disabled")
+            # V100 Thread Safety Fix
+            self.after(0, lambda: self._safe_log_insert(ts, msg))
         except: pass
+
+    def _safe_log_insert(self, ts, msg):
+        self.txt_log.configure(state="normal")
+        self.txt_log.insert("end", f"[{ts}] {msg}\n")
+        self.txt_log.see("end")
+        self.txt_log.configure(state="disabled")
 
 if __name__ == "__main__":
     app = TurboCoreApp()
