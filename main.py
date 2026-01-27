@@ -45,7 +45,7 @@ FONT_MONO = ("Consolas", 11)
 # --- TRADUÇÕES ---
 TRANSLATIONS = {
     "PT": {
-        "app_title": "TURBO CORE V101 - MATRIX LOGCAT",
+        "app_title": "TURBO CORE V101.1 - ROBUST EXECUTION",
         "sidebar_dash": "🖥️ DASHBOARD",
         "sidebar_game": "🎮 COMPETITIVO",
         "sidebar_apps": "📦 APPS",
@@ -82,6 +82,9 @@ TRANSLATIONS = {
         "guide_text": "1. Ative Opções do Desenvolvedor\n2. Ative Depuração USB\n3. Ative Depuração Sem Fio\n\nNo Wi-Fi:\nUse 'Parear com Código'.\nCopie IP, Porta e Código.",
         "msg_success": "SUCESSO",
         "msg_error": "ERRO",
+        "msg_conn_error": "ERRO DE CONEXÃO",
+        "msg_no_device": "Nenhum dispositivo conectado!\n\n1. Conecte o cabo USB ou Wi-Fi.\n2. Verifique se o status está verde no topo.",
+        "msg_cmd_success": "Modo Aplicado com Sucesso!",
         "msg_restored": "Dispositivo restaurado!",
         "msg_installed": "APK Instalado!",
         "msg_sent": "Arquivo enviado!",
@@ -111,7 +114,7 @@ TRANSLATIONS = {
         "help_bat_ult": "ULTIMATE ECONOMIA (DEEP)\n\n• Ação: Brilho Zero, Mata Apps, Limita CPU.\n• Risco: USABILIDADE.\n\n⚠️ O celular vira um 'tijolo' para sobreviver. A tela ficará quase apagada. Só use em emergências."
     },
     "EN": {
-        "app_title": "TURBO CORE V101 - MATRIX LOGCAT",
+        "app_title": "TURBO CORE V101.1 - ROBUST EXECUTION",
         "sidebar_dash": "🖥️ DASHBOARD",
         "sidebar_game": "🎮 COMPETITIVE",
         "sidebar_apps": "📦 APPS",
@@ -148,6 +151,9 @@ TRANSLATIONS = {
         "guide_text": "1. Enable Developer Options\n2. Enable USB Debugging\n3. Enable Wireless Debugging\n\nFor Wi-Fi:\nUse 'Pair with Code'.\nCopy IP, Port & Code.",
         "msg_success": "SUCCESS",
         "msg_error": "ERROR",
+        "msg_conn_error": "CONNECTION ERROR",
+        "msg_no_device": "No device connected!\n\n1. Check USB/Wi-Fi.\n2. Check status header.",
+        "msg_cmd_success": "Mode Applied Successfully!",
         "msg_restored": "Device restored!",
         "msg_installed": "APK Installed!",
         "msg_sent": "File sent!",
@@ -177,7 +183,7 @@ TRANSLATIONS = {
         "help_bat_ult": "ULTIMATE SAVER\n\n• Action: Zero Brightness, Kill Apps.\n• Risk: USABILITY.\n\n⚠️ Phone becomes barely usable to survive."
     },
     "ES": {
-        "app_title": "TURBO CORE V101 - MATRIX LOGCAT",
+        "app_title": "TURBO CORE V101.1 - ROBUST EXECUTION",
         "sidebar_dash": "🖥️ PANEL",
         "sidebar_game": "🎮 COMPETITIVO",
         "sidebar_apps": "📦 APPS",
@@ -214,6 +220,9 @@ TRANSLATIONS = {
         "guide_text": "1. Activar Opciones Desarrollador\n2. Activar Depuración USB\n3. Activar Depuración Inalámbrica\n\nPara Wi-Fi:\nUsar 'Vincular con Código'.\nCopiar IP, Puerto y Código.",
         "msg_success": "ÉXITO",
         "msg_error": "ERROR",
+        "msg_conn_error": "ERROR DE CONEXIÓN",
+        "msg_no_device": "¡No hay dispositivo!\n\n1. Verifique USB/Wi-Fi.\n2. Verifique estado.",
+        "msg_cmd_success": "¡Modo Aplicado con Éxito!",
         "msg_restored": "¡Dispositivo restaurado!",
         "msg_installed": "¡APK Instalado!",
         "msg_sent": "¡Archivo enviado!",
@@ -272,7 +281,7 @@ class TurboCoreApp(ctk.CTk):
         self.logcat_process = None
         self.stop_logcat_flag = False
 
-        self.debug_log(f"--- INICIANDO TURBO CORE V101 MATRIX LOGCAT [{self.current_lang}] ---")
+        self.debug_log(f"--- INICIANDO TURBO CORE V101.1 ROBUST [{self.current_lang}] ---")
         self.title(self.T("app_title"))
         self.geometry("900x750")
         self.resizable(False, True)
@@ -371,7 +380,7 @@ class TurboCoreApp(ctk.CTk):
         self.sidebar.pack_propagate(False)
 
         ctk.CTkLabel(self.sidebar, text="TURBO\nCORE", font=("Montserrat", 24, "bold"), text_color=self.accent_color).pack(pady=(40, 5))
-        ctk.CTkLabel(self.sidebar, text="V101 LOGCAT", font=("Roboto", 10), text_color=COLOR_TEXT_DIM).pack(pady=(0, 20))
+        ctk.CTkLabel(self.sidebar, text="V101.1 ROBUST", font=("Roboto", 10), text_color=COLOR_TEXT_DIM).pack(pady=(0, 20))
 
         self.btn_dash = self.create_sidebar_btn(self.T("sidebar_dash"), "dash")
         self.btn_special = self.create_sidebar_btn(self.T("sidebar_game"), "special")
@@ -692,13 +701,18 @@ class TurboCoreApp(ctk.CTk):
         messagebox.showinfo(self.T("msg_success"), self.T("msg_kill"))
 
     def ativar_free_fire(self):
-        if not self.target_device: return messagebox.showerror(self.T("msg_error"), "No Device")
+        if not self.target_device:
+            messagebox.showerror(self.T("msg_conn_error"), self.T("msg_no_device"))
+            return
         self.log(self.T("msg_ff_active"))
         cmds = MODOS_PERF["Gamer Ultimate (Mobile)"]["cmd"]
         self.run_adb_cmd_string(cmds)
-        messagebox.showinfo(self.T("msg_success"), self.T("msg_ff_active"))
 
     def run_adb_cmd_string(self, cmd_string):
+        if not self.target_device:
+            messagebox.showerror(self.T("msg_conn_error"), self.T("msg_no_device"))
+            return
+
         self.debug_log(f"CMD: {cmd_string}")
         def t():
             exe = os.path.join(self.bin_dir, "adb.exe")
@@ -706,10 +720,15 @@ class TurboCoreApp(ctk.CTk):
             for c in cmd_string.split(";"):
                 if c.strip(): subprocess.run([exe, "-s", self.target_device, "shell", c.strip()], startupinfo=si)
             self.log("Commands applied.")
+            self.after(0, lambda: messagebox.showinfo(self.T("msg_success"), self.T("msg_cmd_success"))) # FIX V101.1
         threading.Thread(target=t).start()
 
     def iniciar_pc(self, choice):
-        if not self.target_device: return
+        if not self.target_device:
+            messagebox.showerror(self.T("msg_conn_error"), self.T("msg_no_device"))
+            self.menu_PC.set(self.T("select_default")) # FIX V101.1
+            return
+
         cfg = MODOS_PC[choice]
         exe_adb = os.path.join(self.bin_dir, "adb.exe")
         exe_scrcpy = os.path.join(self.bin_dir, "scrcpy.exe")
@@ -720,12 +739,18 @@ class TurboCoreApp(ctk.CTk):
         def thread_pc():
             si = subprocess.STARTUPINFO(); si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
             self.log(f"Starting {choice}...")
-            cmds = [
-                "wm size reset", "wm density reset",
-                f"wm size {cfg['size']}", f"wm density {cfg['density']}",
-                "settings put system user_rotation 1", "settings put system accelerometer_rotation 0"
-            ]
-            for c in cmds: subprocess.run([exe_adb, "-s", self.target_device, "shell", c], startupinfo=si)
+
+            # FIX V101.1 - WM SIZE TRY/EXCEPT
+            try:
+                cmds = [
+                    "wm size reset", "wm density reset",
+                    f"wm size {cfg['size']}", f"wm density {cfg['density']}",
+                    "settings put system user_rotation 1", "settings put system accelerometer_rotation 0"
+                ]
+                for c in cmds: subprocess.run([exe_adb, "-s", self.target_device, "shell", c], startupinfo=si)
+            except Exception as e:
+                self.debug_log(f"WM SIZE FAIL (IGNORED): {e}")
+
             time.sleep(2.5)
             scrcpy_args = list(cfg['scrcpy'])
             if opt_video:
@@ -736,18 +761,32 @@ class TurboCoreApp(ctk.CTk):
                 self.log(f"Recording: {filename}")
             if not opt_audio: scrcpy_args += ["--no-audio"]
             if opt_ghost: scrcpy_args += ["--turn-screen-off"]
+
+            # FIX V101.1 - SCRCPY DEBUG
             try:
-                subprocess.run([exe_scrcpy, "-s", self.target_device] + scrcpy_args, cwd=self.bin_dir, startupinfo=si)
-            except Exception as e: self.debug_log(f"SCRCPY ERROR: {e}")
-            cmds_reset = ["wm size reset", "wm density reset", "settings put system user_rotation 0", "settings put system accelerometer_rotation 1"]
-            for c in cmds_reset: subprocess.run([exe_adb, "-s", self.target_device, "shell", c], startupinfo=si)
+                proc = subprocess.run([exe_scrcpy, "-s", self.target_device] + scrcpy_args, cwd=self.bin_dir, startupinfo=si, capture_output=True, text=True)
+                if proc.returncode != 0:
+                    self.after(0, lambda: messagebox.showerror("SCRCPY ERROR", f"Scrcpy Failed:\n{proc.stderr}"))
+            except Exception as e:
+                self.debug_log(f"SCRCPY CRITICAL: {e}")
+
+            try:
+                cmds_reset = ["wm size reset", "wm density reset", "settings put system user_rotation 0", "settings put system accelerometer_rotation 1"]
+                for c in cmds_reset: subprocess.run([exe_adb, "-s", self.target_device, "shell", c], startupinfo=si)
+            except: pass
 
         threading.Thread(target=thread_pc, daemon=True).start()
 
     def aplicar_perf(self, choice):
+        if not self.target_device:
+            self.menu_PERF.set(self.T("select_default"))
+            return
         self.run_adb_cmd_string(MODOS_PERF[choice]["cmd"])
 
     def aplicar_bat(self, choice):
+        if not self.target_device:
+            self.menu_BAT.set(self.T("select_default"))
+            return
         self.run_adb_cmd_string(MODOS_BAT[choice]["cmd"])
 
     def restaurar_padrao(self):
@@ -759,7 +798,7 @@ class TurboCoreApp(ctk.CTk):
         self.menu_PC.set(default_txt)
         self.menu_PERF.set(default_txt)
         self.menu_BAT.set(default_txt)
-        messagebox.showinfo(self.T("msg_success"), self.T("msg_restored"))
+        # Msgbox handled in run_adb_cmd_string
 
     def install_apk(self):
         if not self.target_device: return messagebox.showerror(self.T("msg_error"), "No Device")
@@ -841,7 +880,6 @@ class TurboCoreApp(ctk.CTk):
     def _safe_logcat_insert(self, line):
         self.txt_logcat.insert("end", line)
         self.txt_logcat.see("end")
-        # Buffer Limit
         if int(self.txt_logcat.index('end-1c').split('.')[0]) > 500:
             self.txt_logcat.delete("1.0", "2.0")
 
@@ -903,12 +941,10 @@ class TurboCoreApp(ctk.CTk):
             while True:
                 if self.target_device:
                     try:
-                        # Battery
                         res = subprocess.run([adb, "-s", self.target_device, "shell", "dumpsys", "battery"], capture_output=True, text=True, startupinfo=si)
                         level = re.search(r'level: (\d+)', res.stdout)
                         temp = re.search(r'temperature: (\d+)', res.stdout)
 
-                        # Storage (df -h /data)
                         res_st = subprocess.run([adb, "-s", self.target_device, "shell", "df", "-h", "/data"], capture_output=True, text=True, startupinfo=si)
                         avail = "N/A"
                         if res_st.stdout:
@@ -917,7 +953,6 @@ class TurboCoreApp(ctk.CTk):
                                 parts = lines[1].split()
                                 if len(parts) >= 4: avail = parts[3]
 
-                        # RAM (/proc/meminfo) V100 FIX
                         res_mem = subprocess.run([adb, "-s", self.target_device, "shell", "cat", "/proc/meminfo"], capture_output=True, text=True, startupinfo=si)
                         ram_str = "RAM: N/A"
                         if res_mem.stdout:
