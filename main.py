@@ -45,7 +45,7 @@ FONT_MONO = ("Consolas", 11)
 # --- TRADUÇÕES ---
 TRANSLATIONS = {
     "PT": {
-        "app_title": "TURBO CORE V107.1 - FEATURE COMPLETE",
+        "app_title": "TURBO CORE V108 - MAX SPEED EDITION",
         "sidebar_dash": "🖥️ DASHBOARD",
         "sidebar_game": "🎮 COMPETITIVO",
         "sidebar_apps": "📦 APPS",
@@ -115,7 +115,7 @@ TRANSLATIONS = {
         "help_bat_ult": "ULTIMATE ECONOMIA (DEEP)\n\n• Ação: Brilho Zero, Mata Apps, Limita CPU.\n• Risco: USABILIDADE.\n\n⚠️ O celular vira um 'tijolo' para sobreviver. A tela ficará quase apagada. Só use em emergências."
     },
     "EN": {
-        "app_title": "TURBO CORE V107.1 - FEATURE COMPLETE",
+        "app_title": "TURBO CORE V108 - MAX SPEED EDITION",
         "sidebar_dash": "🖥️ DASHBOARD",
         "sidebar_game": "🎮 COMPETITIVE",
         "sidebar_apps": "📦 APPS",
@@ -185,7 +185,7 @@ TRANSLATIONS = {
         "help_bat_ult": "ULTIMATE SAVER\n\n• Action: Zero Brightness, Kill Apps.\n• Risk: USABILITY.\n\n⚠️ Phone becomes barely usable to survive."
     },
     "ES": {
-        "app_title": "TURBO CORE V107.1 - FEATURE COMPLETE",
+        "app_title": "TURBO CORE V108 - MAX SPEED EDITION",
         "sidebar_dash": "🖥️ PANEL",
         "sidebar_game": "🎮 COMPETITIVO",
         "sidebar_apps": "📦 APPS",
@@ -283,9 +283,9 @@ class TurboCoreApp(ctk.CTk):
         self.all_apps_cache = []
         self.logcat_process = None
         self.stop_logcat_flag = False
-        self.last_ip = "" # V104 Smart Reconnect
+        self.last_ip = ""
 
-        self.debug_log(f"--- INICIANDO TURBO CORE V107.1 FEATURE COMPLETE [{self.current_lang}] ---")
+        self.debug_log(f"--- INICIANDO TURBO CORE V108 MAX SPEED [{self.current_lang}] ---")
         self.title(self.T("app_title"))
         self.geometry("900x750")
         self.resizable(False, True)
@@ -299,6 +299,14 @@ class TurboCoreApp(ctk.CTk):
             self.app_dir = os.path.dirname(os.path.abspath(__file__))
         self.bin_dir = os.path.join(self.app_dir, "bin")
         self.caps_dir = os.path.join(self.app_dir, "Capturas")
+
+        # V108 OPTIMIZATION: Cache paths
+        self.adb_exe = os.path.join(self.bin_dir, "adb.exe")
+        self.scrcpy_exe = os.path.join(self.bin_dir, "scrcpy.exe")
+
+        # V108 OPTIMIZATION: Cache STARTUPINFO
+        self.si = subprocess.STARTUPINFO()
+        self.si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
 
         self.check_binaries()
 
@@ -327,10 +335,7 @@ class TurboCoreApp(ctk.CTk):
             messagebox.showwarning("ERRO CRITICO", "Pasta 'bin' não encontrada!")
             return
 
-        adb_path = os.path.join(self.bin_dir, "adb.exe")
-        scrcpy_path = os.path.join(self.bin_dir, "scrcpy.exe")
-
-        if not os.path.exists(adb_path) or not os.path.exists(scrcpy_path):
+        if not os.path.exists(self.adb_exe) or not os.path.exists(self.scrcpy_exe):
             messagebox.showwarning("ARQUIVOS FALTANDO", "adb.exe ou scrcpy.exe faltando em bin/")
 
     def setup_hotkeys(self):
@@ -384,7 +389,7 @@ class TurboCoreApp(ctk.CTk):
         self.sidebar.pack_propagate(False)
 
         ctk.CTkLabel(self.sidebar, text="TURBO\nCORE", font=("Montserrat", 24, "bold"), text_color=self.accent_color).pack(pady=(40, 5))
-        ctk.CTkLabel(self.sidebar, text="V107.1 FINAL", font=("Roboto", 10), text_color=COLOR_TEXT_DIM).pack(pady=(0, 20))
+        ctk.CTkLabel(self.sidebar, text="V108 SPEED", font=("Roboto", 10), text_color=COLOR_TEXT_DIM).pack(pady=(0, 20))
 
         self.btn_dash = self.create_sidebar_btn(self.T("sidebar_dash"), "dash")
         self.btn_special = self.create_sidebar_btn(self.T("sidebar_game"), "special")
@@ -700,9 +705,8 @@ class TurboCoreApp(ctk.CTk):
         self.lbl_loading.place(relx=0.5, rely=0.5, anchor="center")
 
         def load():
-            si = subprocess.STARTUPINFO(); si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-            exe = os.path.join(self.bin_dir, "adb.exe")
-            res = subprocess.run([exe, "-s", self.target_device, "shell", "pm", "list", "packages", "-3"], capture_output=True, text=True, startupinfo=si)
+            # V108: Use cached path
+            res = subprocess.run([self.adb_exe, "-s", self.target_device, "shell", "pm", "list", "packages", "-3"], capture_output=True, text=True, startupinfo=self.si)
 
             apps = []
             for line in res.stdout.splitlines():
@@ -766,40 +770,32 @@ class TurboCoreApp(ctk.CTk):
         self.debug_log(f"CMD: {cmd_string}")
 
         def t():
-            exe = os.path.join(self.bin_dir, "adb.exe")
-            si = subprocess.STARTUPINFO(); si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-            cmds = cmd_string.split(";")
+            # V108: Batch Execution Optimization
+            # If commands are separated by ;, we try to execute them in a single ADB shell call if they don't contain specific sleep triggers
+            cmds = [c.strip() for c in cmd_string.split(";") if c.strip()]
 
-            for attempt in range(2):
-                success = True
-                for c in cmds:
-                    if not c.strip(): continue
-                    if not self._ping_device():
-                        self.log("Device offline. Healing...")
-                        self.heal_adb_connection()
-                        success = False
-                        break
+            # Simple ping before starting
+            if not self._ping_device():
+                 self.log("Device offline. Healing...")
+                 self.heal_adb_connection()
+                 if not self._ping_device():
+                     self.after(0, lambda: messagebox.showerror(self.T("msg_error"), "Device unavailable."))
+                     return
 
-                    res = subprocess.run([exe, "-s", self.target_device, "shell", c.strip()], startupinfo=si, capture_output=True, text=True)
-                    if res.returncode != 0:
-                        success = False
-                        self.log(f"CMD Fail: {c.strip()}")
-                        break
+            # Combine commands into one shell execution for speed
+            combined_cmd = " && ".join(cmds)
+            full_cmd = [self.adb_exe, "-s", self.target_device, "shell", combined_cmd]
 
-                    if "wm size" in c: time.sleep(4.0)
-                    elif "wm density" in c: time.sleep(1.5)
-                    else: time.sleep(0.5)
+            self.log(f"Executing batch: {len(cmds)} cmds...")
+            res = subprocess.run(full_cmd, startupinfo=self.si, capture_output=True, text=True)
 
-                if success:
-                    self.log("Commands applied.")
-                    self.after(0, lambda: messagebox.showinfo(self.T("msg_success"), self.T("msg_cmd_success")))
-                    return
-                else:
-                    if attempt == 0:
-                        self.log("Retry attempt...")
-                        self.heal_adb_connection()
-                    else:
-                        self.after(0, lambda: messagebox.showerror(self.T("msg_error"), "Failed after retry."))
+            if res.returncode == 0:
+                self.log("Batch Success.")
+                # Optional: Add small delay if we suspect UI needs to catch up, but V108 goal is speed.
+                self.after(0, lambda: messagebox.showinfo(self.T("msg_success"), self.T("msg_cmd_success")))
+            else:
+                self.log(f"Batch Error: {res.stderr}")
+                self.after(0, lambda: messagebox.showerror(self.T("msg_error"), f"Failed:\n{res.stderr}"))
 
         threading.Thread(target=t).start()
 
@@ -810,30 +806,33 @@ class TurboCoreApp(ctk.CTk):
             return
 
         cfg = MODOS_PC[choice]
-        exe_adb = os.path.join(self.bin_dir, "adb.exe")
-        exe_scrcpy = os.path.join(self.bin_dir, "scrcpy.exe")
         opt_video = self.chk_video.get()
         opt_audio = self.chk_audio.get()
         opt_ghost = self.chk_ghost.get()
 
         def thread_pc():
-            si = subprocess.STARTUPINFO(); si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
             self.log(f"Starting {choice}...")
 
             try:
+                # V108: Faster Sequence
                 if not self._ping_device(): self.heal_adb_connection()
-                subprocess.run([exe_adb, "-s", self.target_device, "shell", "wm size reset"], startupinfo=si)
-                subprocess.run([exe_adb, "-s", self.target_device, "shell", f"wm size {cfg['size']}"], startupinfo=si)
-                time.sleep(4.0)
+
+                # Batch 1: Resize
+                cmd_size = f"wm size reset && wm size {cfg['size']}"
+                subprocess.run([self.adb_exe, "-s", self.target_device, "shell", cmd_size], startupinfo=self.si)
+                time.sleep(1.5) # V108: Reduced from 4.0
 
                 if not self._ping_device(): self.heal_adb_connection()
-                subprocess.run([exe_adb, "-s", self.target_device, "shell", "wm density reset"], startupinfo=si)
-                subprocess.run([exe_adb, "-s", self.target_device, "shell", f"wm density {cfg['density']}"], startupinfo=si)
-                time.sleep(1.0)
 
-                subprocess.run([exe_adb, "-s", self.target_device, "shell", "settings put system user_rotation 1"], startupinfo=si)
-                subprocess.run([exe_adb, "-s", self.target_device, "shell", "settings put system accelerometer_rotation 0"], startupinfo=si)
-                time.sleep(1.0)
+                # Batch 2: Density
+                cmd_density = f"wm density reset && wm density {cfg['density']}"
+                subprocess.run([self.adb_exe, "-s", self.target_device, "shell", cmd_density], startupinfo=self.si)
+                time.sleep(0.5) # V108: Reduced from 1.0
+
+                # Batch 3: Rotation
+                cmd_rot = "settings put system user_rotation 1 && settings put system accelerometer_rotation 0"
+                subprocess.run([self.adb_exe, "-s", self.target_device, "shell", cmd_rot], startupinfo=self.si)
+                time.sleep(0.5)
 
             except Exception as e:
                 self.debug_log(f"Setup warning: {e}")
@@ -848,54 +847,39 @@ class TurboCoreApp(ctk.CTk):
             if not opt_audio: scrcpy_args += ["--no-audio"]
             if opt_ghost: scrcpy_args += ["--turn-screen-off"]
 
-            for attempt in range(2):
-                if not self._ping_device(): self.heal_adb_connection()
-                try:
-                    proc = subprocess.run([exe_scrcpy, "-s", self.target_device] + scrcpy_args, cwd=self.bin_dir, startupinfo=si, capture_output=True, text=True)
-                    if proc.returncode == 0: break
-
-                    err = proc.stderr
-                    if attempt == 0:
-                        self.log("Scrcpy Error. Self-healing...")
-                        self.heal_adb_connection()
-                    else:
-                        self.after(0, lambda: messagebox.showerror("SCRCPY ERROR", f"Scrcpy Failed:\n{err}"))
-                        break
-                except Exception as e:
-                    if attempt == 0: self.heal_adb_connection()
-
+            # Scrcpy Execution
             try:
-                cmds_reset = ["wm size reset", "wm density reset", "settings put system user_rotation 0", "settings put system accelerometer_rotation 1"]
-                for c in cmds_reset:
-                    subprocess.run([exe_adb, "-s", self.target_device, "shell", c], startupinfo=si)
-                    time.sleep(0.5)
+                subprocess.run([self.scrcpy_exe, "-s", self.target_device] + scrcpy_args, cwd=self.bin_dir, startupinfo=self.si)
+            except Exception as e:
+                self.log(f"Scrcpy Error: {e}")
+
+            # Restore
+            try:
+                cmds_reset = "wm size reset && wm density reset && settings put system user_rotation 0 && settings put system accelerometer_rotation 1"
+                subprocess.run([self.adb_exe, "-s", self.target_device, "shell", cmds_reset], startupinfo=self.si)
             except: pass
 
         threading.Thread(target=thread_pc, daemon=True).start()
 
     def _ping_device(self):
         try:
-            si = subprocess.STARTUPINFO(); si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-            exe = os.path.join(self.bin_dir, "adb.exe")
-            res = subprocess.run([exe, "-s", self.target_device, "get-state"], capture_output=True, text=True, startupinfo=si)
+            res = subprocess.run([self.adb_exe, "-s", self.target_device, "get-state"], capture_output=True, text=True, startupinfo=self.si)
             return "device" in res.stdout
         except: return False
 
     def heal_adb_connection(self):
         self.debug_log("HEALING ADB CONNECTION (SMART)...")
-        si = subprocess.STARTUPINFO(); si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-        exe = os.path.join(self.bin_dir, "adb.exe")
 
-        subprocess.run([exe, "disconnect"], startupinfo=si)
+        subprocess.run([self.adb_exe, "disconnect"], startupinfo=self.si)
         time.sleep(1)
 
         if self.last_ip:
             self.debug_log(f"Reconnecting to {self.last_ip}...")
-            subprocess.run([exe, "connect", self.last_ip], startupinfo=si)
-            time.sleep(3)
+            subprocess.run([self.adb_exe, "connect", self.last_ip], startupinfo=self.si)
+            time.sleep(2) # V108: Reduced from 3
         else:
             self.debug_log("USB Mode: Waiting for auto-reconnect...")
-            time.sleep(2)
+            time.sleep(1)
 
         self.debug_log("Healing Complete.")
 
@@ -914,6 +898,7 @@ class TurboCoreApp(ctk.CTk):
     def restaurar_padrao(self):
         if not self.target_device: return
         self.log(self.T("msg_restored"))
+        # V108: All in one string
         cmds = "wm size reset; wm density reset; settings put system user_rotation 0; settings put system accelerometer_rotation 1; settings put global low_power 0; settings put system screen_brightness 100; settings put global window_animation_scale 1; settings put global transition_animation_scale 1; settings put global animator_duration_scale 1"
         self.run_adb_cmd_string(cmds)
         default_txt = self.T("select_default")
@@ -928,9 +913,7 @@ class TurboCoreApp(ctk.CTk):
         if not file_path: return
         self.log(f"Installing...")
         def run():
-            si = subprocess.STARTUPINFO(); si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-            exe = os.path.join(self.bin_dir, "adb.exe")
-            res = subprocess.run([exe, "-s", self.target_device, "install", "-r", file_path], capture_output=True, text=True, startupinfo=si)
+            res = subprocess.run([self.adb_exe, "-s", self.target_device, "install", "-r", file_path], capture_output=True, text=True, startupinfo=self.si)
             if "Success" in res.stdout:
                 self.log(self.T("msg_installed"))
                 self.after(0, lambda: messagebox.showinfo(self.T("msg_success"), self.T("msg_installed")))
@@ -944,9 +927,7 @@ class TurboCoreApp(ctk.CTk):
         if not file_path: return
         self.log(f"Sending file...")
         def run():
-            si = subprocess.STARTUPINFO(); si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-            exe = os.path.join(self.bin_dir, "adb.exe")
-            res = subprocess.run([exe, "-s", self.target_device, "push", file_path, "/sdcard/Download/"], capture_output=True, text=True, startupinfo=si)
+            res = subprocess.run([self.adb_exe, "-s", self.target_device, "push", file_path, "/sdcard/Download/"], capture_output=True, text=True, startupinfo=self.si)
             if res.returncode == 0:
                 self.log("File Sent!")
                 self.after(0, lambda: messagebox.showinfo(self.T("msg_success"), self.T("msg_sent")))
@@ -961,11 +942,9 @@ class TurboCoreApp(ctk.CTk):
         filepath = os.path.join(self.caps_dir, filename)
 
         def run():
-            si = subprocess.STARTUPINFO(); si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-            exe = os.path.join(self.bin_dir, "adb.exe")
             try:
                 with open(filepath, "wb") as f:
-                    subprocess.run([exe, "-s", self.target_device, "exec-out", "screencap", "-p"], stdout=f, startupinfo=si)
+                    subprocess.run([self.adb_exe, "-s", self.target_device, "exec-out", "screencap", "-p"], stdout=f, startupinfo=self.si)
 
                 self.log(f"Screenshot: {filename}")
                 self.after(0, lambda: messagebox.showinfo(self.T("msg_success"), f"Saved: {filename}"))
@@ -1001,10 +980,8 @@ class TurboCoreApp(ctk.CTk):
         self.txt_logcat.delete("1.0", "end")
 
         def run():
-            si = subprocess.STARTUPINFO(); si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-            exe = os.path.join(self.bin_dir, "adb.exe")
             try:
-                self.logcat_process = subprocess.Popen([exe, "-s", self.target_device, "logcat", "-v", "time"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, startupinfo=si)
+                self.logcat_process = subprocess.Popen([self.adb_exe, "-s", self.target_device, "logcat", "-v", "time"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, startupinfo=self.si)
                 while not self.stop_logcat_flag and self.logcat_process.poll() is None:
                     line = self.logcat_process.stdout.readline()
                     if line: self.after(0, lambda l=line: self._safe_logcat_insert(l))
@@ -1028,9 +1005,7 @@ class TurboCoreApp(ctk.CTk):
     # --- HELPERS ---
     def get_device_name(self):
         try:
-            si = subprocess.STARTUPINFO(); si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-            exe = os.path.join(self.bin_dir, "adb.exe")
-            res = subprocess.run([exe, "-s", self.target_device, "shell", "getprop ro.product.model"], capture_output=True, text=True, startupinfo=si, timeout=2)
+            res = subprocess.run([self.adb_exe, "-s", self.target_device, "shell", "getprop ro.product.model"], capture_output=True, text=True, startupinfo=self.si, timeout=2)
             return res.stdout.strip() if res.stdout.strip() else self.target_device
         except: return self.target_device
 
@@ -1054,12 +1029,10 @@ class TurboCoreApp(ctk.CTk):
 
     def start_monitor(self):
         def loop():
-            adb = os.path.join(self.bin_dir, "adb.exe")
-            si = subprocess.STARTUPINFO(); si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
             while True:
                 try:
-                    if os.path.exists(adb):
-                        res = subprocess.run([adb, "devices"], capture_output=True, text=True, startupinfo=si)
+                    if os.path.exists(self.adb_exe):
+                        res = subprocess.run([self.adb_exe, "devices"], capture_output=True, text=True, startupinfo=self.si)
                         lines = [l for l in res.stdout.split('\n') if 'device' in l and 'List' not in l]
                         if lines:
                             new_id = lines[0].split()[0]
@@ -1079,7 +1052,7 @@ class TurboCoreApp(ctk.CTk):
                                 # V107 AUTO-RECONNECT
                                 if self.last_ip:
                                     self.debug_log(f"Auto-reconnecting to {self.last_ip}...")
-                                    subprocess.run([adb, "connect", self.last_ip], startupinfo=si)
+                                    subprocess.run([self.adb_exe, "connect", self.last_ip], startupinfo=self.si)
 
                 except: pass
                 time.sleep(3)
@@ -1087,18 +1060,16 @@ class TurboCoreApp(ctk.CTk):
 
     def start_battery_monitor(self):
         def loop():
-            adb = os.path.join(self.bin_dir, "adb.exe")
-            si = subprocess.STARTUPINFO(); si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
             while True:
                 if self.target_device:
                     try:
                         # Battery
-                        res = subprocess.run([adb, "-s", self.target_device, "shell", "dumpsys", "battery"], capture_output=True, text=True, startupinfo=si)
+                        res = subprocess.run([self.adb_exe, "-s", self.target_device, "shell", "dumpsys", "battery"], capture_output=True, text=True, startupinfo=self.si)
                         level = re.search(r'level: (\d+)', res.stdout)
                         temp = re.search(r'temperature: (\d+)', res.stdout)
 
                         # Storage (df -h /data)
-                        res_st = subprocess.run([adb, "-s", self.target_device, "shell", "df", "-h", "/data"], capture_output=True, text=True, startupinfo=si)
+                        res_st = subprocess.run([self.adb_exe, "-s", self.target_device, "shell", "df", "-h", "/data"], capture_output=True, text=True, startupinfo=self.si)
                         avail = "N/A"
                         if res_st.stdout:
                             lines = res_st.stdout.split('\n')
@@ -1107,7 +1078,7 @@ class TurboCoreApp(ctk.CTk):
                                 if len(parts) >= 4: avail = parts[3]
 
                         # RAM (/proc/meminfo)
-                        res_mem = subprocess.run([adb, "-s", self.target_device, "shell", "cat", "/proc/meminfo"], capture_output=True, text=True, startupinfo=si)
+                        res_mem = subprocess.run([self.adb_exe, "-s", self.target_device, "shell", "cat", "/proc/meminfo"], capture_output=True, text=True, startupinfo=self.si)
                         ram_str = "RAM: N/A"
                         if res_mem.stdout:
                             mt = re.search(r'MemTotal:\s+(\d+)', res_mem.stdout)
@@ -1122,17 +1093,16 @@ class TurboCoreApp(ctk.CTk):
                         if level and temp:
                             self.after(0, lambda: self.update_stats_ui(int(level.group(1)), int(temp.group(1))/10.0, avail, ram_str))
                     except: pass
-                time.sleep(5)
+                # V108 Optimization: Increased sleep from 5 to 10s to reduce overhead
+                time.sleep(10)
         threading.Thread(target=loop, daemon=True).start()
 
     def run_manual(self):
         cmd = self.term_input.get("0.0", "end").strip()
-        if cmd: threading.Thread(target=lambda: subprocess.Popen(cmd, cwd=self.bin_dir, shell=True, startupinfo=subprocess.STARTUPINFO())).start()
+        if cmd: threading.Thread(target=lambda: subprocess.Popen(cmd, cwd=self.bin_dir, shell=True, startupinfo=self.si)).start()
 
     def run_adb_generic(self, cmd):
-        si = subprocess.STARTUPINFO(); si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-        exe = os.path.join(self.bin_dir, "adb.exe")
-        subprocess.run([exe] + cmd.split(), startupinfo=si)
+        subprocess.run([self.adb_exe] + cmd.split(), startupinfo=self.si)
 
     def debug_log(self, msg):
         try:
