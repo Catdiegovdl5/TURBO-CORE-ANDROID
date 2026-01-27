@@ -75,10 +75,10 @@ MODOS_BAT = {
 class TurboCoreApp(ctk.CTk):
     def __init__(self):
         super().__init__()
-        self.debug_log("--- INICIANDO TURBO CORE V94 - PREMIUM EDITION ---")
-        self.title("TURBO CORE V94 - PREMIUM EDITION")
-        self.geometry("850x650")
-        self.resizable(False, False)
+        self.debug_log("--- INICIANDO TURBO CORE V94.1 - PREMIUM FIX ---")
+        self.title("TURBO CORE V94.1 - PREMIUM EDITION")
+        self.geometry("850x700") # Aumentado altura para acomodar cards extras
+        self.resizable(False, True) # Permitir scroll vertical se necessário futuramente
         self.configure(fg_color=COLOR_BG)
         self.target_device = ""
         self.device_model = "Desconhecido"
@@ -95,7 +95,6 @@ class TurboCoreApp(ctk.CTk):
         if not os.path.exists(self.caps_dir):
             os.makedirs(self.caps_dir)
 
-        # Na V94, o fundo é minimalista (cor sólida). Imagem removida para look premium limpo.
         self.img_bg = None
 
         self.setup_ui()
@@ -322,8 +321,8 @@ class TurboCoreApp(ctk.CTk):
                       fg_color=COLOR_SURFACE, border_width=1, border_color=COLOR_ACCENT, text_color=COLOR_ACCENT,
                       hover_color=COLOR_HOVER, height=50, corner_radius=12,
                       command=lambda: self.switch_tab("special"))
-        btn_comp.pack(fill="x", pady=(0, 20))
-        
+        btn_comp.pack(fill="x", pady=(0, 15))
+
         # 1. PC MODES - Card Frame
         card_pc = self.create_card(p, "PC EXPERIENCE")
         self.create_menu(card_pc, list(MODOS_PC.keys()), self.iniciar_pc)
@@ -345,7 +344,15 @@ class TurboCoreApp(ctk.CTk):
                                          text_color=COLOR_TEXT_DIM, fg_color=COLOR_ACCENT, hover_color=COLOR_HOVER, corner_radius=6)
         self.chk_ghost.pack(side="left", padx=10)
 
-        # 2. UTILS - Card Frame
+        # 2. PERFORMANCE CONTROL (RESTAURADO)
+        card_perf = self.create_card(p, "PERFORMANCE CONTROL")
+        self.create_menu(card_perf, list(MODOS_PERF.keys()), self.aplicar_perf)
+
+        # 3. BATTERY MANAGER (RESTAURADO)
+        card_bat = self.create_card(p, "BATTERY MANAGER")
+        self.create_menu(card_bat, list(MODOS_BAT.keys()), self.aplicar_bat)
+
+        # 4. UTILS - Card Frame
         card_utils = self.create_card(p, "SYSTEM TOOLS")
 
         grid = ctk.CTkFrame(card_utils, fg_color="transparent")
@@ -360,13 +367,13 @@ class TurboCoreApp(ctk.CTk):
                       command=self.restaurar_padrao).pack(side="left", padx=(5, 0), expand=True, fill="x")
         
         # Log
-        self.txt_log = ctk.CTkTextbox(p, height=100, fg_color=COLOR_SURFACE, text_color=COLOR_ACCENT,
+        self.txt_log = ctk.CTkTextbox(p, height=80, fg_color=COLOR_SURFACE, text_color=COLOR_ACCENT,
                                       font=FONT_MONO, corner_radius=12, border_width=1, border_color=COLOR_BORDER)
         self.txt_log.pack(fill="x", pady=20)
 
     def create_card(self, parent, title):
         frame = ctk.CTkFrame(parent, fg_color=COLOR_SURFACE, corner_radius=12, border_width=1, border_color=COLOR_BORDER)
-        frame.pack(fill="x", pady=10, ipadx=15, ipady=15)
+        frame.pack(fill="x", pady=5, ipadx=15, ipady=15)
         ctk.CTkLabel(frame, text=title, font=("Roboto", 11, "bold"), text_color=COLOR_TEXT_DIM).pack(anchor="w", pady=(0, 10))
         return frame
 
