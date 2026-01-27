@@ -24,6 +24,7 @@ COR_FUNDO = "#000000"
 COR_SUCESSO = "#22c55e"
 COR_ERRO = "#ef4444"
 COR_ALERTA = "#f59e0b"
+COR_SIDEBAR = "#111111"
 
 # --- HELP TEXTS (SEGURANÇA E RESPONSABILIDADE) ---
 HELP_TEXTS = {
@@ -65,9 +66,9 @@ MODOS_BAT = {
 class TurboCoreApp(ctk.CTk):
     def __init__(self):
         super().__init__()
-        self.debug_log("--- INICIANDO TURBO CORE V92 - NAVEGAÇÃO UNIFICADA ---")
-        self.title("TURBO CORE V92 - NAVEGAÇÃO UNIFICADA")
-        self.geometry("540x980")
+        self.debug_log("--- INICIANDO TURBO CORE V93 - SIDEBAR REVOLUTION ---")
+        self.title("TURBO CORE V93 - SIDEBAR REVOLUTION")
+        self.geometry("700x600") # Aumentado largura para acomodar sidebar
         self.resizable(False, False)
         self.configure(fg_color=COR_FUNDO)
         self.target_device = ""
@@ -87,7 +88,7 @@ class TurboCoreApp(ctk.CTk):
 
         try:
             img_path = os.path.join(self.app_dir, "fundo_chip.jpg")
-            self.img_bg = ctk.CTkImage(Image.open(img_path), size=(540, 980))
+            self.img_bg = ctk.CTkImage(Image.open(img_path), size=(700, 600))
         except Exception as e:
             self.debug_log(f"Erro ao carregar imagem de fundo: {e}")
             self.img_bg = None
@@ -170,41 +171,52 @@ class TurboCoreApp(ctk.CTk):
         self.log(f"Keymapping (Espaço/WASD): {state}")
 
     def setup_ui(self):
-        self.debug_log("Iniciando construção da UI...")
-        self.header = ctk.CTkFrame(self, height=60, corner_radius=0, fg_color="#080808")
+        self.debug_log("Iniciando construção da UI V93...")
+
+        # --- LAYOUT PRINCIPAL (Esquerda: Sidebar, Direita: Header+Main) ---
+
+        # 1. SIDEBAR (Esquerda)
+        self.sidebar = ctk.CTkFrame(self, width=180, corner_radius=0, fg_color=COR_SIDEBAR)
+        self.sidebar.pack(side="left", fill="y", expand=False)
+        self.sidebar.pack_propagate(False) # Fixa largura
+
+        ctk.CTkLabel(self.sidebar, text="TURBO\nCORE V93", font=("Impact", 20), text_color="white").pack(pady=30)
+
+        # Botões Sidebar
+        self.btn_dash = self.create_sidebar_btn("🖥️ DASHBOARD", "dash")
+        self.btn_special = self.create_sidebar_btn("🎮 COMPETITIVO", "special")
+        self.btn_term = self.create_sidebar_btn("💻 TERMINAL", "term")
+
+        # 2. PAINEL DIREITO (Header + Conteúdo)
+        self.right_panel = ctk.CTkFrame(self, fg_color="transparent")
+        self.right_panel.pack(side="right", fill="both", expand=True)
+
+        # 2.1 HEADER (No topo do painel direito)
+        self.header = ctk.CTkFrame(self.right_panel, height=60, corner_radius=0, fg_color="#080808")
         self.header.pack(fill="x", side="top")
 
         self.frame_dev_info = ctk.CTkFrame(self.header, fg_color="transparent")
         self.frame_dev_info.pack(side="left", padx=15, pady=10)
 
-        # V91 - Botão de Status Interativo
+        # Botão de Status Interativo
         self.btn_device_status = ctk.CTkButton(self.frame_dev_info, text="Buscando...", font=("Arial", 12, "bold"),
-                                               fg_color="#333", width=200, command=self.abrir_gerenciador_conexao)
+                                               fg_color="#333", width=180, command=self.abrir_gerenciador_conexao)
         self.btn_device_status.pack(side="left", padx=(0, 10))
 
         # Monitoramento (BAT / TEMP)
         self.lbl_stats = ctk.CTkLabel(self.frame_dev_info, text="", font=("Consolas", 12, "bold"), text_color="gray")
-        self.lbl_stats.pack(side="left", padx=(10, 0))
+        self.lbl_stats.pack(side="left", padx=(5, 0))
 
         self.btn_refresh = ctk.CTkButton(self.frame_dev_info, text="🔄", width=30, height=30, fg_color="#222", command=self.force_refresh)
         self.btn_refresh.pack(side="left", padx=10)
 
-        self.frame_nav = ctk.CTkFrame(self.header, fg_color="transparent")
-        self.frame_nav.pack(side="right", padx=10)
-        
-        # Botões de Navegação
-        self.btn_dash = self.create_nav_btn("MODOS", "dash")
-        self.btn_special = self.create_nav_btn("ESPECIAL", "special")
-        self.btn_conn = self.create_nav_btn("CONEXÃO", "conn")
-        self.btn_term = self.create_nav_btn("TERMINAL", "term")
-
-        self.main_area = ctk.CTkFrame(self, fg_color="transparent")
+        # 2.2 MAIN AREA
+        self.main_area = ctk.CTkFrame(self.right_panel, fg_color="transparent")
         self.main_area.pack(fill="both", expand=True)
         
         self.frames = {
             "dash": ctk.CTkFrame(self.main_area, fg_color="transparent"),
             "special": ctk.CTkFrame(self.main_area, fg_color="transparent"),
-            "conn": ctk.CTkFrame(self.main_area, fg_color="transparent"),
             "term": ctk.CTkFrame(self.main_area, fg_color="transparent")
         }
         
@@ -214,35 +226,50 @@ class TurboCoreApp(ctk.CTk):
 
         self.build_dashboard(self.frames["dash"])
         self.build_special(self.frames["special"])
-        self.build_connection(self.frames["conn"])
         self.build_terminal(self.frames["term"])
         
         self.current_frame = None
         self.switch_tab("dash")
         
-        self.lbl_system_status = ctk.CTkLabel(self, text="SISTEMA PRONTO", font=("Consolas", 11), text_color="#555", fg_color="black")
+        self.lbl_system_status = ctk.CTkLabel(self.right_panel, text="SISTEMA PRONTO", font=("Consolas", 11), text_color="#555", fg_color="black")
         self.lbl_system_status.pack(fill="x", side="bottom", ipady=2)
-        self.debug_log("UI construída.")
+        self.debug_log("UI V93 construída.")
+
+    def create_sidebar_btn(self, text, mode):
+        btn = ctk.CTkButton(self.sidebar, text=text, fg_color="transparent", font=("Arial", 12, "bold"), anchor="w",
+                            height=40, command=lambda: self.switch_tab(mode))
+        btn.pack(fill="x", padx=10, pady=5)
+        return btn
+
+    def switch_tab(self, mode):
+        self.debug_log(f"Trocando aba para: {mode}")
+        if self.current_frame: self.current_frame.pack_forget() # Usando pack para o right_panel frames
+        self.current_frame = self.frames[mode]
+        self.current_frame.pack(fill="both", expand=True)
+
+        # Highlight Sidebar
+        btns = {"dash": self.btn_dash, "special": self.btn_special, "term": self.btn_term}
+        for k, b in btns.items():
+            if k == mode:
+                b.configure(fg_color=COR_PRIMARIA, text_color="white")
+            else:
+                b.configure(fg_color="transparent", text_color="#aaa")
 
     def abrir_gerenciador_conexao(self):
-        # V91 - Assistente de Conexão
         toplevel = ctk.CTkToplevel(self)
         toplevel.title("Assistente de Conexão")
         toplevel.geometry("600x450")
         toplevel.attributes("-topmost", True)
 
-        # Layout 2 Colunas
         frame_tools = ctk.CTkFrame(toplevel)
         frame_tools.pack(side="left", fill="both", expand=True, padx=10, pady=10)
 
         frame_tutorial = ctk.CTkFrame(toplevel, fg_color="#111")
         frame_tutorial.pack(side="right", fill="both", expand=True, padx=10, pady=10)
 
-        # Coluna Ferramentas
         ctk.CTkLabel(frame_tools, text="FERRAMENTAS", font=("Arial", 14, "bold")).pack(pady=10)
 
-        # Pareamento
-        ctk.CTkLabel(frame_tools, text="1. PAREAMENTO (Wireless Debugging)", text_color="#fbbf24").pack(pady=(10,5))
+        ctk.CTkLabel(frame_tools, text="1. PAREAMENTO (Wireless)", text_color="#fbbf24").pack(pady=(10,5))
         ip_pair_entry = ctk.CTkEntry(frame_tools, placeholder_text="IP:PORTA (Ex: 192.168.0.5:40000)")
         ip_pair_entry.pack(fill="x", padx=10, pady=5)
         code_entry = ctk.CTkEntry(frame_tools, placeholder_text="CÓDIGO (6 Dígitos)")
@@ -254,7 +281,6 @@ class TurboCoreApp(ctk.CTk):
 
         ctk.CTkButton(frame_tools, text="PAREAR", fg_color="#fbbf24", text_color="black", command=do_pair).pack(pady=5)
 
-        # Conexão
         ctk.CTkLabel(frame_tools, text="2. CONEXÃO (ADB Connect)", text_color=COR_PRIMARIA).pack(pady=(20,5))
         ip_conn_entry = ctk.CTkEntry(frame_tools, placeholder_text="IP:PORTA (Ex: 192.168.0.5:5555)")
         ip_conn_entry.pack(fill="x", padx=10, pady=5)
@@ -265,7 +291,6 @@ class TurboCoreApp(ctk.CTk):
 
         ctk.CTkButton(frame_tools, text="CONECTAR", fg_color=COR_PRIMARIA, command=do_connect).pack(pady=5)
 
-        # Coluna Tutorial
         ctk.CTkLabel(frame_tutorial, text="COMO CONECTAR?", font=("Arial", 14, "bold")).pack(pady=10)
         tut_text = """
 1. No Celular, ative as
@@ -281,47 +306,13 @@ class TurboCoreApp(ctk.CTk):
 
 5. Copie o IP, Porta e Código
    para os campos ao lado.
-
-OBS: O IP de Pareamento e o IP
-de Conexão geralmente têm
-PORTAS DIFERENTES!
         """
         lbl_tut = ctk.CTkLabel(frame_tutorial, text=tut_text, justify="left", font=("Consolas", 11), text_color="#ccc")
         lbl_tut.pack(padx=10, pady=10)
 
-    def create_nav_btn(self, text, mode):
-        btn = ctk.CTkButton(self.frame_nav, text=text, fg_color="transparent", width=80, font=("Arial", 11, "bold"), 
-                            command=lambda: self.switch_tab(mode))
-        btn.pack(side="left", padx=2)
-        return btn
-
-    def switch_tab(self, mode):
-        self.debug_log(f"Trocando aba para: {mode}")
-        if self.current_frame: self.current_frame.place_forget()
-        self.current_frame = self.frames[mode]
-        self.current_frame.place(x=0, y=0, relwidth=1, relheight=1)
-        
-        # Lógica de Cores da Aba Ativa
-        btns = {"dash": self.btn_dash, "special": self.btn_special, "conn": self.btn_conn, "term": self.btn_term}
-        
-        for k, b in btns.items():
-            if k == mode:
-                # Cor diferente para cada aba
-                if k == "dash": color = COR_PC
-                elif k == "special": color = COR_PRIMARIA
-                else: color = "#333"
-                b.configure(text_color="white", fg_color=color)
-            else:
-                b.configure(text_color="#888", fg_color="transparent")
-
     # --- DASHBOARD ---
     def build_dashboard(self, p):
         c = ctk.CTkFrame(p, fg_color="transparent"); c.pack(fill="both", padx=20, pady=20)
-
-        # V92 - ATALHO COMPETITIVO
-        ctk.CTkButton(c, text="🚀 IR PARA MODOS COMPETITIVOS (Free Fire / Jogos)",
-                      font=("Arial", 12, "bold"), fg_color=COR_PRIMARIA, height=45,
-                      command=lambda: self.switch_tab("special")).pack(fill="x", pady=(0, 20))
         
         # 1. PERFORMANCE
         self.create_menu(c, "🔥 DESEMPENHO MÁXIMO", list(MODOS_PERF.keys()), self.aplicar_perf, COR_PRIMARIA)
@@ -329,7 +320,7 @@ PORTAS DIFERENTES!
         # 2. MODO PC
         self.create_menu(c, "🖥️ MODOS PC (MONITOR)", list(MODOS_PC.keys()), self.iniciar_pc, COR_PC)
 
-        # Opções de Lançamento (NOVO V90)
+        # Opções de Lançamento
         frame_opts = ctk.CTkFrame(c, fg_color="#111", border_width=1, border_color="#333")
         frame_opts.pack(fill="x", pady=(5, 15))
         ctk.CTkLabel(frame_opts, text="OPÇÕES DE LANÇAMENTO", font=("Arial", 10, "bold"), text_color="gray").pack(pady=(5,2))
@@ -349,10 +340,7 @@ PORTAS DIFERENTES!
             
         # UTILITÁRIOS
         ctk.CTkLabel(c, text="FERRAMENTAS GERAIS", font=("Arial", 12, "bold")).pack(anchor="w", pady=(30,5))
-
-        # Instalador de APK
         ctk.CTkButton(c, text="INSTALAR APK 📥", fg_color="#fbbf24", text_color="black", height=40, font=("Arial", 11, "bold"), command=self.install_apk).pack(fill="x", pady=5)
-
         ctk.CTkButton(c, text="RESTAURAR ORIGINAL 🔄", fg_color="#333", height=40, font=("Arial", 11, "bold"), command=self.restaurar_padrao).pack(fill="x", pady=5)
         
         self.txt_log = ctk.CTkTextbox(c, height=120, fg_color="#050505", text_color="#0f0", font=("Consolas", 10))
@@ -364,30 +352,23 @@ PORTAS DIFERENTES!
         
         f = ctk.CTkFrame(parent, fg_color="transparent")
         f.pack(fill="x")
-        
-        # Menu Dropdown (Com callback para mudar o texto)
         m = ctk.CTkOptionMenu(f, values=["Selecionar..."] + values, fg_color="#111", button_color=color, width=350,
                               command=lambda v: self.on_menu_select(v, cmd, m))
         m.pack(side="left", fill="x", expand=True, padx=(0, 5))
-        
-        # Botão de Ajuda
         ctk.CTkButton(f, text="?", width=40, fg_color="#222", hover_color="#444", 
                       command=lambda: self.show_info(m.get())).pack(side="right")
-        
-        # Salva referência para resets futuros
         setattr(self, f"menu_{title.split()[0]}", m) 
 
     def on_menu_select(self, value, command_func, menu_widget):
         if value != "Selecionar...":
             self.debug_log(f"Menu selecionado: {value}")
-            menu_widget.set(value) # Atualiza o texto do botão para o modo escolhido
-            command_func(value)    # Executa a função
+            menu_widget.set(value)
+            command_func(value)
 
     def show_info(self, mode_name):
         if mode_name == "Selecionar...":
-            messagebox.showinfo("Ajuda", "Selecione um modo primeiro para ver os detalhes.")
+            messagebox.showinfo("Ajuda", "Selecione um modo primeiro.")
             return
-        
         info = HELP_TEXTS.get(mode_name, "Descrição técnica não disponível.")
         messagebox.showinfo(f"Info: {mode_name}", info)
 
@@ -403,14 +384,12 @@ PORTAS DIFERENTES!
                                command=self.ativar_free_fire)
         btn_ff.pack(fill="x", pady=10)
 
-        # Keymapping Toggle
         self.sw_keymap = ctk.CTkSwitch(c, text="ATIVAR KEYMAPPING (Espaço + WASD)", command=self.toggle_keymapping,
                                        font=("Arial", 12, "bold"), text_color="white", progress_color=COR_SUCESSO)
         self.sw_keymap.pack(pady=15)
 
         ctk.CTkLabel(c, text="EM BREVE (Desenvolvimento)", font=("Arial", 12, "bold"), text_color="gray").pack(pady=(30, 10))
         
-        # V92 - Lista de Jogos Futuros
         games_frame = ctk.CTkFrame(c, fg_color="transparent")
         games_frame.pack(fill="x", padx=10)
 
@@ -428,11 +407,7 @@ PORTAS DIFERENTES!
         """
         ctk.CTkLabel(c, text=desc, font=("Consolas", 12), justify="left", anchor="w").pack(anchor="w")
 
-    def create_placeholder_btn(self, parent, text, col):
-        btn = ctk.CTkButton(parent, text=text, fg_color="#222", text_color="#666", state="disabled", width=140, height=50)
-        btn.grid(row=0, column=col, padx=5, sticky="ew")
-        parent.grid_columnconfigure(col, weight=1)
-
+    def activar_free_fire(self): self.ativar_free_fire() # Alias fix
     def ativar_free_fire(self):
         self.debug_log("Ativando modo Free Fire...")
         if not self.target_device: return messagebox.showerror("ERRO", "Conecte o celular!")
@@ -459,7 +434,6 @@ PORTAS DIFERENTES!
         exe_adb = os.path.join(self.bin_dir, "adb.exe")
         exe_scrcpy = os.path.join(self.bin_dir, "scrcpy.exe")
         
-        # Lê opções do V90
         opt_video = self.chk_video.get()
         opt_audio = self.chk_audio.get()
         opt_ghost = self.chk_ghost.get()
@@ -480,7 +454,6 @@ PORTAS DIFERENTES!
 
             scrcpy_args = list(cfg['scrcpy'])
 
-            # Aplica flags V90
             if opt_video:
                 timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
                 filename = f"REC_{timestamp}.mp4"
@@ -526,17 +499,12 @@ PORTAS DIFERENTES!
 
     def install_apk(self):
         if not self.target_device: return messagebox.showerror("Erro", "Conecte o dispositivo primeiro!")
-
         file_path = filedialog.askopenfilename(filetypes=[("Android Package", "*.apk")])
         if not file_path: return
-
         self.log(f"Instalando: {os.path.basename(file_path)}...")
-        self.debug_log(f"Iniciando instalação de APK: {file_path}")
-
         def run_install():
             si = subprocess.STARTUPINFO(); si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
             exe = os.path.join(self.bin_dir, "adb.exe")
-
             try:
                 res = subprocess.run([exe, "-s", self.target_device, "install", "-r", file_path], capture_output=True, text=True, startupinfo=si)
                 if "Success" in res.stdout:
@@ -544,39 +512,9 @@ PORTAS DIFERENTES!
                     self.after(0, lambda: messagebox.showinfo("Sucesso", "APK Instalado com Sucesso!"))
                 else:
                     self.log(f"Erro na instalação: {res.stderr}")
-                    self.debug_log(f"Erro install: {res.stderr}")
                     self.after(0, lambda: messagebox.showerror("Erro", f"Falha ao instalar:\n{res.stderr}"))
-            except Exception as e:
-                self.debug_log(f"Exceção install: {e}")
-
+            except Exception as e: self.debug_log(f"Exceção install: {e}")
         threading.Thread(target=run_install).start()
-
-    # --- CONEXÃO ---
-    def build_connection(self, p):
-        # Passo 1: Pareamento
-        frame_pair = ctk.CTkFrame(p, fg_color="#111", border_width=1, border_color="#333")
-        frame_pair.pack(fill="x", padx=20, pady=(20, 10))
-        ctk.CTkLabel(frame_pair, text="PASSO 1: PAREAMENTO (Wireless Debugging)", font=("Arial", 12, "bold"), text_color="#fbbf24").pack(pady=10)
-
-        self.ent_pair_ip = ctk.CTkEntry(frame_pair, placeholder_text="IP:PORTA (Ex: 192.168.1.5:40000)", width=300)
-        self.ent_pair_ip.pack(pady=5)
-        self.ent_pair_code = ctk.CTkEntry(frame_pair, placeholder_text="CÓDIGO DE PAREAMENTO", width=300)
-        self.ent_pair_code.pack(pady=5)
-        ctk.CTkButton(frame_pair, text="PAREAR DISPOSITIVO", fg_color="#fbbf24", text_color="black", command=self.wifi_pair).pack(pady=15)
-
-        # Passo 2: Conexão
-        frame_conn = ctk.CTkFrame(p, fg_color="#111", border_width=1, border_color="#333")
-        frame_conn.pack(fill="x", padx=20, pady=10)
-        ctk.CTkLabel(frame_conn, text="PASSO 2: CONEXÃO (ADB)", font=("Arial", 12, "bold"), text_color=COR_PRIMARIA).pack(pady=10)
-
-        self.ent_ip = ctk.CTkEntry(frame_conn, placeholder_text="IP:PORTA (Ex: 192.168.1.5:5555)", width=300)
-        self.ent_ip.pack(pady=5)
-
-        btn_frame = ctk.CTkFrame(frame_conn, fg_color="transparent")
-        btn_frame.pack(pady=15)
-        ctk.CTkButton(btn_frame, text="ESCANEAR REDE 🔎", fg_color="#333", width=140, command=self.scan_network).pack(side="left", padx=5)
-        ctk.CTkButton(btn_frame, text="CONECTAR", fg_color=COR_PRIMARIA, width=140, command=self.wifi_connect).pack(side="left", padx=5)
-
 
     def build_terminal(self, p):
         ctk.CTkLabel(p, text="TERMINAL MANUAL", font=("Arial", 14, "bold")).pack(pady=10)
@@ -604,7 +542,6 @@ PORTAS DIFERENTES!
 
     def update_stats_ui(self, level, temp):
         if not self.target_device: return
-
         temp_color = COR_ERRO if temp > 40.0 else "gray"
         text = f" | 🔋 {level}% | 🌡️ {temp}°C"
         self.lbl_stats.configure(text=text, text_color=temp_color)
@@ -655,13 +592,11 @@ PORTAS DIFERENTES!
                     try:
                         res = subprocess.run([adb, "-s", self.target_device, "shell", "dumpsys", "battery"], capture_output=True, text=True, startupinfo=si)
                         output = res.stdout
-
                         level = re.search(r'level: (\d+)', output)
                         temp = re.search(r'temperature: (\d+)', output)
-
                         if level and temp:
                             l_val = int(level.group(1))
-                            t_val = int(temp.group(1)) / 10.0 # Converte 370 para 37.0
+                            t_val = int(temp.group(1)) / 10.0
                             self.after(0, lambda: self.update_stats_ui(l_val, t_val))
                     except Exception as e:
                         self.debug_log(f"Erro Battery Monitor: {e}")
@@ -677,59 +612,7 @@ PORTAS DIFERENTES!
         exe = os.path.join(self.bin_dir, "adb.exe")
         subprocess.run([exe] + cmd.split(), startupinfo=si)
 
-    def wifi_connect(self):
-        addr = self.ent_ip.get()
-        self.debug_log(f"Tentando conectar Wi-Fi: {addr}")
-        if addr: threading.Thread(target=lambda: self.run_adb_generic(f"connect {addr}")).start()
-
-    def wifi_pair(self):
-        addr = self.ent_pair_ip.get(); code = self.ent_pair_code.get()
-        self.debug_log(f"Tentando parear: {addr} code={code}")
-        if addr and code: threading.Thread(target=lambda: self.run_adb_generic(f"pair {addr} {code}")).start()
-
-    def scan_network(self):
-        self.log("Escaneando rede por dispositivos (Porta 5555)...")
-        self.debug_log("Iniciando scan de rede...")
-
-        def run_scan():
-            try:
-                local_ip = socket.gethostbyname(socket.gethostname())
-                subnet = '.'.join(local_ip.split('.')[:-1]) + '.'
-                self.debug_log(f"Subnet detectada: {subnet}0/24")
-                found = []
-
-                with concurrent.futures.ThreadPoolExecutor(max_workers=50) as executor:
-                    futures = {executor.submit(self._check_ip, f"{subnet}{i}"): f"{subnet}{i}" for i in range(1, 255)}
-                    for future in concurrent.futures.as_completed(futures):
-                        ip = futures[future]
-                        if future.result():
-                            found.append(ip)
-                            self.debug_log(f"SCAN: Encontrado {ip}")
-
-                if found:
-                    self.log(f"Encontrados: {', '.join(found)}")
-                    # Preenche o primeiro encontrado
-                    self.after(0, lambda: self.ent_ip.delete(0, 'end'))
-                    self.after(0, lambda: self.ent_ip.insert(0, f"{found[0]}:5555"))
-                else:
-                    self.log("Nenhum dispositivo com porta 5555 aberta encontrado.")
-            except Exception as e:
-                self.debug_log(f"ERRO NO SCANNER: {e}")
-
-        threading.Thread(target=run_scan).start()
-
-    def _check_ip(self, ip):
-        try:
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.settimeout(0.5)
-            result = sock.connect_ex((ip, 5555))
-            sock.close()
-            return result == 0
-        except:
-            return False
-
     def debug_log(self, msg):
-        # Escreve no console real do sistema (CMD) para debug
         try:
             sys.__stdout__.write(f"[DEBUG] {msg}\n")
             sys.__stdout__.flush()
@@ -737,7 +620,7 @@ PORTAS DIFERENTES!
 
     def log(self, msg):
         ts = datetime.datetime.now().strftime("%H:%M:%S")
-        self.debug_log(f"GUI LOG: {msg}") # Espelha logs da GUI no console
+        self.debug_log(f"GUI LOG: {msg}")
         try:
             self.txt_log.configure(state="normal")
             self.txt_log.insert("end", f"[{ts}] {msg}\n")
