@@ -18,7 +18,7 @@ from PIL import Image
 # --- CONFIGURAÇÃO GERAL ---
 ctk.set_appearance_mode("Dark")
 
-# Cores Estáticas (Base)
+# Cores Estáticas
 COLOR_BG = "#0A0A0A"
 COLOR_SURFACE = "#171717"
 COLOR_BORDER = "#333333"
@@ -30,7 +30,7 @@ COLOR_HOVER = "#262626"
 
 # Temas
 THEMES = {
-    "Studio Blue": "#00E5FF", # Default
+    "Studio Blue": "#00E5FF",
     "ROG Red": "#b91c1c",
     "Razer Green": "#22c55e",
     "Cyberpunk Purple": "#d946ef"
@@ -45,12 +45,13 @@ FONT_MONO = ("Consolas", 11)
 # --- TRADUÇÕES ---
 TRANSLATIONS = {
     "PT": {
-        "app_title": "TURBO CORE V96 - ULTIMATE EDITION",
+        "app_title": "TURBO CORE V97 - GOD MODE",
         "sidebar_dash": "🖥️ DASHBOARD",
         "sidebar_game": "🎮 COMPETITIVO",
+        "sidebar_apps": "📦 APPS",
         "sidebar_term": "💻 TERMINAL",
         "status_searching": "Buscando...",
-        "status_disconnected": "❌ DESCONECTADO (Clique aqui)",
+        "status_disconnected": "❌ DESCONECTADO (Clique)",
         "sys_ready": "SISTEMA PRONTO",
         "launch_comp": "🚀 IR PARA MODOS COMPETITIVOS",
         "card_pc": "EXPERIÊNCIA PC",
@@ -63,6 +64,7 @@ TRANSLATIONS = {
         "btn_install": "Instalar APK 📥",
         "btn_send": "Enviar Arquivo 📤",
         "btn_reset": "Restaurar Original 🔄",
+        "btn_kill": "⚡ KILL ALL",
         "select_default": "Selecionar...",
         "hero_ff": "ATIVAR MODO FREE FIRE MAX 🎯",
         "sw_keymap": "Ativar Keymapping (WASD)",
@@ -82,18 +84,26 @@ TRANSLATIONS = {
         "msg_error": "ERRO",
         "msg_restored": "Dispositivo restaurado!",
         "msg_installed": "APK Instalado!",
-        "msg_sent": "Arquivo enviado para Downloads!",
-        "msg_ff_active": "MODO FREE FIRE ATIVADO!\nBom jogo!",
+        "msg_sent": "Arquivo enviado!",
+        "msg_ff_active": "MODO FREE FIRE ATIVADO!",
+        "msg_kill": "Processos de fundo encerrados!",
         "theme_label": "Theme / Tema",
-        "lang_label": "Lang / Idioma"
+        "lang_label": "Lang / Idioma",
+        "apps_search": "Buscar pacote...",
+        "apps_refresh": "🔄 Recarregar",
+        "apps_loading": "Carregando apps...",
+        "action_open": "Abrir",
+        "action_kill": "Parar",
+        "action_del": "Del"
     },
     "EN": {
-        "app_title": "TURBO CORE V96 - ULTIMATE EDITION",
+        "app_title": "TURBO CORE V97 - GOD MODE",
         "sidebar_dash": "🖥️ DASHBOARD",
         "sidebar_game": "🎮 COMPETITIVE",
+        "sidebar_apps": "📦 APPS",
         "sidebar_term": "💻 TERMINAL",
         "status_searching": "Searching...",
-        "status_disconnected": "❌ DISCONNECTED (Click here)",
+        "status_disconnected": "❌ DISCONNECTED (Click)",
         "sys_ready": "SYSTEM READY",
         "launch_comp": "🚀 LAUNCH COMPETITIVE MODE",
         "card_pc": "PC EXPERIENCE",
@@ -106,6 +116,7 @@ TRANSLATIONS = {
         "btn_install": "Install APK 📥",
         "btn_send": "Send File 📤",
         "btn_reset": "Factory Reset 🔄",
+        "btn_kill": "⚡ KILL ALL",
         "select_default": "Select...",
         "hero_ff": "ACTIVATE FREE FIRE MODE 🎯",
         "sw_keymap": "Enable Keymapping (WASD)",
@@ -125,18 +136,26 @@ TRANSLATIONS = {
         "msg_error": "ERROR",
         "msg_restored": "Device restored!",
         "msg_installed": "APK Installed!",
-        "msg_sent": "File sent to Downloads!",
-        "msg_ff_active": "FREE FIRE MODE ACTIVE!\nGood game!",
+        "msg_sent": "File sent!",
+        "msg_ff_active": "FREE FIRE MODE ACTIVE!",
+        "msg_kill": "Background processes killed!",
         "theme_label": "Theme",
-        "lang_label": "Language"
+        "lang_label": "Language",
+        "apps_search": "Search package...",
+        "apps_refresh": "🔄 Refresh",
+        "apps_loading": "Loading apps...",
+        "action_open": "Open",
+        "action_kill": "Kill",
+        "action_del": "Del"
     },
     "ES": {
-        "app_title": "TURBO CORE V96 - ULTIMATE EDITION",
+        "app_title": "TURBO CORE V97 - GOD MODE",
         "sidebar_dash": "🖥️ PANEL",
         "sidebar_game": "🎮 COMPETITIVO",
+        "sidebar_apps": "📦 APPS",
         "sidebar_term": "💻 TERMINAL",
         "status_searching": "Buscando...",
-        "status_disconnected": "❌ DESCONECTADO (Clic aquí)",
+        "status_disconnected": "❌ DESCONECTADO (Clic)",
         "sys_ready": "SISTEMA LISTO",
         "launch_comp": "🚀 IR A MODO COMPETITIVO",
         "card_pc": "EXPERIENCIA PC",
@@ -149,6 +168,7 @@ TRANSLATIONS = {
         "btn_install": "Instalar APK 📥",
         "btn_send": "Enviar Archivo 📤",
         "btn_reset": "Restaurar Original 🔄",
+        "btn_kill": "⚡ KILL ALL",
         "select_default": "Seleccionar...",
         "hero_ff": "ACTIVAR MODO FREE FIRE 🎯",
         "sw_keymap": "Activar Keymapping (WASD)",
@@ -168,10 +188,17 @@ TRANSLATIONS = {
         "msg_error": "ERROR",
         "msg_restored": "¡Dispositivo restaurado!",
         "msg_installed": "¡APK Instalado!",
-        "msg_sent": "¡Archivo enviado a Descargas!",
-        "msg_ff_active": "¡MODO FREE FIRE ACTIVO!\n¡Buen juego!",
+        "msg_sent": "¡Archivo enviado!",
+        "msg_ff_active": "¡MODO FREE FIRE ACTIVO!",
+        "msg_kill": "¡Procesos cerrados!",
         "theme_label": "Tema",
-        "lang_label": "Idioma"
+        "lang_label": "Idioma",
+        "apps_search": "Buscar paquete...",
+        "apps_refresh": "🔄 Recargar",
+        "apps_loading": "Cargando apps...",
+        "action_open": "Abrir",
+        "action_kill": "Parar",
+        "action_del": "Del"
     }
 }
 
@@ -212,9 +239,9 @@ class TurboCoreApp(ctk.CTk):
         self.current_theme = "Studio Blue"
         self.accent_color = THEMES[self.current_theme]
 
-        self.debug_log(f"--- INICIANDO TURBO CORE V96 ULTIMATE [{self.current_lang}] ---")
+        self.debug_log(f"--- INICIANDO TURBO CORE V97 GOD MODE [{self.current_lang}] ---")
         self.title(self.T("app_title"))
-        self.geometry("850x750")
+        self.geometry("900x750")
         self.resizable(False, True)
         self.configure(fg_color=COLOR_BG)
         self.target_device = ""
@@ -306,10 +333,11 @@ class TurboCoreApp(ctk.CTk):
         self.sidebar.pack_propagate(False)
 
         ctk.CTkLabel(self.sidebar, text="TURBO\nCORE", font=("Montserrat", 24, "bold"), text_color=self.accent_color).pack(pady=(40, 5))
-        ctk.CTkLabel(self.sidebar, text="V96 ULTIMATE", font=("Roboto", 10), text_color=COLOR_TEXT_DIM).pack(pady=(0, 20))
+        ctk.CTkLabel(self.sidebar, text="V97 GOD MODE", font=("Roboto", 10), text_color=COLOR_TEXT_DIM).pack(pady=(0, 20))
 
         self.btn_dash = self.create_sidebar_btn(self.T("sidebar_dash"), "dash")
         self.btn_special = self.create_sidebar_btn(self.T("sidebar_game"), "special")
+        self.btn_apps = self.create_sidebar_btn(self.T("sidebar_apps"), "apps")
         self.btn_term = self.create_sidebar_btn(self.T("sidebar_term"), "term")
 
         # Selectors
@@ -341,7 +369,7 @@ class TurboCoreApp(ctk.CTk):
 
         self.btn_device_status = ctk.CTkButton(self.frame_dev_info, text=self.T("status_searching"), font=FONT_BOLD,
                                                fg_color=COLOR_SURFACE, text_color=COLOR_TEXT_DIM,
-                                               width=220, height=36, corner_radius=18,
+                                               width=200, height=36, corner_radius=18,
                                                border_width=1, border_color=COLOR_BORDER,
                                                hover_color=COLOR_HOVER,
                                                command=self.abrir_gerenciador_conexao)
@@ -357,17 +385,24 @@ class TurboCoreApp(ctk.CTk):
                                          command=self.force_refresh)
         self.btn_refresh.pack(side="left", padx=5)
 
+        self.btn_kill = ctk.CTkButton(self.frame_dev_info, text=self.T("btn_kill"), width=100, height=36,
+                                      fg_color=COLOR_ERROR, text_color="white", hover_color="#991B1B",
+                                      corner_radius=18, command=self.kill_all_processes)
+        self.btn_kill.pack(side="left", padx=5)
+
         self.main_area = ctk.CTkFrame(self.right_panel, fg_color="transparent")
         self.main_area.pack(fill="both", expand=True, padx=30, pady=20)
         
         self.frames = {
             "dash": ctk.CTkFrame(self.main_area, fg_color="transparent"),
             "special": ctk.CTkFrame(self.main_area, fg_color="transparent"),
+            "apps": ctk.CTkFrame(self.main_area, fg_color="transparent"),
             "term": ctk.CTkFrame(self.main_area, fg_color="transparent")
         }
         
         self.build_dashboard(self.frames["dash"])
         self.build_special(self.frames["special"])
+        self.build_apps(self.frames["apps"])
         self.build_terminal(self.frames["term"])
         
         self.current_frame = None
@@ -388,7 +423,7 @@ class TurboCoreApp(ctk.CTk):
         self.current_frame = self.frames[mode]
         self.current_frame.pack(fill="both", expand=True)
 
-        btns = {"dash": self.btn_dash, "special": self.btn_special, "term": self.btn_term}
+        btns = {"dash": self.btn_dash, "special": self.btn_special, "apps": self.btn_apps, "term": self.btn_term}
         for k, b in btns.items():
             if k == mode:
                 b.configure(fg_color=COLOR_HOVER, text_color=self.accent_color, border_width=1, border_color=COLOR_BORDER)
@@ -544,6 +579,73 @@ class TurboCoreApp(ctk.CTk):
         for game in future_games:
             ctk.CTkLabel(c2, text=f"• {game}", font=FONT_MAIN, text_color=COLOR_TEXT_DIM).pack(anchor="w", pady=2)
 
+    def build_apps(self, p):
+        # Header: Search & Refresh
+        head = ctk.CTkFrame(p, fg_color="transparent")
+        head.pack(fill="x", pady=10)
+
+        self.ent_search = ctk.CTkEntry(head, placeholder_text=self.T("apps_search"), width=300, fg_color=COLOR_SURFACE, border_color=COLOR_BORDER)
+        self.ent_search.pack(side="left", padx=(20, 10))
+
+        ctk.CTkButton(head, text=self.T("apps_refresh"), width=100, fg_color=COLOR_SURFACE, border_color=COLOR_BORDER, border_width=1,
+                      command=self.refresh_apps_list).pack(side="left")
+
+        # Scrollable List
+        self.scroll_apps = ctk.CTkScrollableFrame(p, fg_color=COLOR_SURFACE, corner_radius=12)
+        self.scroll_apps.pack(fill="both", expand=True, padx=20, pady=10)
+
+        # Initial Load
+        self.refresh_apps_list()
+
+    def refresh_apps_list(self):
+        for w in self.scroll_apps.winfo_children(): w.destroy()
+
+        if not self.target_device:
+            ctk.CTkLabel(self.scroll_apps, text="No Device").pack(pady=20)
+            return
+
+        def load():
+            self.debug_log("Loading Apps...")
+            si = subprocess.STARTUPINFO(); si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+            exe = os.path.join(self.bin_dir, "adb.exe")
+            res = subprocess.run([exe, "-s", self.target_device, "shell", "pm", "list", "packages", "-3"], capture_output=True, text=True, startupinfo=si)
+
+            search = self.ent_search.get().lower()
+
+            for line in res.stdout.splitlines():
+                pkg = line.replace("package:", "").strip()
+                if not pkg or (search and search not in pkg.lower()): continue
+
+                self.after(0, lambda p=pkg: self.create_app_row(p))
+
+        threading.Thread(target=load).start()
+
+    def create_app_row(self, pkg):
+        f = ctk.CTkFrame(self.scroll_apps, fg_color="transparent", height=40)
+        f.pack(fill="x", pady=2)
+
+        ctk.CTkLabel(f, text=pkg, font=FONT_MONO, text_color=COLOR_TEXT_MAIN, width=350, anchor="w").pack(side="left", padx=10)
+
+        # Actions
+        ctk.CTkButton(f, text="▶", width=40, fg_color=COLOR_SUCCESS, text_color="white",
+                      command=lambda: self.run_adb_generic(f"shell monkey -p {pkg} -c android.intent.category.LAUNCHER 1")).pack(side="right", padx=2)
+
+        ctk.CTkButton(f, text="🛑", width=40, fg_color="orange", text_color="white",
+                      command=lambda: self.run_adb_generic(f"shell am force-stop {pkg}")).pack(side="right", padx=2)
+
+        ctk.CTkButton(f, text="🗑️", width=40, fg_color=COLOR_ERROR, text_color="white",
+                      command=lambda: self.uninstall_app(pkg)).pack(side="right", padx=2)
+
+    def uninstall_app(self, pkg):
+        if messagebox.askyesno("Uninstall", f"Uninstall {pkg}?"):
+            self.run_adb_cmd_string(f"pm uninstall {pkg}")
+            self.after(1000, self.refresh_apps_list)
+
+    def kill_all_processes(self):
+        if not self.target_device: return
+        self.run_adb_cmd_string("am kill-all")
+        messagebox.showinfo(self.T("msg_success"), self.T("msg_kill"))
+
     def ativar_free_fire(self):
         if not self.target_device: return messagebox.showerror(self.T("msg_error"), "No Device")
         self.log(self.T("msg_ff_active"))
@@ -680,10 +782,10 @@ class TurboCoreApp(ctk.CTk):
             self.btn_refresh.configure(text_color=COLOR_ERROR)
             self.lbl_stats.configure(text="")
 
-    def update_stats_ui(self, level, temp, free_space):
+    def update_stats_ui(self, level, temp, free_space, ram_info=""):
         if not self.target_device: return
         color = COLOR_ERROR if temp > 40.0 else COLOR_TEXT_DIM
-        self.lbl_stats.configure(text=f"BAT: {level}% | TEMP: {temp}°C | FREE: {free_space}", text_color=color)
+        self.lbl_stats.configure(text=f"BAT: {level}% | TEMP: {temp}°C | {ram_info} | FREE: {free_space}", text_color=color)
 
     def force_refresh(self):
         self.btn_device_status.configure(text=self.T("status_searching"), border_color=self.accent_color)
@@ -728,14 +830,27 @@ class TurboCoreApp(ctk.CTk):
                         # Storage (df -h /data)
                         res_st = subprocess.run([adb, "-s", self.target_device, "shell", "df", "-h", "/data"], capture_output=True, text=True, startupinfo=si)
                         avail = "N/A"
-                        # Parse logic for df output (usually line 2, col 4 or similar)
-                        lines = res_st.stdout.split('\n')
-                        if len(lines) > 1:
-                            parts = lines[1].split()
-                            if len(parts) >= 4: avail = parts[3]
+                        if res_st.stdout:
+                            lines = res_st.stdout.split('\n')
+                            if len(lines) > 1:
+                                parts = lines[1].split()
+                                if len(parts) >= 4: avail = parts[3]
+
+                        # RAM (/proc/meminfo)
+                        res_mem = subprocess.run([adb, "-s", self.target_device, "shell", "cat", "/proc/meminfo"], capture_output=True, text=True, startupinfo=si)
+                        ram_str = ""
+                        if res_mem.stdout:
+                            mt = re.search(r'MemTotal:\s+(\d+)', res_mem.stdout)
+                            ma = re.search(r'MemAvailable:\s+(\d+)', res_mem.stdout)
+                            if mt and ma:
+                                t_kb = int(mt.group(1))
+                                a_kb = int(ma.group(1))
+                                u_gb = (t_kb - a_kb) / 1024 / 1024
+                                t_gb = t_kb / 1024 / 1024
+                                ram_str = f"RAM: {u_gb:.1f}/{t_gb:.1f}GB"
 
                         if level and temp:
-                            self.after(0, lambda: self.update_stats_ui(int(level.group(1)), int(temp.group(1))/10.0, avail))
+                            self.after(0, lambda: self.update_stats_ui(int(level.group(1)), int(temp.group(1))/10.0, avail, ram_str))
                     except: pass
                 time.sleep(5)
         threading.Thread(target=loop, daemon=True).start()
