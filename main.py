@@ -45,7 +45,7 @@ FONT_MONO = ("Consolas", 11)
 # --- TRADUÇÕES ---
 TRANSLATIONS = {
     "PT": {
-        "app_title": "TURBO CORE V100.1 - HELP FIX",
+        "app_title": "TURBO CORE V101 - MATRIX LOGCAT",
         "sidebar_dash": "🖥️ DASHBOARD",
         "sidebar_game": "🎮 COMPETITIVO",
         "sidebar_apps": "📦 APPS",
@@ -95,6 +95,10 @@ TRANSLATIONS = {
         "action_open": "Abrir",
         "action_kill": "Parar",
         "action_del": "Del",
+        "tab_manual": "MANUAL",
+        "tab_logcat": "LOGCAT (MATRIX)",
+        "btn_start_log": "▶ INICIAR LEITURA",
+        "btn_stop_log": "⏹ PARAR",
         # HELP TEXTS
         "help_pc_lite": "MODO ECONÔMICO (SAFE)\n\n• Resolução: 540p (Baixa)\n• FPS: 30 Travado\n• Risco: NENHUM.\n\nIdeal para leitura e tarefas simples. Economiza bateria e mantém o celular frio.",
         "help_pc_sob": "MODO SOBERANO (PADRÃO)\n\n• Resolução: 720p (HD)\n• Densidade: 160 DPI\n• Risco: BAIXO.\n\nTransforma o celular em um monitor secundário funcional. Melhor equilíbrio entre qualidade e performance.",
@@ -107,7 +111,7 @@ TRANSLATIONS = {
         "help_bat_ult": "ULTIMATE ECONOMIA (DEEP)\n\n• Ação: Brilho Zero, Mata Apps, Limita CPU.\n• Risco: USABILIDADE.\n\n⚠️ O celular vira um 'tijolo' para sobreviver. A tela ficará quase apagada. Só use em emergências."
     },
     "EN": {
-        "app_title": "TURBO CORE V100.1 - HELP FIX",
+        "app_title": "TURBO CORE V101 - MATRIX LOGCAT",
         "sidebar_dash": "🖥️ DASHBOARD",
         "sidebar_game": "🎮 COMPETITIVE",
         "sidebar_apps": "📦 APPS",
@@ -157,6 +161,10 @@ TRANSLATIONS = {
         "action_open": "Open",
         "action_kill": "Kill",
         "action_del": "Del",
+        "tab_manual": "MANUAL",
+        "tab_logcat": "LOGCAT (MATRIX)",
+        "btn_start_log": "▶ START LOGCAT",
+        "btn_stop_log": "⏹ STOP",
         # HELP TEXTS EN
         "help_pc_lite": "ECONOMY MODE (SAFE)\n\n• Res: 540p\n• FPS: 30 Locked\n• Risk: NONE.\n\nSaves battery, keeps device cool.",
         "help_pc_sob": "SOVEREIGN MODE (STD)\n\n• Res: 720p\n• Density: 160 DPI\n• Risk: LOW.\n\nTurns phone into a functional secondary monitor.",
@@ -169,7 +177,7 @@ TRANSLATIONS = {
         "help_bat_ult": "ULTIMATE SAVER\n\n• Action: Zero Brightness, Kill Apps.\n• Risk: USABILITY.\n\n⚠️ Phone becomes barely usable to survive."
     },
     "ES": {
-        "app_title": "TURBO CORE V100.1 - HELP FIX",
+        "app_title": "TURBO CORE V101 - MATRIX LOGCAT",
         "sidebar_dash": "🖥️ PANEL",
         "sidebar_game": "🎮 COMPETITIVO",
         "sidebar_apps": "📦 APPS",
@@ -219,6 +227,10 @@ TRANSLATIONS = {
         "action_open": "Abrir",
         "action_kill": "Parar",
         "action_del": "Del",
+        "tab_manual": "MANUAL",
+        "tab_logcat": "LOGCAT (MATRIX)",
+        "btn_start_log": "▶ INICIAR",
+        "btn_stop_log": "⏹ DETENER",
         # HELP TEXTS ES
         "help_pc_lite": "MODO ECONÓMICO (SAFE)\n\n• Res: 540p\n• FPS: 30 Fijo\n• Riesgo: NINGUNO.\n\nAhorra batería, mantiene frío.",
         "help_pc_sob": "MODO SOBERANO (STD)\n\n• Res: 720p\n• Densidad: 160 DPI\n• Riesgo: BAJO.\n\nMonitor secundario funcional.",
@@ -257,8 +269,10 @@ class TurboCoreApp(ctk.CTk):
         self.current_theme = "Studio Blue"
         self.accent_color = THEMES[self.current_theme]
         self.all_apps_cache = []
+        self.logcat_process = None
+        self.stop_logcat_flag = False
 
-        self.debug_log(f"--- INICIANDO TURBO CORE V100.1 HELP FIX [{self.current_lang}] ---")
+        self.debug_log(f"--- INICIANDO TURBO CORE V101 MATRIX LOGCAT [{self.current_lang}] ---")
         self.title(self.T("app_title"))
         self.geometry("900x750")
         self.resizable(False, True)
@@ -278,7 +292,6 @@ class TurboCoreApp(ctk.CTk):
         if not os.path.exists(self.caps_dir):
             os.makedirs(self.caps_dir)
 
-        # Carregamento de Imagem V100 (Restaurado)
         try:
             img_path = os.path.join(self.app_dir, "fundo_chip.jpg")
             self.img_bg = ctk.CTkImage(Image.open(img_path), size=(900, 750))
@@ -358,14 +371,13 @@ class TurboCoreApp(ctk.CTk):
         self.sidebar.pack_propagate(False)
 
         ctk.CTkLabel(self.sidebar, text="TURBO\nCORE", font=("Montserrat", 24, "bold"), text_color=self.accent_color).pack(pady=(40, 5))
-        ctk.CTkLabel(self.sidebar, text="V100.1 FIX", font=("Roboto", 10), text_color=COLOR_TEXT_DIM).pack(pady=(0, 20))
+        ctk.CTkLabel(self.sidebar, text="V101 LOGCAT", font=("Roboto", 10), text_color=COLOR_TEXT_DIM).pack(pady=(0, 20))
 
         self.btn_dash = self.create_sidebar_btn(self.T("sidebar_dash"), "dash")
         self.btn_special = self.create_sidebar_btn(self.T("sidebar_game"), "special")
         self.btn_apps = self.create_sidebar_btn(self.T("sidebar_apps"), "apps")
         self.btn_term = self.create_sidebar_btn(self.T("sidebar_term"), "term")
 
-        # Sidebar Footer Fix V100
         self.sidebar_footer = ctk.CTkFrame(self.sidebar, fg_color="transparent")
         self.sidebar_footer.pack(side="bottom", fill="x", padx=10, pady=(20, 60))
 
@@ -782,10 +794,56 @@ class TurboCoreApp(ctk.CTk):
         threading.Thread(target=run).start()
 
     def build_terminal(self, p):
-        self.term_input = ctk.CTkTextbox(p, height=200, fg_color=COLOR_SURFACE, text_color=COLOR_TEXT_MAIN, font=FONT_MONO)
+        self.tab_term = ctk.CTkTabview(p, fg_color="transparent")
+        self.tab_term.pack(fill="both", expand=True)
+        self.tab_term.add(self.T("tab_manual"))
+        self.tab_term.add(self.T("tab_logcat"))
+
+        f_manual = self.tab_term.tab(self.T("tab_manual"))
+        self.term_input = ctk.CTkTextbox(f_manual, height=200, fg_color=COLOR_SURFACE, text_color=COLOR_TEXT_MAIN, font=FONT_MONO)
         self.term_input.pack(fill="x", padx=20, pady=20)
-        ctk.CTkButton(p, text=self.T("btn_exec"), fg_color=self.accent_color, text_color=COLOR_BG, hover_color=COLOR_TEXT_MAIN,
+        ctk.CTkButton(f_manual, text=self.T("btn_exec"), fg_color=self.accent_color, text_color=COLOR_BG, hover_color=COLOR_TEXT_MAIN,
                       command=self.run_manual).pack(padx=20)
+
+        f_logcat = self.tab_term.tab(self.T("tab_logcat"))
+        f_btns = ctk.CTkFrame(f_logcat, fg_color="transparent")
+        f_btns.pack(fill="x", pady=5)
+        ctk.CTkButton(f_btns, text=self.T("btn_start_log"), fg_color=COLOR_SUCCESS, width=120, command=self.start_logcat).pack(side="left", padx=10)
+        ctk.CTkButton(f_btns, text=self.T("btn_stop_log"), fg_color=COLOR_ERROR, width=80, command=self.stop_logcat).pack(side="left", padx=10)
+
+        self.txt_logcat = ctk.CTkTextbox(f_logcat, fg_color="black", text_color=self.accent_color, font=FONT_MONO)
+        self.txt_logcat.pack(fill="both", expand=True, padx=10, pady=5)
+
+    def start_logcat(self):
+        if self.logcat_process: return
+        self.stop_logcat_flag = False
+        self.txt_logcat.delete("1.0", "end")
+
+        def run():
+            si = subprocess.STARTUPINFO(); si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+            exe = os.path.join(self.bin_dir, "adb.exe")
+            try:
+                self.logcat_process = subprocess.Popen([exe, "-s", self.target_device, "logcat", "-v", "time"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, startupinfo=si)
+                while not self.stop_logcat_flag and self.logcat_process.poll() is None:
+                    line = self.logcat_process.stdout.readline()
+                    if line: self.after(0, lambda l=line: self._safe_logcat_insert(l))
+            except: pass
+            self.logcat_process = None
+
+        threading.Thread(target=run, daemon=True).start()
+
+    def stop_logcat(self):
+        self.stop_logcat_flag = True
+        if self.logcat_process:
+            self.logcat_process.terminate()
+            self.logcat_process = None
+
+    def _safe_logcat_insert(self, line):
+        self.txt_logcat.insert("end", line)
+        self.txt_logcat.see("end")
+        # Buffer Limit
+        if int(self.txt_logcat.index('end-1c').split('.')[0]) > 500:
+            self.txt_logcat.delete("1.0", "2.0")
 
     # --- HELPERS ---
     def get_device_name(self):
