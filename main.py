@@ -14,9 +14,12 @@ except ImportError:
 from PIL import Image
 
 def resource_path(relative_path):
-    if hasattr(sys, '_MEIPASS'):
-        return os.path.join(sys._MEIPASS, relative_path)
-    return os.path.join(os.path.abspath("."), relative_path)
+    """ Retorna o caminho absoluto para o recurso, funciona para dev e para PyInstaller """
+    try:
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
 
 # --- CONFIGURAÇÃO GERAL ---
 ctk.set_appearance_mode("Dark")
@@ -299,9 +302,14 @@ class TurboCoreApp(ctk.CTk):
         self.target_device = ""
         self.device_model = "Desconhecido"
 
+        # Caminhos Internos (Arquivos que estao DENTRO do EXE)
         self.app_dir = resource_path("")
         self.bin_dir = resource_path("bin")
-        self.caps_dir = os.path.join(os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.path.dirname(__file__), "Capturas")
+        self.img_bg_path = resource_path("fundo_chip.jpg")
+
+        # Caminhos Externos (Pasta de fotos que fica do LADO de fora do EXE)
+        self.exe_dir = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.path.dirname(os.path.abspath(__file__))
+        self.caps_dir = os.path.join(self.exe_dir, "Capturas")
 
         self.adb_exe = os.path.join(self.bin_dir, "adb.exe")
         self.scrcpy_exe = os.path.join(self.bin_dir, "scrcpy.exe")
@@ -316,8 +324,7 @@ class TurboCoreApp(ctk.CTk):
             os.makedirs(self.caps_dir)
 
         try:
-            img_path = resource_path("fundo_chip.jpg")
-            self.img_bg = ctk.CTkImage(Image.open(img_path), size=(900, 750))
+            self.img_bg = ctk.CTkImage(Image.open(self.img_bg_path), size=(900, 750))
         except Exception as e:
             self.debug_log(f"Erro imagem fundo: {e}")
             self.img_bg = None
