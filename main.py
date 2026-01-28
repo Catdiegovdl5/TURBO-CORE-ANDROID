@@ -45,7 +45,7 @@ FONT_MONO = ("Consolas", 11)
 # --- TRADUÇÕES ---
 TRANSLATIONS = {
     "PT": {
-        "app_title": "TURBO CORE V109 - FREE FIRE EDITION",
+        "app_title": "TURBO CORE V109.1 - SENSI MAX UPDATE",
         "sidebar_dash": "🖥️ DASHBOARD",
         "sidebar_game": "🎮 COMPETITIVO",
         "sidebar_apps": "📦 APPS",
@@ -67,7 +67,7 @@ TRANSLATIONS = {
         "btn_reset": "Restaurar Original 🔄",
         "btn_kill": "⚡ LIMPAR RAM",
         "select_default": "Selecionar...",
-        "hero_ff_sensi": "FREE FIRE: MODO SENSI MAX 🎯",
+        "hero_ff_sensi": "FREE FIRE: SENSI HEADSHOT 🎯",
         "hero_ff_liso": "FREE FIRE: MODO LISO (FPS) 🚀",
         "sw_keymap": "Ativar Keymapping (WASD)",
         "coming_soon": "EM BREVE (Roadmap)",
@@ -90,7 +90,7 @@ TRANSLATIONS = {
         "msg_restored": "Dispositivo restaurado!",
         "msg_installed": "APK Instalado!",
         "msg_sent": "Arquivo enviado!",
-        "msg_ff_sensi_active": "MODO SENSI ATIVADO! (DPI 400)",
+        "msg_ff_sensi_active": "SENSI HEADSHOT ATIVADA! (DPI 598)",
         "msg_ff_liso_active": "MODO LISO ATIVADO! (540p)",
         "msg_kill": "Processos de fundo encerrados!",
         "theme_label": "Theme / Tema",
@@ -114,10 +114,10 @@ TRANSLATIONS = {
         "help_perf_std": "USUAL TURBO\n\n• Ação: Acelera animações do Android (0.5x).\n• Risco: NENHUM.\n\nDeixa a navegação mais rápida visualmente sem forçar o hardware.",
         "help_bat_eco": "ECONOMIA NORMAL\n\n• Ação: Ativa modo Low Power nativo.\n• Risco: NENHUM.\n\nGerenciamento padrão do Android.",
         "help_bat_sup": "SUPER ECONOMIA\n\n• Ação: Desliga Bluetooth, Sync e reduz resolução.\n• Risco: BAIXO.\n\nVocê deixará de receber notificações de alguns apps.",
-        "help_bat_ult": "ULTIMATE ECONOMIA (DEEP)\n\n• Ação: Brilho Zero, Mata Apps, Limita CPU.\n• Risco: USABILITY.\n\n⚠️ O celular vira um 'tijolo' para sobreviver. A tela ficará quase apagada. Só use em emergências."
+        "help_bat_ult": "ULTIMATE ECONOMIA (DEEP)\n\n• Ação: Brilho Zero, Mata Apps, Limita CPU.\n• Risco: USABILIDADE.\n\n⚠️ O celular vira um 'tijolo' para sobreviver. A tela ficará quase apagada. Só use em emergências."
     },
     "EN": {
-        "app_title": "TURBO CORE V109 - FREE FIRE EDITION",
+        "app_title": "TURBO CORE V109.1 - SENSI MAX UPDATE",
         "sidebar_dash": "🖥️ DASHBOARD",
         "sidebar_game": "🎮 COMPETITIVE",
         "sidebar_apps": "📦 APPS",
@@ -139,7 +139,7 @@ TRANSLATIONS = {
         "btn_reset": "Factory Reset 🔄",
         "btn_kill": "⚡ KILL ALL",
         "select_default": "Select...",
-        "hero_ff_sensi": "FREE FIRE: SENSI MAX MODE 🎯",
+        "hero_ff_sensi": "FREE FIRE: HEADSHOT SENSI 🎯",
         "hero_ff_liso": "FREE FIRE: SMOOTH MODE (FPS) 🚀",
         "sw_keymap": "Enable Keymapping (WASD)",
         "coming_soon": "COMING SOON (Roadmap)",
@@ -162,7 +162,7 @@ TRANSLATIONS = {
         "msg_restored": "Device restored!",
         "msg_installed": "APK Installed!",
         "msg_sent": "File sent!",
-        "msg_ff_sensi_active": "SENSI MODE ACTIVE! (DPI 400)",
+        "msg_ff_sensi_active": "HEADSHOT SENSI ACTIVE! (DPI 598)",
         "msg_ff_liso_active": "SMOOTH MODE ACTIVE! (540p)",
         "msg_kill": "Background processes killed!",
         "theme_label": "Theme",
@@ -189,7 +189,7 @@ TRANSLATIONS = {
         "help_bat_ult": "ULTIMATE SAVER\n\n• Action: Zero Brightness, Kill Apps.\n• Risk: USABILITY.\n\n⚠️ Phone becomes barely usable to survive."
     },
     "ES": {
-        "app_title": "TURBO CORE V109 - FREE FIRE EDITION",
+        "app_title": "TURBO CORE V109.1 - SENSI MAX UPDATE",
         "sidebar_dash": "🖥️ PANEL",
         "sidebar_game": "🎮 COMPETITIVO",
         "sidebar_apps": "📦 APPS",
@@ -211,7 +211,7 @@ TRANSLATIONS = {
         "btn_reset": "Restaurar Original 🔄",
         "btn_kill": "⚡ LIMPIAR RAM",
         "select_default": "Seleccionar...",
-        "hero_ff_sensi": "FREE FIRE: MODO SENSI MAX 🎯",
+        "hero_ff_sensi": "FREE FIRE: SENSI HEADSHOT 🎯",
         "hero_ff_liso": "FREE FIRE: MODO SUAVE (FPS) 🚀",
         "sw_keymap": "Activar Keymapping (WASD)",
         "coming_soon": "PRÓXIMAMENTE (Roadmap)",
@@ -234,7 +234,7 @@ TRANSLATIONS = {
         "msg_restored": "¡Dispositivo restaurado!",
         "msg_installed": "¡APK Instalado!",
         "msg_sent": "¡Archivo enviado!",
-        "msg_ff_sensi_active": "¡MODO SENSI ACTIVO! (DPI 400)",
+        "msg_ff_sensi_active": "¡SENSI HEADSHOT ACTIVA! (DPI 598)",
         "msg_ff_liso_active": "¡MODO SUAVE ACTIVO! (540p)",
         "msg_kill": "¡Procesos cerrados!",
         "theme_label": "Tema",
@@ -291,7 +291,7 @@ class TurboCoreApp(ctk.CTk):
         self.stop_logcat_flag = False
         self.last_ip = ""
 
-        self.debug_log(f"--- INICIANDO TURBO CORE V109 FREE FIRE EDITION [{self.current_lang}] ---")
+        self.debug_log(f"--- INICIANDO TURBO CORE V109.1 SENSI MAX UPDATE [{self.current_lang}] ---")
         self.title(self.T("app_title"))
         self.geometry("900x750")
         self.resizable(False, True)
@@ -395,7 +395,7 @@ class TurboCoreApp(ctk.CTk):
         self.sidebar.pack_propagate(False)
 
         ctk.CTkLabel(self.sidebar, text="TURBO\nCORE", font=("Montserrat", 24, "bold"), text_color=self.accent_color).pack(pady=(40, 5))
-        ctk.CTkLabel(self.sidebar, text="V109 FF MAX", font=("Roboto", 10), text_color=COLOR_TEXT_DIM).pack(pady=(0, 20))
+        ctk.CTkLabel(self.sidebar, text="V109.1 SENSI", font=("Roboto", 10), text_color=COLOR_TEXT_DIM).pack(pady=(0, 20))
 
         self.btn_dash = self.create_sidebar_btn(self.T("sidebar_dash"), "dash")
         self.btn_special = self.create_sidebar_btn(self.T("sidebar_game"), "special")
@@ -774,8 +774,9 @@ class TurboCoreApp(ctk.CTk):
     def ativar_free_fire_sensi(self):
         if not self.target_device: return messagebox.showerror(self.T("msg_conn_error"), self.T("msg_no_device"))
         self.log(self.T("msg_ff_sensi_active"))
-        # Sensi Max: High DPI (400), Reset Resolution, Clear Bloat
-        cmds = "wm size reset; wm density 400; pm disable-user --user 0 com.samsung.android.game.gos"
+        # Sensi Max: High DPI (598 - Safe Max), Reset Resolution, Clear Bloat
+        # V109.1 UPDATE: Increased to 598 for headshot sensitivity
+        cmds = "wm size reset; wm density 598; pm disable-user --user 0 com.samsung.android.game.gos"
         self.run_adb_cmd_string(cmds, show_success=True)
 
     def ativar_free_fire_liso(self):
