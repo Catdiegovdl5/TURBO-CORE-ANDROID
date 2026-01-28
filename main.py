@@ -6,8 +6,6 @@ import os
 import sys
 import time
 import datetime
-import socket
-import concurrent.futures
 import re
 try:
     import keyboard
@@ -45,7 +43,7 @@ FONT_MONO = ("Consolas", 11)
 # --- TRADUÇÕES ---
 TRANSLATIONS = {
     "PT": {
-        "app_title": "TURBO CORE V107 - NETWORK & FF REWORK",
+        "app_title": "TURBO CORE V107 - FREE FIRE SPECIAL",
         "sidebar_dash": "🖥️ DASHBOARD",
         "sidebar_game": "🎮 COMPETITIVO",
         "sidebar_apps": "📦 APPS",
@@ -67,8 +65,8 @@ TRANSLATIONS = {
         "btn_reset": "Restaurar Original 🔄",
         "btn_kill": "⚡ LIMPAR RAM",
         "select_default": "Selecionar...",
-        "hero_ff_sensi": "MODO FF SENSI (CAPA) 🎯",
-        "hero_ff_liso": "MODO FF LISO (FPS) 🚀",
+        "hero_ff_sensi": "🎯 FF SENSI (CAPA)",
+        "hero_ff_liso": "🚀 FF LISO (PERFORMANCE)",
         "sw_keymap": "Ativar Keymapping (WASD)",
         "coming_soon": "EM BREVE (Roadmap)",
         "term_manual": "TERMINAL MANUAL",
@@ -79,8 +77,6 @@ TRANSLATIONS = {
         "conn_step": "2. CONEXÃO (ADB Connect)",
         "btn_pair": "PAREAR DISPOSITIVO",
         "btn_connect": "CONECTAR",
-        "btn_scan": "ESCANEAR REDE 🔎",
-        "scan_running": "Escaneando...",
         "guide_title": "COMO CONECTAR?",
         "guide_text": "1. Ative Opções do Desenvolvedor\n2. Ative Depuração USB\n3. Ative Depuração Sem Fio\n\nNo Wi-Fi:\nUse 'Parear com Código'.\nCopie IP, Porta e Código.",
         "msg_success": "SUCESSO",
@@ -118,7 +114,7 @@ TRANSLATIONS = {
         "help_bat_ult": "ULTIMATE ECONOMIA (DEEP)\n\n• Ação: Brilho Zero, Mata Apps, Limita CPU.\n• Risco: USABILITY.\n\n⚠️ O celular vira um 'tijolo' para sobreviver. A tela ficará quase apagada. Só use em emergências."
     },
     "EN": {
-        "app_title": "TURBO CORE V107 - NETWORK & FF REWORK",
+        "app_title": "TURBO CORE V107 - FREE FIRE SPECIAL",
         "sidebar_dash": "🖥️ DASHBOARD",
         "sidebar_game": "🎮 COMPETITIVE",
         "sidebar_apps": "📦 APPS",
@@ -140,8 +136,8 @@ TRANSLATIONS = {
         "btn_reset": "Factory Reset 🔄",
         "btn_kill": "⚡ KILL ALL",
         "select_default": "Select...",
-        "hero_ff_sensi": "FF SENSI MODE (HEADSHOT) 🎯",
-        "hero_ff_liso": "FF SMOOTH MODE (FPS) 🚀",
+        "hero_ff_sensi": "🎯 FF SENSI (HEADSHOT)",
+        "hero_ff_liso": "🚀 FF SMOOTH (PERFORMANCE)",
         "sw_keymap": "Enable Keymapping (WASD)",
         "coming_soon": "COMING SOON (Roadmap)",
         "term_manual": "MANUAL TERMINAL",
@@ -152,8 +148,6 @@ TRANSLATIONS = {
         "conn_step": "2. CONNECTION (ADB Connect)",
         "btn_pair": "PAIR DEVICE",
         "btn_connect": "CONNECT",
-        "btn_scan": "SCAN NETWORK 🔎",
-        "scan_running": "Scanning...",
         "guide_title": "QUICK GUIDE",
         "guide_text": "1. Enable Developer Options\n2. Enable USB Debugging\n3. Enable Wireless Debugging\n\nFor Wi-Fi:\nUse 'Pair with Code'.\nCopy IP, Port & Code.",
         "msg_success": "SUCCESS",
@@ -191,7 +185,7 @@ TRANSLATIONS = {
         "help_bat_ult": "ULTIMATE SAVER\n\n• Action: Zero Brightness, Kill Apps.\n• Risk: USABILITY.\n\n⚠️ Phone becomes barely usable to survive."
     },
     "ES": {
-        "app_title": "TURBO CORE V107 - NETWORK & FF REWORK",
+        "app_title": "TURBO CORE V107 - FREE FIRE SPECIAL",
         "sidebar_dash": "🖥️ PANEL",
         "sidebar_game": "🎮 COMPETITIVO",
         "sidebar_apps": "📦 APPS",
@@ -213,8 +207,8 @@ TRANSLATIONS = {
         "btn_reset": "Restaurar Original 🔄",
         "btn_kill": "⚡ LIMPIAR RAM",
         "select_default": "Seleccionar...",
-        "hero_ff_sensi": "MODO SENSI MAX (CAPA) 🎯",
-        "hero_ff_liso": "MODO SUAVE (FPS) 🚀",
+        "hero_ff_sensi": "🎯 FF SENSI (CAPA)",
+        "hero_ff_liso": "🚀 FF SUAVE (PERFORMANCE)",
         "sw_keymap": "Activar Keymapping (WASD)",
         "coming_soon": "PRÓXIMAMENTE (Roadmap)",
         "term_manual": "TERMINAL MANUAL",
@@ -225,8 +219,6 @@ TRANSLATIONS = {
         "conn_step": "2. CONEXIÓN (ADB Connect)",
         "btn_pair": "VINCULAR DISPOSITIVO",
         "btn_connect": "CONECTAR",
-        "btn_scan": "ESCANEAR RED 🔎",
-        "scan_running": "Escaneando...",
         "guide_title": "GUÍA RÁPIDA",
         "guide_text": "1. Activar Opciones Desarrollador\n2. Activar Depuración USB\n3. Activar Depuración Inalámbrica\n\nPara Wi-Fi:\nUsar 'Vincular con Código'.\nCopiar IP, Puerto y Código.",
         "msg_success": "ÉXITO",
@@ -294,7 +286,7 @@ class TurboCoreApp(ctk.CTk):
         self.stop_logcat_flag = False
         self.last_ip = ""
 
-        self.debug_log(f"--- INICIANDO TURBO CORE V107 NETWORK & FF REWORK [{self.current_lang}] ---")
+        self.debug_log(f"--- INICIANDO TURBO CORE V107 FREE FIRE SPECIAL [{self.current_lang}] ---")
         self.title(self.T("app_title"))
         self.geometry("900x750")
         self.resizable(False, True)
@@ -394,7 +386,7 @@ class TurboCoreApp(ctk.CTk):
         self.sidebar.pack_propagate(False)
 
         ctk.CTkLabel(self.sidebar, text="TURBO\nCORE", font=("Montserrat", 24, "bold"), text_color=self.accent_color).pack(pady=(40, 5))
-        ctk.CTkLabel(self.sidebar, text="V107 NETWORK", font=("Roboto", 10), text_color=COLOR_TEXT_DIM).pack(pady=(0, 20))
+        ctk.CTkLabel(self.sidebar, text="V107 FF", font=("Roboto", 10), text_color=COLOR_TEXT_DIM).pack(pady=(0, 20))
 
         self.btn_dash = self.create_sidebar_btn(self.T("sidebar_dash"), "dash")
         self.btn_special = self.create_sidebar_btn(self.T("sidebar_game"), "special")
@@ -533,58 +525,8 @@ class TurboCoreApp(ctk.CTk):
         ctk.CTkButton(frame_tools, text=self.T("btn_connect"), fg_color=self.accent_color, text_color=COLOR_BG, hover_color=COLOR_TEXT_MAIN,
                       command=do_connect).pack(fill="x", pady=5)
 
-        # V107 REAL NETWORK SCANNER
-        ctk.CTkLabel(frame_tools, text="3. AUTO-SCAN", font=FONT_MAIN, text_color=self.accent_color).pack(pady=(20,5), anchor="w")
-        self.btn_scan = ctk.CTkButton(frame_tools, text=self.T("btn_scan"), fg_color="transparent", border_width=1, border_color=COLOR_TEXT_DIM,
-                      text_color=COLOR_TEXT_DIM, hover_color=COLOR_HOVER, command=self.scan_network)
-        self.btn_scan.pack(fill="x", pady=5)
-
         ctk.CTkLabel(frame_tutorial, text=self.T("guide_title"), font=FONT_BOLD, text_color=COLOR_TEXT_MAIN).pack(pady=10)
         ctk.CTkLabel(frame_tutorial, text=self.T("guide_text"), justify="left", font=FONT_MAIN, text_color=COLOR_TEXT_DIM).pack(padx=15, pady=10)
-
-    # V107 REAL NETWORK SCANNER IMPLEMENTATION
-    def scan_network(self):
-        self.btn_scan.configure(text=self.T("scan_running"), state="disabled")
-        self.log("Scanning local network for ADB devices (Port 5555)...")
-
-        def run_scan():
-            found_devices = []
-            try:
-                local_ip = socket.gethostbyname(socket.gethostname())
-                subnet = '.'.join(local_ip.split('.')[:-1]) + '.'
-
-                with concurrent.futures.ThreadPoolExecutor(max_workers=50) as executor:
-                    futures = {executor.submit(self._check_ip, f"{subnet}{i}"): f"{subnet}{i}" for i in range(1, 255)}
-                    for future in concurrent.futures.as_completed(futures):
-                        ip = futures[future]
-                        if future.result():
-                            found_devices.append(ip)
-
-                self.after(0, lambda: self._on_scan_complete(found_devices))
-            except Exception as e:
-                self.debug_log(f"Scan Error: {e}")
-                self.after(0, lambda: self.btn_scan.configure(text=self.T("btn_scan"), state="normal"))
-
-        threading.Thread(target=run_scan).start()
-
-    def _check_ip(self, ip):
-        try:
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.settimeout(0.05) # V107 Fast timeout
-            result = sock.connect_ex((ip, 5555))
-            sock.close()
-            return result == 0
-        except: return False
-
-    def _on_scan_complete(self, devices):
-        self.btn_scan.configure(text=self.T("btn_scan"), state="normal")
-        if devices:
-            self.log(f"Found: {', '.join(devices)}")
-            msg = f"Devices Found:\n{', '.join(devices)}\n\n(Copy IP to Connect field)"
-            messagebox.showinfo("Scan Result", msg)
-        else:
-            self.log("No devices found.")
-            messagebox.showinfo("Scan Result", "No devices found on port 5555.")
 
     def build_dashboard(self, p):
         btn_comp = ctk.CTkButton(p, text=self.T("launch_comp"), font=FONT_BOLD,
@@ -780,6 +722,11 @@ class TurboCoreApp(ctk.CTk):
     # V107 REWORK: FF SENSI (DPI 90 + Pointer 7)
     def ativar_ff_sensi(self):
         if not self.target_device: return messagebox.showerror(self.T("msg_conn_error"), self.T("msg_no_device"))
+
+        # New Safety Confirmation
+        if not messagebox.askokcancel("ALERTA", "A interface ficará MINÚSCULA para aumentar a sensibilidade. Deseja continuar?"):
+            return
+
         self.log(self.T("msg_ff_sensi_active"))
         # Density 90 (Ultra Small UI = High Sensi Feel), Pointer Speed 7 (Max), Instant Touch
         cmds = "wm density 90 && settings put system pointer_speed 7 && settings put secure long_press_timeout 100"
@@ -802,10 +749,7 @@ class TurboCoreApp(ctk.CTk):
         self.debug_log(f"CMD: {cmd_string}")
 
         def t():
-            # V108: Batch Execution Optimization
-            cmds = [c.strip() for c in cmd_string.split("&&") if c.strip()] # Changed split to && for new logic or keep ; compatibility
-            if not cmds: cmds = [c.strip() for c in cmd_string.split(";") if c.strip()]
-
+            # Check connection first
             if not self._ping_device():
                  self.log("Device offline. Healing...")
                  self.heal_adb_connection()
@@ -813,19 +757,34 @@ class TurboCoreApp(ctk.CTk):
                      self.after(0, lambda: messagebox.showerror(self.T("msg_error"), "Device unavailable."))
                      return
 
-            combined_cmd = " && ".join(cmds)
-            full_cmd = [self.adb_exe, "-s", self.target_device, "shell", combined_cmd]
+            # Split commands by '&&' or ';'
+            cmds = [c.strip() for c in cmd_string.split("&&") if c.strip()]
+            if not cmds: cmds = [c.strip() for c in cmd_string.split(";") if c.strip()]
 
-            self.log(f"Executing batch...")
-            res = subprocess.run(full_cmd, startupinfo=self.si, capture_output=True, text=True)
+            # Execute sequentially with Patient Waiter
+            for cmd in cmds:
+                full_cmd = [self.adb_exe, "-s", self.target_device, "shell", cmd]
+                self.log(f"Exec: {cmd}")
 
-            if res.returncode == 0:
-                self.log("Batch Success.")
-                if show_success:
-                    self.after(0, lambda: messagebox.showinfo(self.T("msg_success"), self.T("msg_cmd_success")))
-            else:
-                self.log(f"Batch Error: {res.stderr}")
-                self.after(0, lambda: messagebox.showerror(self.T("msg_error"), f"Failed:\n{res.stderr}"))
+                res = subprocess.run(full_cmd, startupinfo=self.si, capture_output=True, text=True)
+
+                if res.returncode != 0:
+                    self.log(f"Error: {res.stderr}")
+                    self.after(0, lambda: messagebox.showerror(self.T("msg_error"), f"Failed: {cmd}\n{res.stderr}"))
+                    return
+
+                # PATIENT WAITER LOGIC
+                if "wm size" in cmd:
+                    self.log("Resolution changed. Waiting for device...")
+                    time.sleep(1) # Initial cooldown
+                    for _ in range(10): # Try for 10 seconds
+                        if self._ping_device():
+                            break
+                        time.sleep(1)
+
+            self.log("Batch Success.")
+            if show_success:
+                self.after(0, lambda: messagebox.showinfo(self.T("msg_success"), self.T("msg_cmd_success")))
 
         threading.Thread(target=t).start()
 
