@@ -865,7 +865,7 @@ class TurboCoreApp(ctk.CTk):
         if self.last_ip:
             self.debug_log(f"Reconnecting to {self.last_ip}...")
             subprocess.run([self.adb_exe, "connect", self.last_ip], startupinfo=self.si)
-            time.sleep(2) # V108: Reduced from 3
+            time.sleep(5) # V107 Fix: Increased to 5s for Wi-Fi stability
         else:
             self.debug_log("USB Mode: Waiting for auto-reconnect...")
             time.sleep(1)
