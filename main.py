@@ -774,9 +774,9 @@ class TurboCoreApp(ctk.CTk):
                     return
 
                 # PATIENT WAITER LOGIC
-                if "wm size" in cmd:
-                    self.log("Resolution changed. Waiting for device...")
-                    time.sleep(1) # Initial cooldown
+                if "wm size" in cmd or "wm density" in cmd:
+                    self.log("Display update. Waiting for device...")
+                    time.sleep(2) # Initial cooldown
                     for _ in range(10): # Try for 10 seconds
                         if self._ping_device():
                             break
