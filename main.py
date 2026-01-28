@@ -308,6 +308,8 @@ class TurboCoreApp(ctk.CTk):
 
         self.check_binaries()
 
+        self.batch_running = False  # V107 Fix: Prevent monitor race condition
+
         if not os.path.exists(self.caps_dir):
             os.makedirs(self.caps_dir)
 
@@ -1019,6 +1021,10 @@ class TurboCoreApp(ctk.CTk):
     def start_monitor(self):
         def loop():
             while True:
+                if self.batch_running:
+                    time.sleep(1)
+                    continue
+
                 try:
                     if os.path.exists(self.adb_exe):
                         res = subprocess.run([self.adb_exe, "devices"], capture_output=True, text=True, startupinfo=self.si)
