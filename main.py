@@ -469,6 +469,9 @@ class TurboCoreApp(ctk.CTk):
         self.lbl_system_status = ctk.CTkLabel(self.right_panel, text=self.T("sys_ready"), font=("Roboto", 9), text_color="#333")
         self.lbl_system_status.pack(fill="x", side="bottom", pady=5)
 
+        if self.target_device:
+            self.after(0, lambda: self.update_status_ui(True))
+
     def create_sidebar_btn(self, text, mode):
         btn = ctk.CTkButton(self.sidebar, text=text, fg_color="transparent", font=FONT_BOLD, anchor="w",
                             height=45, corner_radius=8, hover_color=COLOR_HOVER,
@@ -951,10 +954,14 @@ class TurboCoreApp(ctk.CTk):
         self.tab_term.add(self.T("tab_logcat"))
 
         f_manual = self.tab_term.tab(self.T("tab_manual"))
-        self.term_input = ctk.CTkTextbox(f_manual, height=200, fg_color=COLOR_SURFACE, text_color=COLOR_TEXT_MAIN, font=FONT_MONO)
-        self.term_input.pack(fill="x", padx=20, pady=20)
+        self.term_input = ctk.CTkTextbox(f_manual, height=80, fg_color=COLOR_SURFACE, text_color=COLOR_TEXT_MAIN, font=FONT_MONO)
+        self.term_input.pack(fill="x", padx=20, pady=10)
+
         ctk.CTkButton(f_manual, text=self.T("btn_exec"), fg_color=self.accent_color, text_color=COLOR_BG, hover_color=COLOR_TEXT_MAIN,
-                      command=self.run_manual).pack(padx=20)
+                      command=self.run_manual).pack(padx=20, pady=5)
+
+        self.term_output = ctk.CTkTextbox(f_manual, fg_color="#000000", text_color="#00FF00", font=FONT_MONO)
+        self.term_output.pack(fill="both", expand=True, padx=20, pady=10)
 
         f_logcat = self.tab_term.tab(self.T("tab_logcat"))
         f_btns = ctk.CTkFrame(f_logcat, fg_color="transparent")
@@ -1039,6 +1046,8 @@ class TurboCoreApp(ctk.CTk):
                                 self.target_device = new_id
                                 self.device_model = self.get_device_name()
                                 self.after(0, lambda: self.update_status_ui(True))
+                            elif self.target_device and self.btn_device_status.cget("text") == self.T("status_searching"):
+                                self.after(0, lambda: self.update_status_ui(True))
                         else:
                             if self.target_device:
                                 self.target_device = ""
@@ -1093,8 +1102,34 @@ class TurboCoreApp(ctk.CTk):
         threading.Thread(target=loop, daemon=True).start()
 
     def run_manual(self):
-        cmd = self.term_input.get("0.0", "end").strip()
-        if cmd: threading.Thread(target=lambda: subprocess.Popen(cmd, cwd=self.bin_dir, shell=True, startupinfo=self.si)).start()
+        cmd_raw = self.term_input.get("0.0", "end").strip()
+        if not cmd_raw: return
+
+        self.term_output.delete("1.0", "end")
+        self.term_output.insert("end", f"> {cmd_raw}\nRunning...\n")
+
+        def run_thread():
+            # 1. Substitute Device ID
+            cmd_final = cmd_raw.replace("DISPOSITIVO", self.target_device if self.target_device else "")
+
+            # 2. Inject Binary Paths
+            if cmd_final.startswith("adb"):
+                cmd_final = cmd_final.replace("adb", f'"{self.adb_exe}"', 1)
+            elif cmd_final.startswith("scrcpy"):
+                cmd_final = cmd_final.replace("scrcpy", f'"{self.scrcpy_exe}"', 1)
+
+            try:
+                # 3. Execute
+                res = subprocess.run(cmd_final, cwd=self.bin_dir, shell=True, capture_output=True, text=True, startupinfo=self.si)
+
+                output = res.stdout + res.stderr
+                if not output: output = "[No Output]"
+
+                self.after(0, lambda: self.term_output.insert("end", output + "\nDone."))
+            except Exception as e:
+                self.after(0, lambda: self.term_output.insert("end", f"Error: {e}"))
+
+        threading.Thread(target=run_thread, daemon=True).start()
 
     def run_adb_generic(self, cmd, show_success=False):
         # Optimized generic runner
