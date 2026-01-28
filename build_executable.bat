@@ -6,7 +6,7 @@ echo.
 echo --- BUILDING TURBO CORE V107 ---
 echo This may take a few minutes...
 
-pyinstaller --noconfirm --onedir --windowed --icon "icon.png" --name "TurboCore_V107_FF" --add-data "fundo_chip.jpg;." --add-data "bin;bin" --collect-all customtkinter main.py
+pyinstaller --noconfirm --onefile --windowed --icon "icon.png" --name "TurboCore_V107_FF" --add-data "fundo_chip.jpg;." --add-data "bin;bin" --collect-all customtkinter main.py
 
 echo.
 echo --- BUILD COMPLETE ---

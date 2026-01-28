@@ -13,6 +13,11 @@ except ImportError:
     keyboard = None
 from PIL import Image
 
+def resource_path(relative_path):
+    if hasattr(sys, '_MEIPASS'):
+        return os.path.join(sys._MEIPASS, relative_path)
+    return os.path.join(os.path.abspath("."), relative_path)
+
 # --- CONFIGURAÇÃO GERAL ---
 ctk.set_appearance_mode("Dark")
 
@@ -294,12 +299,9 @@ class TurboCoreApp(ctk.CTk):
         self.target_device = ""
         self.device_model = "Desconhecido"
 
-        if getattr(sys, 'frozen', False):
-            self.app_dir = os.path.dirname(sys.executable)
-        else:
-            self.app_dir = os.path.dirname(os.path.abspath(__file__))
-        self.bin_dir = os.path.join(self.app_dir, "bin")
-        self.caps_dir = os.path.join(self.app_dir, "Capturas")
+        self.app_dir = resource_path("")
+        self.bin_dir = resource_path("bin")
+        self.caps_dir = os.path.join(os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.path.dirname(__file__), "Capturas")
 
         self.adb_exe = os.path.join(self.bin_dir, "adb.exe")
         self.scrcpy_exe = os.path.join(self.bin_dir, "scrcpy.exe")
@@ -314,7 +316,7 @@ class TurboCoreApp(ctk.CTk):
             os.makedirs(self.caps_dir)
 
         try:
-            img_path = os.path.join(self.app_dir, "fundo_chip.jpg")
+            img_path = resource_path("fundo_chip.jpg")
             self.img_bg = ctk.CTkImage(Image.open(img_path), size=(900, 750))
         except Exception as e:
             self.debug_log(f"Erro imagem fundo: {e}")
