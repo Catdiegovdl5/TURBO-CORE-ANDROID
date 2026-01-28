@@ -45,7 +45,7 @@ FONT_MONO = ("Consolas", 11)
 # --- TRADUÇÕES ---
 TRANSLATIONS = {
     "PT": {
-        "app_title": "TURBO CORE V108.1 - MAX SPEED (FIX)",
+        "app_title": "TURBO CORE V109 - FREE FIRE EDITION",
         "sidebar_dash": "🖥️ DASHBOARD",
         "sidebar_game": "🎮 COMPETITIVO",
         "sidebar_apps": "📦 APPS",
@@ -67,7 +67,8 @@ TRANSLATIONS = {
         "btn_reset": "Restaurar Original 🔄",
         "btn_kill": "⚡ LIMPAR RAM",
         "select_default": "Selecionar...",
-        "hero_ff": "ATIVAR MODO FREE FIRE MAX 🎯",
+        "hero_ff_sensi": "FREE FIRE: MODO SENSI MAX 🎯",
+        "hero_ff_liso": "FREE FIRE: MODO LISO (FPS) 🚀",
         "sw_keymap": "Ativar Keymapping (WASD)",
         "coming_soon": "EM BREVE (Roadmap)",
         "term_manual": "TERMINAL MANUAL",
@@ -89,7 +90,8 @@ TRANSLATIONS = {
         "msg_restored": "Dispositivo restaurado!",
         "msg_installed": "APK Instalado!",
         "msg_sent": "Arquivo enviado!",
-        "msg_ff_active": "MODO FREE FIRE ATIVADO!",
+        "msg_ff_sensi_active": "MODO SENSI ATIVADO! (DPI 400)",
+        "msg_ff_liso_active": "MODO LISO ATIVADO! (540p)",
         "msg_kill": "Processos de fundo encerrados!",
         "theme_label": "Theme / Tema",
         "lang_label": "Lang / Idioma",
@@ -115,7 +117,7 @@ TRANSLATIONS = {
         "help_bat_ult": "ULTIMATE ECONOMIA (DEEP)\n\n• Ação: Brilho Zero, Mata Apps, Limita CPU.\n• Risco: USABILITY.\n\n⚠️ O celular vira um 'tijolo' para sobreviver. A tela ficará quase apagada. Só use em emergências."
     },
     "EN": {
-        "app_title": "TURBO CORE V108.1 - MAX SPEED (FIX)",
+        "app_title": "TURBO CORE V109 - FREE FIRE EDITION",
         "sidebar_dash": "🖥️ DASHBOARD",
         "sidebar_game": "🎮 COMPETITIVE",
         "sidebar_apps": "📦 APPS",
@@ -137,7 +139,8 @@ TRANSLATIONS = {
         "btn_reset": "Factory Reset 🔄",
         "btn_kill": "⚡ KILL ALL",
         "select_default": "Select...",
-        "hero_ff": "ACTIVATE FREE FIRE MODE 🎯",
+        "hero_ff_sensi": "FREE FIRE: SENSI MAX MODE 🎯",
+        "hero_ff_liso": "FREE FIRE: SMOOTH MODE (FPS) 🚀",
         "sw_keymap": "Enable Keymapping (WASD)",
         "coming_soon": "COMING SOON (Roadmap)",
         "term_manual": "MANUAL TERMINAL",
@@ -159,7 +162,8 @@ TRANSLATIONS = {
         "msg_restored": "Device restored!",
         "msg_installed": "APK Installed!",
         "msg_sent": "File sent!",
-        "msg_ff_active": "FREE FIRE MODE ACTIVE!",
+        "msg_ff_sensi_active": "SENSI MODE ACTIVE! (DPI 400)",
+        "msg_ff_liso_active": "SMOOTH MODE ACTIVE! (540p)",
         "msg_kill": "Background processes killed!",
         "theme_label": "Theme",
         "lang_label": "Language",
@@ -185,7 +189,7 @@ TRANSLATIONS = {
         "help_bat_ult": "ULTIMATE SAVER\n\n• Action: Zero Brightness, Kill Apps.\n• Risk: USABILITY.\n\n⚠️ Phone becomes barely usable to survive."
     },
     "ES": {
-        "app_title": "TURBO CORE V108.1 - MAX SPEED (FIX)",
+        "app_title": "TURBO CORE V109 - FREE FIRE EDITION",
         "sidebar_dash": "🖥️ PANEL",
         "sidebar_game": "🎮 COMPETITIVO",
         "sidebar_apps": "📦 APPS",
@@ -207,7 +211,8 @@ TRANSLATIONS = {
         "btn_reset": "Restaurar Original 🔄",
         "btn_kill": "⚡ LIMPIAR RAM",
         "select_default": "Seleccionar...",
-        "hero_ff": "ACTIVAR MODO FREE FIRE 🎯",
+        "hero_ff_sensi": "FREE FIRE: MODO SENSI MAX 🎯",
+        "hero_ff_liso": "FREE FIRE: MODO SUAVE (FPS) 🚀",
         "sw_keymap": "Activar Keymapping (WASD)",
         "coming_soon": "PRÓXIMAMENTE (Roadmap)",
         "term_manual": "TERMINAL MANUAL",
@@ -229,7 +234,8 @@ TRANSLATIONS = {
         "msg_restored": "¡Dispositivo restaurado!",
         "msg_installed": "¡APK Instalado!",
         "msg_sent": "¡Archivo enviado!",
-        "msg_ff_active": "¡MODO FREE FIRE ACTIVO!",
+        "msg_ff_sensi_active": "¡MODO SENSI ACTIVO! (DPI 400)",
+        "msg_ff_liso_active": "¡MODO SUAVE ACTIVO! (540p)",
         "msg_kill": "¡Procesos cerrados!",
         "theme_label": "Tema",
         "lang_label": "Idioma",
@@ -285,7 +291,7 @@ class TurboCoreApp(ctk.CTk):
         self.stop_logcat_flag = False
         self.last_ip = ""
 
-        self.debug_log(f"--- INICIANDO TURBO CORE V108.1 MAX SPEED FIX [{self.current_lang}] ---")
+        self.debug_log(f"--- INICIANDO TURBO CORE V109 FREE FIRE EDITION [{self.current_lang}] ---")
         self.title(self.T("app_title"))
         self.geometry("900x750")
         self.resizable(False, True)
@@ -342,7 +348,7 @@ class TurboCoreApp(ctk.CTk):
         if keyboard:
             try:
                 keyboard.add_hotkey('f1', lambda: self.iniciar_pc("PC Soberano (Padrão)"))
-                keyboard.add_hotkey('f2', lambda: self.ativar_free_fire())
+                # keyboard.add_hotkey('f2', lambda: self.ativar_free_fire()) # Removed F2 global hotkey to avoid confusion between Sensi/Liso
                 self.hook_space = keyboard.on_press_key("space", self.key_tap_handler, suppress=False)
                 for k in ["w", "a", "s", "d"]:
                     keyboard.on_press_key(k, lambda e, key=k: self.key_swipe_handler(key), suppress=False)
@@ -389,7 +395,7 @@ class TurboCoreApp(ctk.CTk):
         self.sidebar.pack_propagate(False)
 
         ctk.CTkLabel(self.sidebar, text="TURBO\nCORE", font=("Montserrat", 24, "bold"), text_color=self.accent_color).pack(pady=(40, 5))
-        ctk.CTkLabel(self.sidebar, text="V108 SPEED", font=("Roboto", 10), text_color=COLOR_TEXT_DIM).pack(pady=(0, 20))
+        ctk.CTkLabel(self.sidebar, text="V109 FF MAX", font=("Roboto", 10), text_color=COLOR_TEXT_DIM).pack(pady=(0, 20))
 
         self.btn_dash = self.create_sidebar_btn(self.T("sidebar_dash"), "dash")
         self.btn_special = self.create_sidebar_btn(self.T("sidebar_game"), "special")
@@ -665,11 +671,21 @@ class TurboCoreApp(ctk.CTk):
 
     def build_special(self, p):
         c = self.create_card(p, self.T("sidebar_game"))
-        btn_ff = ctk.CTkButton(c, text=self.T("hero_ff"), font=FONT_TITLE,
+
+        # V109: Split Free Fire Modes
+        btn_ff_sensi = ctk.CTkButton(c, text=self.T("hero_ff_sensi"), font=FONT_TITLE,
                                fg_color=self.accent_color, text_color=COLOR_BG, hover_color=COLOR_TEXT_MAIN,
-                               height=80, corner_radius=12,
-                               command=self.ativar_free_fire)
-        btn_ff.pack(fill="x", pady=10)
+                               height=60, corner_radius=12,
+                               command=self.ativar_free_fire_sensi)
+        btn_ff_sensi.pack(fill="x", pady=5)
+
+        btn_ff_liso = ctk.CTkButton(c, text=self.T("hero_ff_liso"), font=FONT_TITLE,
+                               fg_color=COLOR_SURFACE, border_width=1, border_color=self.accent_color,
+                               text_color=self.accent_color, hover_color=COLOR_HOVER,
+                               height=60, corner_radius=12,
+                               command=self.ativar_free_fire_liso)
+        btn_ff_liso.pack(fill="x", pady=5)
+
         self.sw_keymap = ctk.CTkSwitch(c, text=self.T("sw_keymap"), command=self.toggle_keymapping,
                                        font=FONT_BOLD, text_color=COLOR_TEXT_MAIN,
                                        progress_color=self.accent_color, button_color=COLOR_TEXT_MAIN, button_hover_color=COLOR_TEXT_MAIN)
@@ -754,12 +770,19 @@ class TurboCoreApp(ctk.CTk):
         self.run_adb_cmd_string("am kill-all", show_success=False)
         messagebox.showinfo(self.T("msg_success"), self.T("msg_kill"))
 
-    def ativar_free_fire(self):
-        if not self.target_device:
-            messagebox.showerror(self.T("msg_conn_error"), self.T("msg_no_device"))
-            return
-        self.log(self.T("msg_ff_active"))
-        cmds = MODOS_PERF["Gamer Ultimate (Mobile)"]["cmd"]
+    # V109: NEW SPLIT METHODS
+    def ativar_free_fire_sensi(self):
+        if not self.target_device: return messagebox.showerror(self.T("msg_conn_error"), self.T("msg_no_device"))
+        self.log(self.T("msg_ff_sensi_active"))
+        # Sensi Max: High DPI (400), Reset Resolution, Clear Bloat
+        cmds = "wm size reset; wm density 400; pm disable-user --user 0 com.samsung.android.game.gos"
+        self.run_adb_cmd_string(cmds, show_success=True)
+
+    def ativar_free_fire_liso(self):
+        if not self.target_device: return messagebox.showerror(self.T("msg_conn_error"), self.T("msg_no_device"))
+        self.log(self.T("msg_ff_liso_active"))
+        # Liso (FPS): Low Res (540p), Low DPI (160), Disable Thermal
+        cmds = "wm size 540x960; wm density 160; settings put global window_animation_scale 0; settings put global transition_animation_scale 0; settings put global animator_duration_scale 0"
         self.run_adb_cmd_string(cmds, show_success=True)
 
     def run_adb_cmd_string(self, cmd_string, show_success=True):
