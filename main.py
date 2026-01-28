@@ -45,7 +45,7 @@ FONT_MONO = ("Consolas", 11)
 # --- TRADUÇÕES ---
 TRANSLATIONS = {
     "PT": {
-        "app_title": "TURBO CORE V109.1 - SENSI MAX UPDATE",
+        "app_title": "TURBO CORE V107 - NETWORK & FF REWORK",
         "sidebar_dash": "🖥️ DASHBOARD",
         "sidebar_game": "🎮 COMPETITIVO",
         "sidebar_apps": "📦 APPS",
@@ -67,8 +67,8 @@ TRANSLATIONS = {
         "btn_reset": "Restaurar Original 🔄",
         "btn_kill": "⚡ LIMPAR RAM",
         "select_default": "Selecionar...",
-        "hero_ff_sensi": "FREE FIRE: SENSI HEADSHOT 🎯",
-        "hero_ff_liso": "FREE FIRE: MODO LISO (FPS) 🚀",
+        "hero_ff_sensi": "MODO FF SENSI (CAPA) 🎯",
+        "hero_ff_liso": "MODO FF LISO (FPS) 🚀",
         "sw_keymap": "Ativar Keymapping (WASD)",
         "coming_soon": "EM BREVE (Roadmap)",
         "term_manual": "TERMINAL MANUAL",
@@ -80,6 +80,7 @@ TRANSLATIONS = {
         "btn_pair": "PAREAR DISPOSITIVO",
         "btn_connect": "CONECTAR",
         "btn_scan": "ESCANEAR REDE 🔎",
+        "scan_running": "Escaneando...",
         "guide_title": "COMO CONECTAR?",
         "guide_text": "1. Ative Opções do Desenvolvedor\n2. Ative Depuração USB\n3. Ative Depuração Sem Fio\n\nNo Wi-Fi:\nUse 'Parear com Código'.\nCopie IP, Porta e Código.",
         "msg_success": "SUCESSO",
@@ -90,7 +91,7 @@ TRANSLATIONS = {
         "msg_restored": "Dispositivo restaurado!",
         "msg_installed": "APK Instalado!",
         "msg_sent": "Arquivo enviado!",
-        "msg_ff_sensi_active": "SENSI HEADSHOT ATIVADA! (DPI 598)",
+        "msg_ff_sensi_active": "SENSI EXTREMA ATIVADA! (DPI 90)",
         "msg_ff_liso_active": "MODO LISO ATIVADO! (540p)",
         "msg_kill": "Processos de fundo encerrados!",
         "theme_label": "Theme / Tema",
@@ -114,10 +115,10 @@ TRANSLATIONS = {
         "help_perf_std": "USUAL TURBO\n\n• Ação: Acelera animações do Android (0.5x).\n• Risco: NENHUM.\n\nDeixa a navegação mais rápida visualmente sem forçar o hardware.",
         "help_bat_eco": "ECONOMIA NORMAL\n\n• Ação: Ativa modo Low Power nativo.\n• Risco: NENHUM.\n\nGerenciamento padrão do Android.",
         "help_bat_sup": "SUPER ECONOMIA\n\n• Ação: Desliga Bluetooth, Sync e reduz resolução.\n• Risco: BAIXO.\n\nVocê deixará de receber notificações de alguns apps.",
-        "help_bat_ult": "ULTIMATE ECONOMIA (DEEP)\n\n• Ação: Brilho Zero, Mata Apps, Limita CPU.\n• Risco: USABILIDADE.\n\n⚠️ O celular vira um 'tijolo' para sobreviver. A tela ficará quase apagada. Só use em emergências."
+        "help_bat_ult": "ULTIMATE ECONOMIA (DEEP)\n\n• Ação: Brilho Zero, Mata Apps, Limita CPU.\n• Risco: USABILITY.\n\n⚠️ O celular vira um 'tijolo' para sobreviver. A tela ficará quase apagada. Só use em emergências."
     },
     "EN": {
-        "app_title": "TURBO CORE V109.1 - SENSI MAX UPDATE",
+        "app_title": "TURBO CORE V107 - NETWORK & FF REWORK",
         "sidebar_dash": "🖥️ DASHBOARD",
         "sidebar_game": "🎮 COMPETITIVE",
         "sidebar_apps": "📦 APPS",
@@ -139,8 +140,8 @@ TRANSLATIONS = {
         "btn_reset": "Factory Reset 🔄",
         "btn_kill": "⚡ KILL ALL",
         "select_default": "Select...",
-        "hero_ff_sensi": "FREE FIRE: HEADSHOT SENSI 🎯",
-        "hero_ff_liso": "FREE FIRE: SMOOTH MODE (FPS) 🚀",
+        "hero_ff_sensi": "FF SENSI MODE (HEADSHOT) 🎯",
+        "hero_ff_liso": "FF SMOOTH MODE (FPS) 🚀",
         "sw_keymap": "Enable Keymapping (WASD)",
         "coming_soon": "COMING SOON (Roadmap)",
         "term_manual": "MANUAL TERMINAL",
@@ -152,6 +153,7 @@ TRANSLATIONS = {
         "btn_pair": "PAIR DEVICE",
         "btn_connect": "CONNECT",
         "btn_scan": "SCAN NETWORK 🔎",
+        "scan_running": "Scanning...",
         "guide_title": "QUICK GUIDE",
         "guide_text": "1. Enable Developer Options\n2. Enable USB Debugging\n3. Enable Wireless Debugging\n\nFor Wi-Fi:\nUse 'Pair with Code'.\nCopy IP, Port & Code.",
         "msg_success": "SUCCESS",
@@ -162,7 +164,7 @@ TRANSLATIONS = {
         "msg_restored": "Device restored!",
         "msg_installed": "APK Installed!",
         "msg_sent": "File sent!",
-        "msg_ff_sensi_active": "HEADSHOT SENSI ACTIVE! (DPI 598)",
+        "msg_ff_sensi_active": "EXTREME SENSI ACTIVE! (DPI 90)",
         "msg_ff_liso_active": "SMOOTH MODE ACTIVE! (540p)",
         "msg_kill": "Background processes killed!",
         "theme_label": "Theme",
@@ -189,7 +191,7 @@ TRANSLATIONS = {
         "help_bat_ult": "ULTIMATE SAVER\n\n• Action: Zero Brightness, Kill Apps.\n• Risk: USABILITY.\n\n⚠️ Phone becomes barely usable to survive."
     },
     "ES": {
-        "app_title": "TURBO CORE V109.1 - SENSI MAX UPDATE",
+        "app_title": "TURBO CORE V107 - NETWORK & FF REWORK",
         "sidebar_dash": "🖥️ PANEL",
         "sidebar_game": "🎮 COMPETITIVO",
         "sidebar_apps": "📦 APPS",
@@ -211,8 +213,8 @@ TRANSLATIONS = {
         "btn_reset": "Restaurar Original 🔄",
         "btn_kill": "⚡ LIMPIAR RAM",
         "select_default": "Seleccionar...",
-        "hero_ff_sensi": "FREE FIRE: SENSI HEADSHOT 🎯",
-        "hero_ff_liso": "FREE FIRE: MODO SUAVE (FPS) 🚀",
+        "hero_ff_sensi": "MODO SENSI MAX (CAPA) 🎯",
+        "hero_ff_liso": "MODO SUAVE (FPS) 🚀",
         "sw_keymap": "Activar Keymapping (WASD)",
         "coming_soon": "PRÓXIMAMENTE (Roadmap)",
         "term_manual": "TERMINAL MANUAL",
@@ -224,6 +226,7 @@ TRANSLATIONS = {
         "btn_pair": "VINCULAR DISPOSITIVO",
         "btn_connect": "CONECTAR",
         "btn_scan": "ESCANEAR RED 🔎",
+        "scan_running": "Escaneando...",
         "guide_title": "GUÍA RÁPIDA",
         "guide_text": "1. Activar Opciones Desarrollador\n2. Activar Depuración USB\n3. Activar Depuración Inalámbrica\n\nPara Wi-Fi:\nUsar 'Vincular con Código'.\nCopiar IP, Puerto y Código.",
         "msg_success": "ÉXITO",
@@ -234,7 +237,7 @@ TRANSLATIONS = {
         "msg_restored": "¡Dispositivo restaurado!",
         "msg_installed": "¡APK Instalado!",
         "msg_sent": "¡Archivo enviado!",
-        "msg_ff_sensi_active": "¡SENSI HEADSHOT ACTIVA! (DPI 598)",
+        "msg_ff_sensi_active": "¡SENSI EXTREMA ACTIVA! (DPI 90)",
         "msg_ff_liso_active": "¡MODO SUAVE ACTIVO! (540p)",
         "msg_kill": "¡Procesos cerrados!",
         "theme_label": "Tema",
@@ -291,7 +294,7 @@ class TurboCoreApp(ctk.CTk):
         self.stop_logcat_flag = False
         self.last_ip = ""
 
-        self.debug_log(f"--- INICIANDO TURBO CORE V109.1 SENSI MAX UPDATE [{self.current_lang}] ---")
+        self.debug_log(f"--- INICIANDO TURBO CORE V107 NETWORK & FF REWORK [{self.current_lang}] ---")
         self.title(self.T("app_title"))
         self.geometry("900x750")
         self.resizable(False, True)
@@ -306,11 +309,8 @@ class TurboCoreApp(ctk.CTk):
         self.bin_dir = os.path.join(self.app_dir, "bin")
         self.caps_dir = os.path.join(self.app_dir, "Capturas")
 
-        # V108 OPTIMIZATION: Cache paths
         self.adb_exe = os.path.join(self.bin_dir, "adb.exe")
         self.scrcpy_exe = os.path.join(self.bin_dir, "scrcpy.exe")
-
-        # V108 OPTIMIZATION: Cache STARTUPINFO
         self.si = subprocess.STARTUPINFO()
         self.si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
 
@@ -348,7 +348,6 @@ class TurboCoreApp(ctk.CTk):
         if keyboard:
             try:
                 keyboard.add_hotkey('f1', lambda: self.iniciar_pc("PC Soberano (Padrão)"))
-                # keyboard.add_hotkey('f2', lambda: self.ativar_free_fire()) # Removed F2 global hotkey to avoid confusion between Sensi/Liso
                 self.hook_space = keyboard.on_press_key("space", self.key_tap_handler, suppress=False)
                 for k in ["w", "a", "s", "d"]:
                     keyboard.on_press_key(k, lambda e, key=k: self.key_swipe_handler(key), suppress=False)
@@ -395,7 +394,7 @@ class TurboCoreApp(ctk.CTk):
         self.sidebar.pack_propagate(False)
 
         ctk.CTkLabel(self.sidebar, text="TURBO\nCORE", font=("Montserrat", 24, "bold"), text_color=self.accent_color).pack(pady=(40, 5))
-        ctk.CTkLabel(self.sidebar, text="V109.1 SENSI", font=("Roboto", 10), text_color=COLOR_TEXT_DIM).pack(pady=(0, 20))
+        ctk.CTkLabel(self.sidebar, text="V107 NETWORK", font=("Roboto", 10), text_color=COLOR_TEXT_DIM).pack(pady=(0, 20))
 
         self.btn_dash = self.create_sidebar_btn(self.T("sidebar_dash"), "dash")
         self.btn_special = self.create_sidebar_btn(self.T("sidebar_game"), "special")
@@ -534,50 +533,58 @@ class TurboCoreApp(ctk.CTk):
         ctk.CTkButton(frame_tools, text=self.T("btn_connect"), fg_color=self.accent_color, text_color=COLOR_BG, hover_color=COLOR_TEXT_MAIN,
                       command=do_connect).pack(fill="x", pady=5)
 
-        # RESTORED V106: Network Scan
+        # V107 REAL NETWORK SCANNER
         ctk.CTkLabel(frame_tools, text="3. AUTO-SCAN", font=FONT_MAIN, text_color=self.accent_color).pack(pady=(20,5), anchor="w")
-        ctk.CTkButton(frame_tools, text=self.T("btn_scan"), fg_color="transparent", border_width=1, border_color=COLOR_TEXT_DIM,
-                      text_color=COLOR_TEXT_DIM, hover_color=COLOR_HOVER, command=self.scan_network).pack(fill="x", pady=5)
+        self.btn_scan = ctk.CTkButton(frame_tools, text=self.T("btn_scan"), fg_color="transparent", border_width=1, border_color=COLOR_TEXT_DIM,
+                      text_color=COLOR_TEXT_DIM, hover_color=COLOR_HOVER, command=self.scan_network)
+        self.btn_scan.pack(fill="x", pady=5)
 
         ctk.CTkLabel(frame_tutorial, text=self.T("guide_title"), font=FONT_BOLD, text_color=COLOR_TEXT_MAIN).pack(pady=10)
         ctk.CTkLabel(frame_tutorial, text=self.T("guide_text"), justify="left", font=FONT_MAIN, text_color=COLOR_TEXT_DIM).pack(padx=15, pady=10)
 
-    # V106 RESTORED METHOD
+    # V107 REAL NETWORK SCANNER IMPLEMENTATION
     def scan_network(self):
+        self.btn_scan.configure(text=self.T("scan_running"), state="disabled")
         self.log("Scanning local network for ADB devices (Port 5555)...")
 
         def run_scan():
+            found_devices = []
             try:
                 local_ip = socket.gethostbyname(socket.gethostname())
                 subnet = '.'.join(local_ip.split('.')[:-1]) + '.'
-                found = []
 
                 with concurrent.futures.ThreadPoolExecutor(max_workers=50) as executor:
                     futures = {executor.submit(self._check_ip, f"{subnet}{i}"): f"{subnet}{i}" for i in range(1, 255)}
                     for future in concurrent.futures.as_completed(futures):
                         ip = futures[future]
                         if future.result():
-                            found.append(ip)
+                            found_devices.append(ip)
 
-                if found:
-                    self.log(f"Found: {', '.join(found)}")
-                    self.after(0, lambda: messagebox.showinfo("Scan Result", f"Devices Found:\n{', '.join(found)}\n\n(Copy IP to Connect field)"))
-                else:
-                    self.log("No devices found.")
-                    self.after(0, lambda: messagebox.showinfo("Scan Result", "No devices found on port 5555."))
+                self.after(0, lambda: self._on_scan_complete(found_devices))
             except Exception as e:
                 self.debug_log(f"Scan Error: {e}")
+                self.after(0, lambda: self.btn_scan.configure(text=self.T("btn_scan"), state="normal"))
 
         threading.Thread(target=run_scan).start()
 
     def _check_ip(self, ip):
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.settimeout(0.2) # Fast timeout
+            sock.settimeout(0.05) # V107 Fast timeout
             result = sock.connect_ex((ip, 5555))
             sock.close()
             return result == 0
         except: return False
+
+    def _on_scan_complete(self, devices):
+        self.btn_scan.configure(text=self.T("btn_scan"), state="normal")
+        if devices:
+            self.log(f"Found: {', '.join(devices)}")
+            msg = f"Devices Found:\n{', '.join(devices)}\n\n(Copy IP to Connect field)"
+            messagebox.showinfo("Scan Result", msg)
+        else:
+            self.log("No devices found.")
+            messagebox.showinfo("Scan Result", "No devices found on port 5555.")
 
     def build_dashboard(self, p):
         btn_comp = ctk.CTkButton(p, text=self.T("launch_comp"), font=FONT_BOLD,
@@ -672,18 +679,18 @@ class TurboCoreApp(ctk.CTk):
     def build_special(self, p):
         c = self.create_card(p, self.T("sidebar_game"))
 
-        # V109: Split Free Fire Modes
+        # V107: Split Free Fire Modes REWORK
         btn_ff_sensi = ctk.CTkButton(c, text=self.T("hero_ff_sensi"), font=FONT_TITLE,
                                fg_color=self.accent_color, text_color=COLOR_BG, hover_color=COLOR_TEXT_MAIN,
                                height=60, corner_radius=12,
-                               command=self.ativar_free_fire_sensi)
+                               command=self.ativar_ff_sensi)
         btn_ff_sensi.pack(fill="x", pady=5)
 
         btn_ff_liso = ctk.CTkButton(c, text=self.T("hero_ff_liso"), font=FONT_TITLE,
                                fg_color=COLOR_SURFACE, border_width=1, border_color=self.accent_color,
                                text_color=self.accent_color, hover_color=COLOR_HOVER,
                                height=60, corner_radius=12,
-                               command=self.ativar_free_fire_liso)
+                               command=self.ativar_ff_liso)
         btn_ff_liso.pack(fill="x", pady=5)
 
         self.sw_keymap = ctk.CTkSwitch(c, text=self.T("sw_keymap"), command=self.toggle_keymapping,
@@ -770,20 +777,21 @@ class TurboCoreApp(ctk.CTk):
         self.run_adb_cmd_string("am kill-all", show_success=False)
         messagebox.showinfo(self.T("msg_success"), self.T("msg_kill"))
 
-    # V109: NEW SPLIT METHODS
-    def ativar_free_fire_sensi(self):
+    # V107 REWORK: FF SENSI (DPI 90 + Pointer 7)
+    def ativar_ff_sensi(self):
         if not self.target_device: return messagebox.showerror(self.T("msg_conn_error"), self.T("msg_no_device"))
         self.log(self.T("msg_ff_sensi_active"))
-        # Sensi Max: High DPI (598 - Safe Max), Reset Resolution, Clear Bloat
-        # V109.1 UPDATE: Increased to 598 for headshot sensitivity
-        cmds = "wm size reset; wm density 598; pm disable-user --user 0 com.samsung.android.game.gos"
+        # Density 90 (Ultra Small UI = High Sensi Feel), Pointer Speed 7 (Max), Instant Touch
+        cmds = "wm density 90 && settings put system pointer_speed 7 && settings put secure long_press_timeout 100"
         self.run_adb_cmd_string(cmds, show_success=True)
+        messagebox.showinfo("INFO", "Sensi Mode Applied!\nUI will be TINY.\nReset via 'Restaurar Original'.")
 
-    def ativar_free_fire_liso(self):
+    # V107 REWORK: FF LISO (540p + No Anim + Power Mode)
+    def ativar_ff_liso(self):
         if not self.target_device: return messagebox.showerror(self.T("msg_conn_error"), self.T("msg_no_device"))
         self.log(self.T("msg_ff_liso_active"))
-        # Liso (FPS): Low Res (540p), Low DPI (160), Disable Thermal
-        cmds = "wm size 540x960; wm density 160; settings put global window_animation_scale 0; settings put global transition_animation_scale 0; settings put global animator_duration_scale 0"
+        # 540p, Density 160, Power Mode 1, No Anims, Kill BG
+        cmds = "wm size 540x960 && wm density 160 && cmd power set-mode 1 && settings put global window_animation_scale 0 && settings put global transition_animation_scale 0 && am kill-all"
         self.run_adb_cmd_string(cmds, show_success=True)
 
     def run_adb_cmd_string(self, cmd_string, show_success=True):
@@ -795,10 +803,9 @@ class TurboCoreApp(ctk.CTk):
 
         def t():
             # V108: Batch Execution Optimization
-            # If commands are separated by ;, we try to execute them in a single ADB shell call if they don't contain specific sleep triggers
-            cmds = [c.strip() for c in cmd_string.split(";") if c.strip()]
+            cmds = [c.strip() for c in cmd_string.split("&&") if c.strip()] # Changed split to && for new logic or keep ; compatibility
+            if not cmds: cmds = [c.strip() for c in cmd_string.split(";") if c.strip()]
 
-            # Simple ping before starting
             if not self._ping_device():
                  self.log("Device offline. Healing...")
                  self.heal_adb_connection()
@@ -806,11 +813,10 @@ class TurboCoreApp(ctk.CTk):
                      self.after(0, lambda: messagebox.showerror(self.T("msg_error"), "Device unavailable."))
                      return
 
-            # Combine commands into one shell execution for speed
             combined_cmd = " && ".join(cmds)
             full_cmd = [self.adb_exe, "-s", self.target_device, "shell", combined_cmd]
 
-            self.log(f"Executing batch: {len(cmds)} cmds...")
+            self.log(f"Executing batch...")
             res = subprocess.run(full_cmd, startupinfo=self.si, capture_output=True, text=True)
 
             if res.returncode == 0:
@@ -923,7 +929,7 @@ class TurboCoreApp(ctk.CTk):
         if not self.target_device: return
         self.log(self.T("msg_restored"))
         # V108: All in one string
-        cmds = "wm size reset; wm density reset; settings put system user_rotation 0; settings put system accelerometer_rotation 1; settings put global low_power 0; settings put system screen_brightness 100; settings put global window_animation_scale 1; settings put global transition_animation_scale 1; settings put global animator_duration_scale 1"
+        cmds = "wm size reset && wm density reset && settings put system user_rotation 0 && settings put system accelerometer_rotation 1 && settings put global low_power 0 && settings put system screen_brightness 100 && settings put global window_animation_scale 1 && settings put global transition_animation_scale 1 && settings put global animator_duration_scale 1 && settings put system pointer_speed 1"
         self.run_adb_cmd_string(cmds, show_success=False) # Suppress generic success msg
         default_txt = self.T("select_default")
         self.menu_PC.set(default_txt)
