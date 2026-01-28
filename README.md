@@ -1,28 +1,27 @@
-# 🚀 TURBO CORE V107 - FREE FIRE SPECIAL
+# 🚀 TURBO CORE V111 - FREE FIRE SPECIAL
+### *Otimização Profissional de Hardware Android via ADB*
 
-O **Turbo Core** é uma ferramenta avançada para Windows que transforma seu dispositivo Android em uma estação de trabalho ou console de jogos, utilizando tecnologia ADB e Scrcpy.
+![Status](https://img.shields.io/badge/Status-Est%C3%A1vel-brightgreen)
+![Versão](https://img.shields.io/badge/Vers%C3%A3o-1.11-blue)
+![Platform](https://img.shields.io/badge/Plataforma-Windows-lightgrey)
+
+O **Turbo Core** é uma ferramenta standalone desenvolvida para transformar a experiência competitiva no Android, focando em sensibilidade de toque e estabilidade de frames.
 
 ## 🔥 Funcionalidades Principais
+- 🎯 **FF SENSI (MODO CAPA):** Calibração agressiva de DPI para 90, garantindo sensibilidade de emulador no mobile.
+- 🚀 **FF LISO (PERFORMANCE):** Redução estratégica de resolução para 540p, eliminando quedas de FPS.
+- 🛡️ **RECONEXÃO BLINDADA:** Protocolo de segurança que mantém a conexão ADB ativa mesmo após mudanças de sistema.
+- 📦 **ZERO DEPENDÊNCIAS:** O executável já contém os binários ADB e Scrcpy internamente.
 
-### 🖥️ Modos PC (Desktop Experience)
-- **Soberano:** Transforma o celular em um monitor 16:9 (720p/60fps) forçando a rotação de tela.
-- **Gamer Apex:** Otimização para FPS máximo e latência zero.
-- **Lite:** Para PCs fracos ou economia de dados.
+## 📥 Como Baixar e Usar
+1. Vá na seção **[RELEASES](https://github.com/Catdiegovdl5/TURBO-CORE-ANDROID/releases)**.
+2. Baixe o arquivo `TurboCore_V111.zip`.
+3. Extraia e abra o `.exe` (Siga as instruções do manual em PDF incluso).
 
-### ⚡ Performance & Jogos
-- **Modo Free Fire:** Resolução competitiva (540p) e remoção de animações.
-- **Ultimate:** Desativa limitadores térmicos e GOS (Samsung).
+## 🛠️ Requisitos
+- Windows 10 ou 11.
+- Cabo USB de boa qualidade.
+- Depuração USB ativada nas Opções do Desenvolvedor do Android.
 
-### 🔋 Gestão de Bateria
-- Modos de economia extrema e deep sleep.
-
-## 🛠️ Como Usar
-1. Ative a Depuração USB no seu Android.
-2. Conecte o cabo USB.
-3. Abra o `TurboCore.exe`.
-4. Escolha o modo desejado e clique em Iniciar.
-
-## 📦 Requisitos
-- Windows 10/11
-- Drivers ADB Instalados
-- Cabo USB de boa qualidade
+---
+**Desenvolvido por: Diego - Turbo Core Project 2026**
