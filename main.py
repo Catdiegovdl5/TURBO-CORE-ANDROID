@@ -48,7 +48,7 @@ FONT_MONO = ("Consolas", 11)
 # --- TRADUÇÕES ---
 TRANSLATIONS = {
     "PT": {
-        "app_title": "TURBO CORE V107 - FREE FIRE SPECIAL",
+        "app_title": "TURBO CORE V110 - FINAL RELEASE",
         "sidebar_dash": "🖥️ DASHBOARD",
         "sidebar_game": "🎮 COMPETITIVO",
         "sidebar_apps": "📦 APPS",
@@ -119,7 +119,7 @@ TRANSLATIONS = {
         "help_bat_ult": "ULTIMATE ECONOMIA (DEEP)\n\n• Ação: Brilho Zero, Mata Apps, Limita CPU.\n• Risco: USABILITY.\n\n⚠️ O celular vira um 'tijolo' para sobreviver. A tela ficará quase apagada. Só use em emergências."
     },
     "EN": {
-        "app_title": "TURBO CORE V107 - FREE FIRE SPECIAL",
+        "app_title": "TURBO CORE V110 - FINAL RELEASE",
         "sidebar_dash": "🖥️ DASHBOARD",
         "sidebar_game": "🎮 COMPETITIVE",
         "sidebar_apps": "📦 APPS",
@@ -190,7 +190,7 @@ TRANSLATIONS = {
         "help_bat_ult": "ULTIMATE SAVER\n\n• Action: Zero Brightness, Kill Apps.\n• Risk: USABILITY.\n\n⚠️ Phone becomes barely usable to survive."
     },
     "ES": {
-        "app_title": "TURBO CORE V107 - FREE FIRE SPECIAL",
+        "app_title": "TURBO CORE V110 - FINAL RELEASE",
         "sidebar_dash": "🖥️ PANEL",
         "sidebar_game": "🎮 COMPETITIVO",
         "sidebar_apps": "📦 APPS",
@@ -291,7 +291,7 @@ class TurboCoreApp(ctk.CTk):
         self.stop_logcat_flag = False
         self.last_ip = ""
 
-        self.debug_log(f"--- INICIANDO TURBO CORE V107 FREE FIRE SPECIAL [{self.current_lang}] ---")
+        self.debug_log(f"--- INICIANDO TURBO CORE V110 FINAL [{self.current_lang}] ---")
         self.title(self.T("app_title"))
         self.geometry("900x750")
         self.resizable(False, True)
@@ -800,7 +800,7 @@ class TurboCoreApp(ctk.CTk):
                 # PATIENT WAITER LOGIC
                 if "wm size" in cmd or "wm density" in cmd:
                     self.log("Display update. Waiting for device stabilization...")
-                    time.sleep(4) # V109: Increased to 4s for Wi-Fi stability
+                    time.sleep(5) # V110: Increased to 5s for Wi-Fi stability
                     for _ in range(10):
                         if self._ping_device():
                             break
