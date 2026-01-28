@@ -48,7 +48,7 @@ FONT_MONO = ("Consolas", 11)
 # --- TRADUÇÕES ---
 TRANSLATIONS = {
     "PT": {
-        "app_title": "TURBO CORE V110 - FINAL RELEASE",
+        "app_title": "TURBO CORE V111 - VISUAL UPDATE",
         "sidebar_dash": "🖥️ DASHBOARD",
         "sidebar_game": "🎮 COMPETITIVO",
         "sidebar_apps": "📦 APPS",
@@ -119,7 +119,7 @@ TRANSLATIONS = {
         "help_bat_ult": "ULTIMATE ECONOMIA (DEEP)\n\n• Ação: Brilho Zero, Mata Apps, Limita CPU.\n• Risco: USABILITY.\n\n⚠️ O celular vira um 'tijolo' para sobreviver. A tela ficará quase apagada. Só use em emergências."
     },
     "EN": {
-        "app_title": "TURBO CORE V110 - FINAL RELEASE",
+        "app_title": "TURBO CORE V111 - VISUAL UPDATE",
         "sidebar_dash": "🖥️ DASHBOARD",
         "sidebar_game": "🎮 COMPETITIVE",
         "sidebar_apps": "📦 APPS",
@@ -190,7 +190,7 @@ TRANSLATIONS = {
         "help_bat_ult": "ULTIMATE SAVER\n\n• Action: Zero Brightness, Kill Apps.\n• Risk: USABILITY.\n\n⚠️ Phone becomes barely usable to survive."
     },
     "ES": {
-        "app_title": "TURBO CORE V110 - FINAL RELEASE",
+        "app_title": "TURBO CORE V111 - VISUAL UPDATE",
         "sidebar_dash": "🖥️ PANEL",
         "sidebar_game": "🎮 COMPETITIVO",
         "sidebar_apps": "📦 APPS",
@@ -291,7 +291,7 @@ class TurboCoreApp(ctk.CTk):
         self.stop_logcat_flag = False
         self.last_ip = ""
 
-        self.debug_log(f"--- INICIANDO TURBO CORE V110 FINAL [{self.current_lang}] ---")
+        self.debug_log(f"--- INICIANDO TURBO CORE V111 FINAL [{self.current_lang}] ---")
         self.title(self.T("app_title"))
         self.geometry("900x750")
         self.resizable(False, True)
@@ -303,6 +303,8 @@ class TurboCoreApp(ctk.CTk):
         self.app_dir = resource_path("")
         self.bin_dir = resource_path("bin")
         self.img_bg_path = resource_path("fundo_chip.jpg")
+        self.icon_ico_path = resource_path("icon.ico")
+        self.icon_png_path = resource_path("icon.png")
 
         # Caminhos Externos (Pasta de fotos que fica do LADO de fora do EXE)
         self.exe_dir = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.path.dirname(os.path.abspath(__file__))
@@ -327,7 +329,27 @@ class TurboCoreApp(ctk.CTk):
             self.debug_log(f"Erro imagem fundo: {e}")
             self.img_bg = None
 
+        # V111: App List Generic Icon
+        try:
+            # Prefer PNG for CTkImage as it handles it better
+            icon_source = self.icon_png_path if os.path.exists(self.icon_png_path) else self.icon_ico_path
+            self.app_generic_icon = ctk.CTkImage(Image.open(icon_source), size=(20, 20))
+        except Exception as e:
+            self.debug_log(f"Erro icone generico: {e}")
+            self.app_generic_icon = None
+
         self.setup_ui()
+
+        # V111: Window Icon (Delayed)
+        try:
+            if os.path.exists(self.icon_ico_path):
+                self.after(200, lambda: self.iconbitmap(self.icon_ico_path))
+            elif os.path.exists(self.icon_png_path):
+                 # Fallback for Linux/Mac or if ICO missing
+                 img = Image.open(self.icon_png_path)
+                 self.after(200, lambda: self.iconphoto(False, ctk.CTkImage(img)))
+        except Exception as e:
+            self.debug_log(f"Window icon error: {e}")
         self.start_monitor()
         self.start_battery_monitor()
         self.setup_hotkeys()
@@ -711,7 +733,12 @@ class TurboCoreApp(ctk.CTk):
         f = ctk.CTkFrame(self.scroll_apps, fg_color="transparent", height=40)
         f.pack(fill="x", pady=2)
 
-        ctk.CTkLabel(f, text=pkg, font=FONT_MONO, text_color=COLOR_TEXT_MAIN, width=350, anchor="w").pack(side="left", padx=10)
+        # V111: Visual Update - Generic Icon
+        if self.app_generic_icon:
+            ctk.CTkLabel(f, text="", image=self.app_generic_icon).pack(side="left", padx=(10, 5))
+            ctk.CTkLabel(f, text=pkg, font=FONT_MONO, text_color=COLOR_TEXT_MAIN, width=330, anchor="w").pack(side="left", padx=0)
+        else:
+            ctk.CTkLabel(f, text=pkg, font=FONT_MONO, text_color=COLOR_TEXT_MAIN, width=350, anchor="w").pack(side="left", padx=10)
 
         ctk.CTkButton(f, text=self.T("action_open"), width=60, fg_color=COLOR_SUCCESS, text_color="white", height=25,
                       command=lambda: self.run_adb_generic(f"shell monkey -p {pkg} -c android.intent.category.LAUNCHER 1", show_success=False)).pack(side="right", padx=2)
