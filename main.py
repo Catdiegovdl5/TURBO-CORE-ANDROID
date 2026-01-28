@@ -1080,8 +1080,18 @@ class TurboCoreApp(ctk.CTk):
                             res = subprocess.run([self.adb_exe, "devices"], capture_output=True, text=True, startupinfo=self.si)
 
                         lines = [l for l in res.stdout.split('\n') if 'device' in l and 'List' not in l]
-                        if lines:
-                            new_id = lines[0].split()[0]
+
+                        # V110 FIX: Filter out mDNS pairing services (adb-...)
+                        new_id = None
+                        for line in lines:
+                            parts = line.split()
+                            if parts:
+                                candidate = parts[0]
+                                if not candidate.startswith("adb-"):
+                                    new_id = candidate
+                                    break
+
+                        if new_id:
                             # V104 Smart Reconnect Memory
                             if ":" in new_id and "." in new_id:
                                 self.last_ip = new_id
