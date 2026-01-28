@@ -1,4 +1,4 @@
-# 🚀 TURBO CORE V66 - Android Manager & PC Mode
+# 🚀 TURBO CORE V107 - FREE FIRE SPECIAL
 
 O **Turbo Core** é uma ferramenta avançada para Windows que transforma seu dispositivo Android em uma estação de trabalho ou console de jogos, utilizando tecnologia ADB e Scrcpy.
 
