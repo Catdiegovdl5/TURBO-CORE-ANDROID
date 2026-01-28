@@ -315,6 +315,7 @@ class TurboCoreApp(ctk.CTk):
 
         self.check_binaries()
 
+        self.adb_lock = threading.Lock()
         self.batch_running = False  # V107 Fix: Prevent monitor race condition
 
         if not os.path.exists(self.caps_dir):
@@ -682,7 +683,8 @@ class TurboCoreApp(ctk.CTk):
 
         def load():
             # V108: Use cached path
-            res = subprocess.run([self.adb_exe, "-s", self.target_device, "shell", "pm", "list", "packages", "-3"], capture_output=True, text=True, startupinfo=self.si)
+            with self.adb_lock:
+                res = subprocess.run([self.adb_exe, "-s", self.target_device, "shell", "pm", "list", "packages", "-3"], capture_output=True, text=True, startupinfo=self.si)
 
             apps = []
             for line in res.stdout.splitlines():
@@ -760,35 +762,46 @@ class TurboCoreApp(ctk.CTk):
         self.debug_log(f"CMD: {cmd_string}")
 
         def t():
-            # Check connection first
+            # Aggressive Reconnect Check
             if not self._ping_device():
-                 self.log("Device offline. Healing...")
-                 self.heal_adb_connection()
+                 self.log("Connection lost. Trying aggressive reconnect...")
+                 with self.adb_lock:
+                     if self.last_ip:
+                         subprocess.run([self.adb_exe, "connect", self.last_ip], startupinfo=self.si)
+                         time.sleep(2)
+
                  if not self._ping_device():
                      self.after(0, lambda: messagebox.showerror(self.T("msg_error"), "Device unavailable."))
                      return
 
             # Split commands by '&&' or ';'
-            cmds = [c.strip() for c in cmd_string.split("&&") if c.strip()]
-            if not cmds: cmds = [c.strip() for c in cmd_string.split(";") if c.strip()]
+            if "&&" in cmd_string:
+                cmds = [c.strip() for c in cmd_string.split("&&") if c.strip()]
+            else:
+                cmds = [c.strip() for c in cmd_string.split(";") if c.strip()]
 
             # Execute sequentially with Patient Waiter
             for cmd in cmds:
                 full_cmd = [self.adb_exe, "-s", self.target_device, "shell", cmd]
                 self.log(f"Exec: {cmd}")
 
-                res = subprocess.run(full_cmd, startupinfo=self.si, capture_output=True, text=True)
+                with self.adb_lock:
+                    res = subprocess.run(full_cmd, startupinfo=self.si, capture_output=True, text=True)
 
                 if res.returncode != 0:
                     self.log(f"Error: {res.stderr}")
-                    self.after(0, lambda: messagebox.showerror(self.T("msg_error"), f"Failed: {cmd}\n{res.stderr}"))
-                    return
+                    # Suppress popup if it's likely a temporary disconnection during wm command
+                    if "device offline" in res.stderr or "device not found" in res.stderr:
+                        self.log("Network glitch detected. Continuing...")
+                    else:
+                        self.after(0, lambda: messagebox.showerror(self.T("msg_error"), f"Failed: {cmd}\n{res.stderr}"))
+                        return
 
                 # PATIENT WAITER LOGIC
                 if "wm size" in cmd or "wm density" in cmd:
-                    self.log("Display update. Waiting for device...")
-                    time.sleep(2) # Initial cooldown
-                    for _ in range(10): # Try for 10 seconds
+                    self.log("Display update. Waiting for device stabilization...")
+                    time.sleep(4) # V109: Increased to 4s for Wi-Fi stability
+                    for _ in range(10):
                         if self._ping_device():
                             break
                         time.sleep(1)
@@ -819,19 +832,22 @@ class TurboCoreApp(ctk.CTk):
 
                 # Batch 1: Resize
                 cmd_size = f"wm size reset && wm size {cfg['size']}"
-                subprocess.run([self.adb_exe, "-s", self.target_device, "shell", cmd_size], startupinfo=self.si)
-                time.sleep(1.5) # V108: Reduced from 4.0
+                with self.adb_lock:
+                    subprocess.run([self.adb_exe, "-s", self.target_device, "shell", cmd_size], startupinfo=self.si)
+                time.sleep(1.5)
 
                 if not self._ping_device(): self.heal_adb_connection()
 
                 # Batch 2: Density
                 cmd_density = f"wm density reset && wm density {cfg['density']}"
-                subprocess.run([self.adb_exe, "-s", self.target_device, "shell", cmd_density], startupinfo=self.si)
-                time.sleep(0.5) # V108: Reduced from 1.0
+                with self.adb_lock:
+                    subprocess.run([self.adb_exe, "-s", self.target_device, "shell", cmd_density], startupinfo=self.si)
+                time.sleep(0.5)
 
                 # Batch 3: Rotation
                 cmd_rot = "settings put system user_rotation 1 && settings put system accelerometer_rotation 0"
-                subprocess.run([self.adb_exe, "-s", self.target_device, "shell", cmd_rot], startupinfo=self.si)
+                with self.adb_lock:
+                    subprocess.run([self.adb_exe, "-s", self.target_device, "shell", cmd_rot], startupinfo=self.si)
                 time.sleep(0.5)
 
             except Exception as e:
@@ -847,8 +863,10 @@ class TurboCoreApp(ctk.CTk):
             if not opt_audio: scrcpy_args += ["--no-audio"]
             if opt_ghost: scrcpy_args += ["--turn-screen-off"]
 
-            # Scrcpy Execution
+            # Scrcpy Execution (Scrcpy needs its own process, lock might be bad if it blocks monitoring, but monitoring is skipped if batch_running.
+            # However, scrcpy runs for a long time. We SHOULD NOT lock scrcpy, but we should lock the adb commands around it.)
             try:
+                # Scrcpy is separate, no lock needed as it doesn't conflict with ADB shell usually
                 subprocess.run([self.scrcpy_exe, "-s", self.target_device] + scrcpy_args, cwd=self.bin_dir, startupinfo=self.si)
             except Exception as e:
                 self.log(f"Scrcpy Error: {e}")
@@ -856,27 +874,41 @@ class TurboCoreApp(ctk.CTk):
             # Restore
             try:
                 cmds_reset = "wm size reset && wm density reset && settings put system user_rotation 0 && settings put system accelerometer_rotation 1"
-                subprocess.run([self.adb_exe, "-s", self.target_device, "shell", cmds_reset], startupinfo=self.si)
+                with self.adb_lock:
+                    subprocess.run([self.adb_exe, "-s", self.target_device, "shell", cmds_reset], startupinfo=self.si)
             except: pass
 
         threading.Thread(target=thread_pc, daemon=True).start()
 
     def _ping_device(self):
         try:
-            res = subprocess.run([self.adb_exe, "-s", self.target_device, "get-state"], capture_output=True, text=True, startupinfo=self.si)
+            with self.adb_lock:
+                res = subprocess.run([self.adb_exe, "-s", self.target_device, "get-state"], capture_output=True, text=True, startupinfo=self.si)
+
+            # V109: Smart Retry
+            if not res.stdout or "device" not in res.stdout:
+                if self.last_ip:
+                    with self.adb_lock:
+                        subprocess.run([self.adb_exe, "connect", self.last_ip], startupinfo=self.si)
+                    time.sleep(1)
+                    with self.adb_lock:
+                        res = subprocess.run([self.adb_exe, "-s", self.target_device, "get-state"], capture_output=True, text=True, startupinfo=self.si)
+
             return "device" in res.stdout
         except: return False
 
     def heal_adb_connection(self):
         self.debug_log("HEALING ADB CONNECTION (SMART)...")
 
-        subprocess.run([self.adb_exe, "disconnect"], startupinfo=self.si)
+        with self.adb_lock:
+            subprocess.run([self.adb_exe, "disconnect"], startupinfo=self.si)
         time.sleep(1)
 
         if self.last_ip:
             self.debug_log(f"Reconnecting to {self.last_ip}...")
-            subprocess.run([self.adb_exe, "connect", self.last_ip], startupinfo=self.si)
-            time.sleep(5) # V107 Fix: Increased to 5s for Wi-Fi stability
+            with self.adb_lock:
+                subprocess.run([self.adb_exe, "connect", self.last_ip], startupinfo=self.si)
+            time.sleep(5)
         else:
             self.debug_log("USB Mode: Waiting for auto-reconnect...")
             time.sleep(1)
@@ -913,7 +945,8 @@ class TurboCoreApp(ctk.CTk):
         if not file_path: return
         self.log(f"Installing...")
         def run():
-            res = subprocess.run([self.adb_exe, "-s", self.target_device, "install", "-r", file_path], capture_output=True, text=True, startupinfo=self.si)
+            with self.adb_lock:
+                res = subprocess.run([self.adb_exe, "-s", self.target_device, "install", "-r", file_path], capture_output=True, text=True, startupinfo=self.si)
             if "Success" in res.stdout:
                 self.log(self.T("msg_installed"))
                 self.after(0, lambda: messagebox.showinfo(self.T("msg_success"), self.T("msg_installed")))
@@ -927,7 +960,8 @@ class TurboCoreApp(ctk.CTk):
         if not file_path: return
         self.log(f"Sending file...")
         def run():
-            res = subprocess.run([self.adb_exe, "-s", self.target_device, "push", file_path, "/sdcard/Download/"], capture_output=True, text=True, startupinfo=self.si)
+            with self.adb_lock:
+                res = subprocess.run([self.adb_exe, "-s", self.target_device, "push", file_path, "/sdcard/Download/"], capture_output=True, text=True, startupinfo=self.si)
             if res.returncode == 0:
                 self.log("File Sent!")
                 self.after(0, lambda: messagebox.showinfo(self.T("msg_success"), self.T("msg_sent")))
@@ -944,7 +978,8 @@ class TurboCoreApp(ctk.CTk):
         def run():
             try:
                 with open(filepath, "wb") as f:
-                    subprocess.run([self.adb_exe, "-s", self.target_device, "exec-out", "screencap", "-p"], stdout=f, startupinfo=self.si)
+                    with self.adb_lock:
+                        subprocess.run([self.adb_exe, "-s", self.target_device, "exec-out", "screencap", "-p"], stdout=f, startupinfo=self.si)
 
                 self.log(f"Screenshot: {filename}")
                 self.after(0, lambda: messagebox.showinfo(self.T("msg_success"), f"Saved: {filename}"))
@@ -1009,7 +1044,8 @@ class TurboCoreApp(ctk.CTk):
     # --- HELPERS ---
     def get_device_name(self):
         try:
-            res = subprocess.run([self.adb_exe, "-s", self.target_device, "shell", "getprop ro.product.model"], capture_output=True, text=True, startupinfo=self.si, timeout=2)
+            with self.adb_lock:
+                res = subprocess.run([self.adb_exe, "-s", self.target_device, "shell", "getprop ro.product.model"], capture_output=True, text=True, startupinfo=self.si, timeout=2)
             return res.stdout.strip() if res.stdout.strip() else self.target_device
         except: return self.target_device
 
@@ -1040,7 +1076,9 @@ class TurboCoreApp(ctk.CTk):
 
                 try:
                     if os.path.exists(self.adb_exe):
-                        res = subprocess.run([self.adb_exe, "devices"], capture_output=True, text=True, startupinfo=self.si)
+                        with self.adb_lock:
+                            res = subprocess.run([self.adb_exe, "devices"], capture_output=True, text=True, startupinfo=self.si)
+
                         lines = [l for l in res.stdout.split('\n') if 'device' in l and 'List' not in l]
                         if lines:
                             new_id = lines[0].split()[0]
@@ -1062,7 +1100,8 @@ class TurboCoreApp(ctk.CTk):
                                 # V107 AUTO-RECONNECT
                                 if self.last_ip:
                                     self.debug_log(f"Auto-reconnecting to {self.last_ip}...")
-                                    subprocess.run([self.adb_exe, "connect", self.last_ip], startupinfo=self.si)
+                                    with self.adb_lock:
+                                        subprocess.run([self.adb_exe, "connect", self.last_ip], startupinfo=self.si)
 
                 except: pass
                 time.sleep(3)
@@ -1074,12 +1113,14 @@ class TurboCoreApp(ctk.CTk):
                 if self.target_device:
                     try:
                         # Battery
-                        res = subprocess.run([self.adb_exe, "-s", self.target_device, "shell", "dumpsys", "battery"], capture_output=True, text=True, startupinfo=self.si)
+                        with self.adb_lock:
+                            res = subprocess.run([self.adb_exe, "-s", self.target_device, "shell", "dumpsys", "battery"], capture_output=True, text=True, startupinfo=self.si)
                         level = re.search(r'level: (\d+)', res.stdout)
                         temp = re.search(r'temperature: (\d+)', res.stdout)
 
                         # Storage (df -h /data)
-                        res_st = subprocess.run([self.adb_exe, "-s", self.target_device, "shell", "df", "-h", "/data"], capture_output=True, text=True, startupinfo=self.si)
+                        with self.adb_lock:
+                            res_st = subprocess.run([self.adb_exe, "-s", self.target_device, "shell", "df", "-h", "/data"], capture_output=True, text=True, startupinfo=self.si)
                         avail = "N/A"
                         if res_st.stdout:
                             lines = res_st.stdout.split('\n')
@@ -1088,7 +1129,8 @@ class TurboCoreApp(ctk.CTk):
                                 if len(parts) >= 4: avail = parts[3]
 
                         # RAM (/proc/meminfo)
-                        res_mem = subprocess.run([self.adb_exe, "-s", self.target_device, "shell", "cat", "/proc/meminfo"], capture_output=True, text=True, startupinfo=self.si)
+                        with self.adb_lock:
+                            res_mem = subprocess.run([self.adb_exe, "-s", self.target_device, "shell", "cat", "/proc/meminfo"], capture_output=True, text=True, startupinfo=self.si)
                         ram_str = "RAM: N/A"
                         if res_mem.stdout:
                             mt = re.search(r'MemTotal:\s+(\d+)', res_mem.stdout)
@@ -1126,7 +1168,8 @@ class TurboCoreApp(ctk.CTk):
 
             try:
                 # 3. Execute
-                res = subprocess.run(cmd_final, cwd=self.bin_dir, shell=True, capture_output=True, text=True, startupinfo=self.si)
+                with self.adb_lock:
+                    res = subprocess.run(cmd_final, cwd=self.bin_dir, shell=True, capture_output=True, text=True, startupinfo=self.si)
 
                 output = res.stdout + res.stderr
                 if not output: output = "[No Output]"
@@ -1141,11 +1184,21 @@ class TurboCoreApp(ctk.CTk):
         # Optimized generic runner
         if show_success:
             def t():
-                subprocess.run([self.adb_exe] + cmd.split(), startupinfo=self.si)
+                with self.adb_lock:
+                    subprocess.run([self.adb_exe] + cmd.split(), startupinfo=self.si)
                 self.after(0, lambda: messagebox.showinfo(self.T("msg_success"), self.T("msg_cmd_success")))
             threading.Thread(target=t).start()
         else:
-             subprocess.Popen([self.adb_exe] + cmd.split(), startupinfo=self.si)
+             # V109: Generic runs should also be locked if they are subprocess.Popen/Run.
+             # However, the previous code used Popen for non-success cases. We change to Popen with lock?
+             # No, context manager with Popen only holds lock during creation, not execution.
+             # For safety in V109, we convert to run() to ensure serialization if it's a quick command.
+             # If it's long running, Popen is better but dangerous without lock.
+             # Given "show_success=False" is usually for "input tap", it's fast.
+             def t():
+                 with self.adb_lock:
+                     subprocess.run([self.adb_exe] + cmd.split(), startupinfo=self.si)
+             threading.Thread(target=t).start()
 
     def debug_log(self, msg):
         try:
