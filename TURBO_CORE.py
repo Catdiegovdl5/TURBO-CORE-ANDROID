@@ -283,6 +283,10 @@ MODOS_BAT = {
 class TurboCoreApp(ctk.CTk):
     def __init__(self):
         super().__init__()
+        # Escala Global para telas menores
+        ctk.set_window_scaling(0.9)
+        ctk.set_widget_scaling(0.9)
+
         self.current_lang = "PT"
         self.current_theme = "Studio Blue"
         self.accent_color = THEMES[self.current_theme]
@@ -293,7 +297,15 @@ class TurboCoreApp(ctk.CTk):
 
         self.debug_log(f"--- INICIANDO TURBO CORE V111 LINUX [{self.current_lang}] ---")
         self.title(self.T("app_title"))
-        self.geometry("900x750")
+
+        # Geometria e Centralização
+        w, h = 1050, 680
+        ws = self.winfo_screenwidth()
+        hs = self.winfo_screenheight()
+        x = (ws/2) - (w/2)
+        y = (hs/2) - (h/2)
+        self.geometry('%dx%d+%d+%d' % (w, h, x, y))
+
         self.resizable(False, True)
         self.configure(fg_color=COLOR_BG)
         self.target_device = ""
@@ -321,7 +333,8 @@ class TurboCoreApp(ctk.CTk):
             os.makedirs(self.caps_dir)
 
         try:
-            self.img_bg = ctk.CTkImage(Image.open(self.img_bg_path), size=(900, 750))
+            # Redimensionar fundo para o novo tamanho exato
+            self.img_bg = ctk.CTkImage(Image.open(self.img_bg_path), size=(1050, 680))
         except Exception as e:
             self.debug_log(f"Erro imagem fundo: {e}")
             self.img_bg = None
