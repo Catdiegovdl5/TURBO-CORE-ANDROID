@@ -1,0 +1,31 @@
+============================================================
+                 TURBO CORE SYSTEM v38
+          Performance Suite para Gamers e Power Users
+============================================================
+
+Obrigado por adquirir o TURBO CORE.
+Siga as instruções abaixo para o seu sistema operacional.
+
+[IMPORTANTE]
+Mantenha os arquivos de imagem (fundo_chip.jpg e fundo_lava.jpg)
+na mesma pasta do executável, ou o programa não abrirá.
+
+------------------------------------------------------------
+💻 PARA WINDOWS
+------------------------------------------------------------
+1. Instale os drivers ADB Universais (se ainda não tiver).
+2. Execute o arquivo "TURBO_CORE.exe" como Administrador.
+3. Conecte seu celular via cabo USB.
+4. Aguarde o status mudar para "ONLINE".
+
+------------------------------------------------------------
+🐧 PARA LINUX (Ubuntu, Mint, Debian, MX)
+------------------------------------------------------------
+1. Clique com o botão direito no arquivo "TURBO_CORE_Linux".
+2. Vá em Propriedades > Permissões.
+3. Marque "Permitir executar arquivo como programa".
+4. Clique duas vezes para abrir.
+
+------------------------------------------------------------
+SUPORTE TÉCNICO: 9919622diego@gmail.com
+© 2026 Turbo Core Dev Team. Todos os direitos reservados.

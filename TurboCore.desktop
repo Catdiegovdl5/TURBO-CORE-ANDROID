@@ -1,0 +1,8 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Turbo Core V111
+Exec=sudo python3 "/home/Diego/TURBO_CORE_Suite/TURBO CORE.py"
+Icon=/home/Diego/TURBO_CORE_Suite/icon.png
+Terminal=true
+Categories=Game;Utility;
