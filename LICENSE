@@ -1,0 +1,6 @@
+---
+THIRD-PARTY NOTICES:
+This software bundles and makes use of the following third-party tools:
+- Android Debug Bridge (ADB): Licensed under the Apache License, Version 2.0.
+- Scrcpy: Developed by Genymobile, licensed under the Apache License, Version 2.0.
+All rights to these tools belong to their respective owners.
