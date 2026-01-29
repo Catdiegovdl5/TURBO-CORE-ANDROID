@@ -32,3 +32,16 @@ O **Turbo Core** é uma ferramenta standalone desenvolvida para transformar a ex
 3. Abra o terminal na pasta onde baixou e dê permissão de execução:
    ```bash
    chmod +x TURBO_CORE_V111_LINUX
+Execute o programa (necessário para os atalhos de hardware):
+
+Bash
+sudo ./TURBO_CORE_V111_LINUX
+🛠️ Requisitos
+Cabo USB de boa qualidade.
+
+Depuração USB ativada nas Opções do Desenvolvedor do Android.
+
+No Linux: Certifique-se de ter o adb instalado (sudo apt install adb).
+
+🤝 Créditos
+Desenvolvedor: Catdiegovdl5
