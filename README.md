@@ -26,13 +26,11 @@ O **Turbo Core** é uma ferramenta standalone desenvolvida para transformar a ex
 3. Extraia e abra o `.exe`.
 4. Siga as instruções do manual em PDF incluso.
 
-### 🐧 No Linux (MX Linux, Ubuntu, Debian, etc):
-1. Vá na seção [RELEASES](https://github.com/Catdiegovdl5/TURBO-CORE-ANDROID/releases).
-2. Baixe o arquivo executável `TURBO_CORE_V111_LINUX`.
-3. Abra o terminal na pasta onde baixou e dê permissão de execução:
+### 🐧 No Linux (Instalação Rápida):
+1. Baixe a pasta do projeto ou o executável.
+2. Abra o terminal na pasta e rode o instalador:
    ```bash
-   chmod +x TURBO_CORE_V111_LINUX
-Execute o programa (necessário para os atalhos de hardware):
+   chmod +x instalar_linux.sh && ./instalar_linux.sh
 
 Bash
 sudo ./TURBO_CORE_V111_LINUX
