@@ -43,5 +43,11 @@ Depuração USB ativada nas Opções do Desenvolvedor do Android.
 
 No Linux: Certifique-se de ter o adb instalado (sudo apt install adb).
 
-🤝 Créditos
-Desenvolvedor: Catdiegovdl5
+---
+
+## 🤝 Créditos e Agradecimentos
+* **Desenvolvedor Principal:** Catdiegovdl5
+* **Colaborador:** Jules
+* **Ferramentas Integradas:**
+  * [ADB](https://developer.android.com/tools/adb) (Google - Apache 2.0)
+  * [Scrcpy](https://github.com/Genymobile/scrcpy) (Genymobile - Apache 2.0)
