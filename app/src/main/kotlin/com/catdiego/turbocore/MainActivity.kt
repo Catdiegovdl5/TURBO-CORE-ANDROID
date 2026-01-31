@@ -9,8 +9,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import rikka.shizuku.Shizuku
-import java.io.BufferedReader
-import java.io.InputStreamReader
+import java.io.OutputStream
 
 class MainActivity : ComponentActivity() {
 
@@ -18,7 +17,8 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         
         setContent {
-            val isShizukuReady = Shizuku.pingBinder()
+            // Verifica se o Shizuku está pronto
+            val isShizukuReady = try { Shizuku.pingBinder() } catch (e: Exception) { false }
             var statusMessage by remember { mutableStateOf(if (isShizukuReady) "SHIZUKU ATIVO ✅" else "SHIZUKU NÃO DETECTADO ❌") }
 
             Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
@@ -29,8 +29,8 @@ class MainActivity : ComponentActivity() {
 
                 Button(
                     onClick = {
-                        if (Shizuku.pingBinder()) {
-                            executarComandoShizuku("wm density 90")
+                        if (isShizukuReady) {
+                            executarComando("wm density 90\n")
                         }
                     },
                     modifier = Modifier.fillMaxWidth()
@@ -40,21 +40,29 @@ class MainActivity : ComponentActivity() {
 
                 Button(
                     onClick = {
-                        if (Shizuku.pingBinder()) {
-                            executarComandoShizuku("wm density reset")
+                        if (isShizukuReady) {
+                            executarComando("wm density reset\n")
                         }
                     },
                     modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
                 ) {
                     Text("RESETAR DPI")
                 }
+                
+                Text("\nNota: Certifique-se que o Shizuku está rodando no Android 16.", 
+                     style = MaterialTheme.typography.bodySmall)
             }
         }
     }
 
-    private fun executarComandoShizuku(comando: String) {
+    private fun executarComando(comando: String) {
         try {
-            Shizuku.newProcess(arrayOf("sh", "-c", comando), null, null)
+            // Nova forma pública de chamar processos no Shizuku 13+
+            val process = Shizuku.newProcess(arrayOf("sh"), null, null)
+            val os: OutputStream = process.outputStream
+            os.write(comando.toByteArray())
+            os.flush()
+            os.close()
         } catch (e: Exception) {
             e.printStackTrace()
         }
