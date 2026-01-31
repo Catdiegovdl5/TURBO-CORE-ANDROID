@@ -20,7 +20,18 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             var ramUsage by remember { mutableStateOf("Calculando...") }
-            val isShizukuReady = try { Shizuku.pingBinder() } catch (e: Exception) { false }
+            // Inicializa como false para evitar chamadas síncronas bloqueantes na thread principal durante o boot
+            var isShizukuReady by remember { mutableStateOf(false) }
+
+            // Verifica Shizuku de forma assíncrona e segura para evitar crash (mtkpower@impl errors)
+            LaunchedEffect(Unit) {
+                kotlinx.coroutines.delay(1000) // Pequeno delay para garantir estabilidade do sistema no boot
+                isShizukuReady = try {
+                    Shizuku.pingBinder()
+                } catch (e: Exception) {
+                    false
+                }
+            }
 
             // Monitor de RAM em tempo real (Tradução da lógica do seu Python)
             LaunchedEffect(Unit) {
