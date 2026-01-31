@@ -7,6 +7,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
@@ -36,32 +37,34 @@ import java.io.InputStreamReader
 
 class MainActivity : ComponentActivity() {
 
-    // DEFINIÇÃO DE NAVEGAÇÃO (TURBO CORE V115)
-    enum class Screen(val title: String, val icon: String) {
-        INICIO("🏠 INÍCIO", "🏠"),
-        DESEMPENHO("⚡ DESEMPENHO", "⚡"),
-        ECONOMIA("🔋 ECONOMIA", "🔋"),
-        COMPETITIVO("🏆 COMPETITIVO", "🏆"),
-        TERMINAL("💻 TERMINAL", "💻")
+    // DEFINIÇÃO DAS ABAS (NAVEGAÇÃO)
+    enum class Screen(val title: String) {
+        INICIO("🏠 INÍCIO"),
+        DESEMPENHO("⚡ DESEMPENHO"),
+        ECONOMIA("🔋 ECONOMIA"),
+        COMPETITIVO("🏆 COMPETITIVO"),
+        TERMINAL("💻 TERMINAL")
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            // --- ESTADO GLOBAL ---
+            // ESTADOS DA UI
             var currentScreen by remember { mutableStateOf(Screen.INICIO) }
             val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
             val scope = rememberCoroutineScope()
 
             var shizukuState by remember { mutableStateOf("Aguardando Sistema...") }
             var isShizukuReady by remember { mutableStateOf(false) }
-            var ramUsage by remember { mutableStateOf("Calculando...") }
+            var ramUsage by remember { mutableStateOf("Calculando RAM...") }
 
-            // --- ANTI-CRASH SYSTEM (ANDROID 16/MEDIATEK) ---
+            // --- PROTEÇÃO ANTI-CRASH (MEDIATEK / ANDROID 16) ---
+            // Delay inicial para garantir que o driver 'mtkpower@impl' não cause deadlock no boot.
             LaunchedEffect(Unit) {
-                delay(1500) // Delay Crítico para estabilização do Binder
+                delay(1500)
                 safeRun {
                     try {
+                        // Verifica se Shizuku está rodando
                         if (Shizuku.pingBinder()) {
                             if (Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED) {
                                 isShizukuReady = true
@@ -75,30 +78,30 @@ class MainActivity : ComponentActivity() {
                                 }
                             }
                         } else {
-                            shizukuState = "Shizuku não rodando"
+                            shizukuState = "Shizuku Não Rodando"
                         }
                     } catch (e: Exception) {
-                        Log.e("TurboCore", "Falha crítica ao conectar no Shizuku", e)
-                        shizukuState = "Erro Crítico: ${e.message}"
+                        shizukuState = "Erro no Binder: ${e.message}"
+                        Log.e("TurboCore", "Erro Shizuku", e)
                     }
                 }
             }
 
-            // Listener de Permissão
+            // LISTENER DE PERMISSÃO (ATUALIZAÇÃO EM TEMPO REAL)
             DisposableEffect(Unit) {
                 val listener = Shizuku.OnRequestPermissionResultListener { _, grantResult ->
                     if (grantResult == PackageManager.PERMISSION_GRANTED) {
                         isShizukuReady = true
                         shizukuState = "Conectado e Seguro"
                     } else {
-                        shizukuState = "Permissão Negada pelo Usuário"
+                        shizukuState = "Permissão Negada"
                     }
                 }
                 Shizuku.addRequestPermissionResultListener(listener)
                 onDispose { Shizuku.removeRequestPermissionResultListener(listener) }
             }
 
-            // Monitor de RAM
+            // MONITOR DE RAM (LOOP INFINITO)
             LaunchedEffect(Unit) {
                 while(true) {
                     safeRun {
@@ -108,36 +111,38 @@ class MainActivity : ComponentActivity() {
                             val avail = memInfo.first { it.contains("MemAvailable") }.filter { it.isDigit() }.toLong() / 1024
                             ramUsage = "RAM: ${total - avail}MB / ${total}MB"
                         } catch (e: Exception) {
-                            ramUsage = "RAM: Erro Leit."
+                            ramUsage = "RAM: Leitura Falhou"
                         }
                     }
                     delay(3000)
                 }
             }
 
-            // --- TEMA CYBERPUNK (TURBO CORE V115) ---
+            // --- TEMA CYBERPUNK ---
             val cyberpunkColors = darkColorScheme(
-                primary = Color(0xFF00E5FF), // Studio Blue
-                background = Color(0xFF0A0A0A), // Darkest
-                surface = Color(0xFF171717), // Panel Background
-                error = Color(0xFFb91c1c), // ROG Red
+                primary = Color(0xFF00E5FF), // Cyan
+                background = Color(0xFF0A0A0A), // Black
+                surface = Color(0xFF171717), // Dark Grey
+                error = Color(0xFFB91C1C), // Red
                 onPrimary = Color.Black,
                 onBackground = Color.White,
                 onSurface = Color.White
             )
 
             MaterialTheme(colorScheme = cyberpunkColors) {
-                // Background Box Global
+                // BOX PARA FUNDO DA TELA
                 Box(modifier = Modifier.fillMaxSize().background(Color(0xFF0A0A0A))) {
-                    // Imagem de Fundo (Placeholder XML ou Imagem Real)
+
+                    // IMAGEM DE FUNDO (SEM TRY-CATCH)
                     Image(
                         painter = painterResource(id = R.drawable.fundo_chip),
                         contentDescription = "Background",
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop,
-                        alpha = 0.2f // Transparência ajustada
+                        alpha = 0.2f
                     )
 
+                    // GAVETA DE NAVEGAÇÃO
                     ModalNavigationDrawer(
                         drawerState = drawerState,
                         drawerContent = {
@@ -147,7 +152,7 @@ class MainActivity : ComponentActivity() {
                             ) {
                                 Spacer(Modifier.height(24.dp))
                                 Text(
-                                    "TURBO CORE V115",
+                                    "TURBO CORE",
                                     modifier = Modifier.padding(start = 24.dp, bottom = 12.dp),
                                     style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
                                     color = Color(0xFF00E5FF)
@@ -158,7 +163,7 @@ class MainActivity : ComponentActivity() {
                                 Screen.values().forEach { screen ->
                                     NavigationDrawerItem(
                                         label = { Text(screen.title, fontWeight = FontWeight.Bold) },
-                                        selected = screen == currentScreen,
+                                        selected = currentScreen == screen,
                                         onClick = {
                                             currentScreen = screen
                                             scope.launch { drawerState.close() }
@@ -178,19 +183,14 @@ class MainActivity : ComponentActivity() {
                             topBar = {
                                 CenterAlignedTopAppBar(
                                     title = {
-                                        Text(currentScreen.title, // Título dinâmico da tela
+                                        Text(currentScreen.title,
                                             color = Color(0xFF00E5FF),
-                                            fontWeight = FontWeight.Bold,
-                                            style = MaterialTheme.typography.titleMedium
+                                            fontWeight = FontWeight.Bold
                                         )
                                     },
                                     navigationIcon = {
                                         IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                                            Icon(
-                                                imageVector = Icons.Filled.Menu,
-                                                contentDescription = "Menu",
-                                                tint = Color.White
-                                            )
+                                            Icon(Icons.Filled.Menu, "Menu", tint = Color.White)
                                         }
                                     },
                                     colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
@@ -207,20 +207,23 @@ class MainActivity : ComponentActivity() {
                                     .padding(16.dp)
                                     .verticalScroll(rememberScrollState())
                             ) {
+                                // AVISO SE SHIZUKU NÃO ESTIVER PRONTO
                                 if (!isShizukuReady) {
-                                    CyberCard(borderColor = Color(0xFFb91c1c)) {
-                                        Text("⚠️ SHIZUKU OFF", style = MaterialTheme.typography.titleLarge, color = Color(0xFFb91c1c))
+                                    CyberCard(borderColor = Color(0xFFB91C1C)) {
+                                        Text("⚠️ SHIZUKU OFF", style = MaterialTheme.typography.titleLarge, color = Color(0xFFB91C1C))
                                         Text("Status: $shizukuState", color = Color.White)
-                                        Text("O app requer Shizuku para funcionar.", color = Color.Gray)
+                                        Text("Verifique se o Shizuku está rodando.", color = Color.Gray)
                                     }
-                                } else {
-                                    when (currentScreen) {
-                                        Screen.INICIO -> DashboardScreen(ramUsage, shizukuState)
-                                        Screen.DESEMPENHO -> DesempenhoScreen()
-                                        Screen.ECONOMIA -> EconomiaScreen()
-                                        Screen.COMPETITIVO -> CompetitivoScreen()
-                                        Screen.TERMINAL -> TerminalScreen()
-                                    }
+                                    Spacer(Modifier.height(16.dp))
+                                }
+
+                                // ROTEAMENTO DAS TELAS
+                                when (currentScreen) {
+                                    Screen.INICIO -> InicioScreen(ramUsage, shizukuState)
+                                    Screen.DESEMPENHO -> DesempenhoScreen()
+                                    Screen.ECONOMIA -> EconomiaScreen()
+                                    Screen.COMPETITIVO -> CompetitivoScreen()
+                                    Screen.TERMINAL -> TerminalScreen()
                                 }
                             }
                         }
@@ -233,14 +236,14 @@ class MainActivity : ComponentActivity() {
     // --- TELAS ---
 
     @Composable
-    fun DashboardScreen(ramUsage: String, shizukuStatus: String) {
+    fun InicioScreen(ramUsage: String, shizukuStatus: String) {
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
             CyberCard {
-                Text("MONITORAMENTO", style = MaterialTheme.typography.labelMedium, color = Color.Gray)
+                Text("SISTEMA", style = MaterialTheme.typography.labelMedium, color = Color.Gray)
                 Text(ramUsage, style = MaterialTheme.typography.headlineMedium, color = Color(0xFF00E5FF))
             }
             CyberCard {
-                Text("STATUS SHIZUKU", style = MaterialTheme.typography.labelMedium, color = Color.Gray)
+                Text("SHIZUKU", style = MaterialTheme.typography.labelMedium, color = Color.Gray)
                 Text(shizukuStatus, style = MaterialTheme.typography.titleMedium, color = Color.Green)
             }
         }
@@ -250,20 +253,18 @@ class MainActivity : ComponentActivity() {
     fun DesempenhoScreen() {
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
             CyberButton("☢️ MODO BRUTO", Color(0xFFFF9800)) {
-                // Sem termal, 360p, 120dpi
+                // No Thermal, 360p, 120dpi
                 runShizukuCommand("settings put global power_manager_constants disable_thermal_control=true")
                 runShizukuCommand("wm size 360x800")
                 changeDpiSafely(120)
                 runShizukuCommand("am kill-all")
             }
-
             CyberButton("🚀 USUAL TURBO", Color(0xFF00E5FF)) {
                 runShizukuCommand("settings put global window_animation_scale 0.5")
                 runShizukuCommand("settings put global transition_animation_scale 0.5")
                 runShizukuCommand("settings put global animator_duration_scale 0.5")
             }
-
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(16.dp))
             ResetButton()
         }
     }
@@ -275,15 +276,13 @@ class MainActivity : ComponentActivity() {
                 runShizukuCommand("settings put global low_power 1")
                 runShizukuCommand("svc bluetooth disable")
             }
-
             CyberButton("🪫 ULTRA ECONOMIA (Pixel)", Color.DarkGray) {
                 runShizukuCommand("wm size 360x800")
                 changeDpiSafely(120)
                 runShizukuCommand("settings put system screen_brightness 0")
                 runShizukuCommand("am kill-all")
             }
-
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(16.dp))
             ResetButton()
         }
     }
@@ -291,16 +290,14 @@ class MainActivity : ComponentActivity() {
     @Composable
     fun CompetitivoScreen() {
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            CyberButton("🔥 GAMER ULTIMATE (No GOS)", Color(0xFFb91c1c)) {
+            CyberButton("🔥 GAMER ULTIMATE (No GOS)", Color(0xFFB91C1C)) {
                 runShizukuCommand("pm disable-user --user 0 com.samsung.android.game.gos")
             }
-
             CyberButton("🎯 SENSI FREE FIRE (Capa)", Color(0xFF00E5FF)) {
                 changeDpiSafely(90)
                 runShizukuCommand("settings put system pointer_speed 7")
             }
-
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(16.dp))
             ResetButton()
         }
     }
@@ -315,7 +312,7 @@ class MainActivity : ComponentActivity() {
             OutlinedTextField(
                 value = command,
                 onValueChange = { command = it },
-                label = { Text("Digite um comando (ex: wm size)") },
+                label = { Text("Digite comando Shell", color = Color.Gray) },
                 modifier = Modifier.fillMaxWidth(),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = Color(0xFF00E5FF),
@@ -325,14 +322,14 @@ class MainActivity : ComponentActivity() {
                 ),
                 keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Go),
                 keyboardActions = KeyboardActions(onGo = {
-                    scope.launch { output = runShizukuCommandWithOutput(command) }
+                    scope.launch { output = runShizukuWithOutput(command) }
                 })
             )
 
             CyberButton("EXECUTAR", Color(0xFF00E5FF)) {
                 scope.launch {
                     output = "Executando..."
-                    output = runShizukuCommandWithOutput(command)
+                    output = runShizukuWithOutput(command)
                 }
             }
 
@@ -344,6 +341,7 @@ class MainActivity : ComponentActivity() {
                 Text(
                     text = output,
                     color = Color.Green,
+                    fontSize = 12.sp,
                     fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
                     modifier = Modifier.padding(16.dp).verticalScroll(rememberScrollState())
                 )
@@ -351,7 +349,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    // --- COMPONENTES UI REUTILIZÁVEIS ---
+    // --- COMPONENTES AUXILIARES ---
 
     @Composable
     fun ResetButton() {
@@ -396,26 +394,25 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    // --- LOGIC UTILS ---
+    // --- LÓGICA DE SISTEMA (REFLEXÃO E SEGURANÇA) ---
 
     private inline fun safeRun(block: () -> Unit) {
         try {
             block()
         } catch (e: Exception) {
-            Log.e("TurboCore", "Erro capturado em safeRun", e)
+            Log.e("TurboCore", "Erro Seguro: ${e.message}")
         }
     }
 
     private fun changeDpiSafely(density: Int?) {
-        val command = if (density == null) {
-            "wm density reset"
-        } else {
+        val cmd = if (density == null) "wm density reset" else {
             if (density < 72 || density > 640) return
             "wm density $density"
         }
-        runShizukuCommand(command)
+        runShizukuCommand(cmd)
     }
 
+    // Executa comando (Fire-and-Forget)
     private fun runShizukuCommand(command: String) {
         safeRun {
             val shizukuClass = rikka.shizuku.Shizuku::class.java
@@ -430,7 +427,8 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private suspend fun runShizukuCommandWithOutput(command: String): String = withContext(Dispatchers.IO) {
+    // Executa comando e retorna saída (Para o Terminal)
+    private suspend fun runShizukuWithOutput(command: String): String = withContext(Dispatchers.IO) {
         try {
             val shizukuClass = rikka.shizuku.Shizuku::class.java
             val newProcessMethod = shizukuClass.getDeclaredMethod(
@@ -449,16 +447,16 @@ class MainActivity : ComponentActivity() {
                 output.append(line).append("\n")
             }
 
-            // Verifica erros também
+            // Captura erros também
             val errorReader = BufferedReader(InputStreamReader(process.errorStream))
             while (errorReader.readLine().also { line = it } != null) {
-                output.append("ERRO: ").append(line).append("\n")
+                output.append("[ERRO] ").append(line).append("\n")
             }
 
             process.waitFor()
-            output.toString().ifEmpty { "Comando executado (sem saída)." }
+            output.toString().ifEmpty { "Sucesso (Sem Saída Visual)" }
         } catch (e: Exception) {
-            "Erro ao executar: ${e.message}"
+            "Falha de Execução: ${e.message}"
         }
     }
 }
