@@ -36,12 +36,12 @@ import java.io.InputStreamReader
 @OptIn(ExperimentalMaterial3Api::class)
 class MainActivity : ComponentActivity() {
 
-    enum class Screen(val title: String, val icon: String) {
-        INICIO("🏠 INÍCIO", "🏠"),
-        DESEMPENHO("⚡ DESEMPENHO", "⚡"),
-        ECONOMIA("🔋 ECONOMIA", "🔋"),
-        COMPETITIVO("🏆 COMPETITIVO", "🏆"),
-        TERMINAL("💻 TERMINAL", "💻")
+    enum class Screen(val title: String) {
+        INICIO("🏠 INÍCIO"),
+        DESEMPENHO("⚡ DESEMPENHO"),
+        ECONOMIA("🔋 ECONOMIA"),
+        COMPETITIVO("🏆 COMPETITIVO"),
+        TERMINAL("💻 TERMINAL")
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -119,16 +119,14 @@ class MainActivity : ComponentActivity() {
 
             MaterialTheme(colorScheme = cyberpunkColors) {
                 Box(modifier = Modifier.fillMaxSize().background(Color(0xFF0A0A0A))) {
-                    // Tenta carregar imagem se existir
-                    try {
-                        Image(
-                            painter = painterResource(id = R.drawable.fundo_chip),
-                            contentDescription = "Background",
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop,
-                            alpha = 0.2f
-                        )
-                    } catch (e: Exception) { }
+                    // CORREÇÃO: Removemos o try-catch ao redor da Image
+                    Image(
+                        painter = painterResource(id = R.drawable.fundo_chip),
+                        contentDescription = "Background",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop,
+                        alpha = 0.2f
+                    )
 
                     ModalNavigationDrawer(
                         drawerState = drawerState,
