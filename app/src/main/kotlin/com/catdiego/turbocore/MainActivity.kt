@@ -78,29 +78,40 @@ class MainActivity : ComponentActivity() {
      * @param density Valor da DPI (72-640) ou null para resetar ao padrão de fábrica.
      */
     private fun changeDpiSafely(density: Int?) {
+        val command = if (density == null) {
+            "wm density reset"
+        } else {
+            // Validação de Segurança: Impede valores que podem brickar a UI
+            if (density < 72 || density > 640) return
+            "wm density $density"
+        }
+        runShizuku(command)
+    }
+
+    /**
+     * Executa comandos shell via Shizuku.
+     * Utiliza reflexão para acessar Shizuku.newProcess caso esteja inacessível diretamente (private/hidden).
+     * Isso garante compatibilidade mesmo se a API estiver oculta no ambiente de compilação.
+     */
+    private fun runShizuku(command: String) {
         try {
             if (!Shizuku.pingBinder()) return
 
-            val command = if (density == null) {
-                "wm density reset"
-            } else {
-                // Validação de Segurança: Impede valores que podem brickar a UI
-                if (density < 72 || density > 640) return
-                "wm density $density"
-            }
+            // Tenta invocar Shizuku.newProcess via reflexão.
+            // Usa getDeclaredMethod e setAccessible para garantir acesso mesmo se o método for privado/protected.
+            val shizukuClass = rikka.shizuku.Shizuku::class.java
+            val newProcessMethod = shizukuClass.getDeclaredMethod(
+                "newProcess",
+                Array<String>::class.java,
+                Array<String>::class.java,
+                String::class.java
+            )
+            newProcessMethod.isAccessible = true
+            newProcessMethod.invoke(null, arrayOf("sh", "-c", command), null, null)
 
-            Shizuku.newProcess(arrayOf("sh", "-c", command), null, null)
         } catch (e: Exception) {
             e.printStackTrace()
+            // Em produção, deve-se logar ou notificar o erro.
         }
-    }
-
-    private fun runShizuku(command: String) {
-        try {
-            if (Shizuku.pingBinder()) {
-                // Shizuku 13+ exige que o comando seja passado como array
-                Shizuku.newProcess(arrayOf("sh", "-c", command), null, null)
-            }
-        } catch (e: Exception) { e.printStackTrace() }
     }
 }
