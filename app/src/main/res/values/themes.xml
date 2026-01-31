@@ -1,4 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.Material3.DayNight.NoActionBar" parent="android:Theme.Material.Light.NoActionBar" />
+    <!-- TEMA BLINDADO: Usa componentes nativos do Android para evitar crash de inflação -->
+    <style name="Theme.TurboCore" parent="android:Theme.Material.NoActionBar">
+        <item name="android:statusBarColor">#000000</item>
+        <item name="android:navigationBarColor">#000000</item>
+        <item name="android:windowBackground">#121212</item>
+    </style>
 </resources>

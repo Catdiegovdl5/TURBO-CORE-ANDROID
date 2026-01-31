@@ -1,6 +1,8 @@
 package com.catdiego.turbocore
 
+import android.content.pm.PackageManager
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
@@ -11,6 +13,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.delay
 import rikka.shizuku.Shizuku
 import java.io.File
 
@@ -19,68 +22,146 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            var ramUsage by remember { mutableStateOf("Calculando...") }
-            // Inicializa como false para evitar chamadas síncronas bloqueantes na thread principal durante o boot
+            // UI State
+            var shizukuState by remember { mutableStateOf("Aguardando Sistema...") }
             var isShizukuReady by remember { mutableStateOf(false) }
+            var ramUsage by remember { mutableStateOf("Calculando...") }
 
-            // Verifica Shizuku de forma assíncrona e segura para evitar crash (mtkpower@impl errors)
+            // BLINDAGEM CONTRA CRASH EM ANDROID 16 (MediaTek)
+            // O driver mtkpower@impl pode causar deadlock se o binder for chamado muito cedo na main thread.
+            // Solução: Delay estratégico de 1500ms fora da thread principal.
             LaunchedEffect(Unit) {
-                kotlinx.coroutines.delay(1000) // Pequeno delay para garantir estabilidade do sistema no boot
-                isShizukuReady = try {
-                    Shizuku.pingBinder()
-                } catch (e: Exception) {
-                    false
-                }
-            }
-
-            // Monitor de RAM em tempo real (Tradução da lógica do seu Python)
-            LaunchedEffect(Unit) {
-                while(true) {
+                delay(1500) // Delay Crítico para estabilização do Binder
+                safeRun {
                     try {
-                        val memInfo = File("/proc/meminfo").readLines()
-                        val total = memInfo.first { it.contains("MemTotal") }.filter { it.isDigit() }.toLong() / 1024
-                        val avail = memInfo.first { it.contains("MemAvailable") }.filter { it.isDigit() }.toLong() / 1024
-                        ramUsage = "RAM: ${total - avail}MB / ${total}MB"
-                    } catch (e: Exception) { ramUsage = "RAM: Erro na leitura" }
-                    kotlinx.coroutines.delay(3000)
-                }
-            }
-
-            Column(modifier = Modifier.fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState())) {
-                Text("TURBO CORE V111", style = MaterialTheme.typography.headlineLarge, color = Color(0xFF00E5FF))
-                
-                // Card de Status
-                Card(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(ramUsage, color = Color.Green)
-                        Text(if(isShizukuReady) "SISTEMA PRONTO ✅" else "SHIZUKU NECESSÁRIO ❌", 
-                             color = if(isShizukuReady) Color.Cyan else Color.Red)
+                        if (Shizuku.pingBinder()) {
+                            // Verifica permissão (Shizuku.checkSelfPermission() é mais seguro que checkSelfPermission(Context))
+                            if (Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED) {
+                                isShizukuReady = true
+                                shizukuState = "Conectado e Seguro"
+                            } else {
+                                if (Shizuku.shouldShowRequestPermissionRationale()) {
+                                    shizukuState = "Permissão Negada"
+                                } else {
+                                    Shizuku.requestPermission(0)
+                                    shizukuState = "Solicitando Acesso..."
+                                }
+                            }
+                        } else {
+                            shizukuState = "Shizuku não rodando"
+                        }
+                    } catch (e: Exception) {
+                        Log.e("TurboCore", "Falha crítica ao conectar no Shizuku", e)
+                        shizukuState = "Erro Crítico: ${e.message}"
                     }
                 }
-
-                Text("MODOS COMPETITIVOS", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 16.dp))
-                
-                // Botão FF SENSI (O seu MODO CAPA do Python)
-                Button(
-                    onClick = { runShizuku("wm density 90; settings put system pointer_speed 7") },
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFb91c1c))
-                ) { Text("🎯 FF SENSI (DPI 90)") }
-
-                // Botão FF LISO (O seu MODO 540p do Python)
-                Button(
-                    onClick = { runShizuku("wm size 540x960; wm density 160; am kill-all") },
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
-                ) { Text("🚀 FF LISO (PERFORMANCE)") }
-
-                Text("SISTEMA", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 16.dp))
-
-                Button(
-                    onClick = { runShizuku("wm size reset; wm density reset; settings put global window_animation_scale 1") },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray)
-                ) { Text("🔄 RESTAURAR PADRÃO") }
             }
+
+            // Listener de Permissão para atualizar UI instantaneamente
+            DisposableEffect(Unit) {
+                val listener = Shizuku.OnRequestPermissionResultListener { requestCode, grantResult ->
+                    if (grantResult == PackageManager.PERMISSION_GRANTED) {
+                        isShizukuReady = true
+                        shizukuState = "Conectado e Seguro"
+                    } else {
+                        shizukuState = "Permissão Negada pelo Usuário"
+                    }
+                }
+                Shizuku.addRequestPermissionResultListener(listener)
+                onDispose { Shizuku.removeRequestPermissionResultListener(listener) }
+            }
+
+             // Monitor de RAM
+            LaunchedEffect(Unit) {
+                while(true) {
+                    safeRun {
+                        try {
+                            val memInfo = File("/proc/meminfo").readLines()
+                            val total = memInfo.first { it.contains("MemTotal") }.filter { it.isDigit() }.toLong() / 1024
+                            val avail = memInfo.first { it.contains("MemAvailable") }.filter { it.isDigit() }.toLong() / 1024
+                            ramUsage = "RAM: ${total - avail}MB / ${total}MB"
+                        } catch (e: Exception) {
+                            ramUsage = "RAM: Erro Leit."
+                        }
+                    }
+                    delay(3000)
+                }
+            }
+
+            // UI Layout
+            MaterialTheme(
+                colorScheme = darkColorScheme(
+                    primary = Color(0xFF00E5FF),
+                    background = Color(0xFF121212),
+                    surface = Color(0xFF1E1E1E)
+                )
+            ) {
+                Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+                    Column(modifier = Modifier.padding(16.dp).verticalScroll(rememberScrollState())) {
+                        Text("TURBO CORE V112", style = MaterialTheme.typography.headlineLarge, color = Color(0xFF00E5FF))
+
+                        Card(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Text(ramUsage, color = Color.Green)
+                                Text("STATUS: $shizukuState",
+                                     color = if(isShizukuReady) Color.Cyan else Color.Red)
+                            }
+                        }
+
+                        if (isShizukuReady) {
+                             Text("MODOS COMPETITIVOS", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 16.dp))
+                
+                            // Botão FF SENSI
+                            Button(
+                                onClick = {
+                                    changeDpiSafely(90)
+                                    runShizukuCommand("settings put system pointer_speed 7")
+                                },
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFb91c1c))
+                            ) { Text("🎯 FF SENSI (DPI 90)") }
+
+                            // Botão FF LISO
+                            Button(
+                                onClick = {
+                                    runShizukuCommand("wm size 540x960")
+                                    changeDpiSafely(160)
+                                    runShizukuCommand("am kill-all")
+                                },
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                            ) { Text("🚀 FF LISO (PERFORMANCE)") }
+
+                            Text("SISTEMA", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 16.dp))
+
+                            Button(
+                                onClick = {
+                                    runShizukuCommand("wm size reset")
+                                    runShizukuCommand("wm density reset")
+                                    runShizukuCommand("settings put global window_animation_scale 1")
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray)
+                            ) { Text("🔄 RESTAURAR PADRÃO") }
+                        } else {
+                            Text("Aguardando Shizuku... Certifique-se que ele está rodando.", color = Color.Gray, modifier = Modifier.padding(top=16.dp))
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Wrapper de segurança para evitar crashes não tratados.
+     */
+    private inline fun safeRun(block: () -> Unit) {
+        try {
+            block()
+        } catch (e: Exception) {
+            Log.e("TurboCore", "Erro capturado em safeRun", e)
         }
     }
 
@@ -96,20 +177,15 @@ class MainActivity : ComponentActivity() {
             if (density < 72 || density > 640) return
             "wm density $density"
         }
-        runShizuku(command)
+        runShizukuCommand(command)
     }
 
     /**
-     * Executa comandos shell via Shizuku.
-     * Utiliza reflexão para acessar Shizuku.newProcess caso esteja inacessível diretamente (private/hidden).
-     * Isso garante compatibilidade mesmo se a API estiver oculta no ambiente de compilação.
+     * Executa comandos shell via Shizuku usando Reflexão para compatibilidade máxima.
      */
-    private fun runShizuku(command: String) {
-        try {
-            if (!Shizuku.pingBinder()) return
-
+    private fun runShizukuCommand(command: String) {
+        safeRun {
             // Tenta invocar Shizuku.newProcess via reflexão.
-            // Usa getDeclaredMethod e setAccessible para garantir acesso mesmo se o método for privado/protected.
             val shizukuClass = rikka.shizuku.Shizuku::class.java
             val newProcessMethod = shizukuClass.getDeclaredMethod(
                 "newProcess",
@@ -119,10 +195,6 @@ class MainActivity : ComponentActivity() {
             )
             newProcessMethod.isAccessible = true
             newProcessMethod.invoke(null, arrayOf("sh", "-c", command), null, null)
-
-        } catch (e: Exception) {
-            e.printStackTrace()
-            // Em produção, deve-se logar ou notificar o erro.
         }
     }
 }

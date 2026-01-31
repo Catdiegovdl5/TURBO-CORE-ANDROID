@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Permite que o app enxergue o gerenciador do Shizuku no Android 11+ -->
+
+    <!-- PERMISSÕES CRÍTICAS PARA SHIZUKU NO ANDROID 14+ / MEDIATEK -->
+    <uses-permission android:name="android.permission.INTERACT_ACROSS_USERS" />
+
+    <!-- VISIBILIDADE DO PACOTE SHIZUKU (ANDROID 11+) -->
     <queries>
         <package android:name="moe.shizuku.privileged.api" />
     </queries>
@@ -9,17 +13,22 @@
         android:allowBackup="true"
         android:icon="@android:drawable/sym_def_app_icon"
         android:label="Turbo Core"
-        android:theme="@style/Theme.Material3.DayNight.NoActionBar">
+        android:roundIcon="@android:drawable/sym_def_app_icon"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.TurboCore">
         
+        <!-- PROVIDER DO SHIZUKU OBRIGATÓRIO -->
         <provider
             android:name="rikka.shizuku.ShizukuProvider"
             android:authorities="${applicationId}.shizuku"
             android:enabled="true"
-            android:exported="false" />
+            android:exported="true"
+            android:multiprocess="false" />
 
         <activity
             android:name=".MainActivity"
-            android:exported="true">
+            android:exported="true"
+            android:theme="@style/Theme.TurboCore">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
