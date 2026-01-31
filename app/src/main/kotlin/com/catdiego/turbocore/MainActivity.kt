@@ -9,6 +9,8 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
@@ -20,28 +22,34 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import rikka.shizuku.Shizuku
+import java.io.BufferedReader
 import java.io.File
+import java.io.InputStreamReader
 
 class MainActivity : ComponentActivity() {
 
-    // Definição das Telas/Abas
-    enum class Screen(val title: String) {
-        DASHBOARD("🖥️ DASHBOARD"),
-        COMPETITIVO("🎮 COMPETITIVO"),
-        BATERIA("🔋 BATERIA"),
-        SISTEMA("⚙️ SISTEMA")
+    // DEFINIÇÃO DE NAVEGAÇÃO (TURBO CORE V115)
+    enum class Screen(val title: String, val icon: String) {
+        INICIO("🏠 INÍCIO", "🏠"),
+        DESEMPENHO("⚡ DESEMPENHO", "⚡"),
+        ECONOMIA("🔋 ECONOMIA", "🔋"),
+        COMPETITIVO("🏆 COMPETITIVO", "🏆"),
+        TERMINAL("💻 TERMINAL", "💻")
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             // --- ESTADO GLOBAL ---
-            var currentScreen by remember { mutableStateOf(Screen.DASHBOARD) }
+            var currentScreen by remember { mutableStateOf(Screen.INICIO) }
             val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
             val scope = rememberCoroutineScope()
 
@@ -51,7 +59,7 @@ class MainActivity : ComponentActivity() {
 
             // --- ANTI-CRASH SYSTEM (ANDROID 16/MEDIATEK) ---
             LaunchedEffect(Unit) {
-                delay(1500) // Delay Crítico para estabilização do Binder (MtkPower)
+                delay(1500) // Delay Crítico para estabilização do Binder
                 safeRun {
                     try {
                         if (Shizuku.pingBinder()) {
@@ -107,7 +115,7 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            // --- TEMA CYBERPUNK ---
+            // --- TEMA CYBERPUNK (TURBO CORE V115) ---
             val cyberpunkColors = darkColorScheme(
                 primary = Color(0xFF00E5FF), // Studio Blue
                 background = Color(0xFF0A0A0A), // Darkest
@@ -121,16 +129,15 @@ class MainActivity : ComponentActivity() {
             MaterialTheme(colorScheme = cyberpunkColors) {
                 // Background Box Global
                 Box(modifier = Modifier.fillMaxSize().background(Color(0xFF0A0A0A))) {
-                    // Imagem de Fundo
+                    // Imagem de Fundo (Placeholder XML ou Imagem Real)
                     Image(
                         painter = painterResource(id = R.drawable.fundo_chip),
                         contentDescription = "Background",
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop,
-                        alpha = 0.3f // Leve transparência para não ofuscar o texto
+                        alpha = 0.2f // Transparência ajustada
                     )
 
-                    // Navigation Drawer
                     ModalNavigationDrawer(
                         drawerState = drawerState,
                         drawerContent = {
@@ -140,7 +147,7 @@ class MainActivity : ComponentActivity() {
                             ) {
                                 Spacer(Modifier.height(24.dp))
                                 Text(
-                                    "TURBO CORE",
+                                    "TURBO CORE V115",
                                     modifier = Modifier.padding(start = 24.dp, bottom = 12.dp),
                                     style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
                                     color = Color(0xFF00E5FF)
@@ -150,7 +157,7 @@ class MainActivity : ComponentActivity() {
 
                                 Screen.values().forEach { screen ->
                                     NavigationDrawerItem(
-                                        label = { Text(screen.title, fontWeight = FontWeight.SemiBold) },
+                                        label = { Text(screen.title, fontWeight = FontWeight.Bold) },
                                         selected = screen == currentScreen,
                                         onClick = {
                                             currentScreen = screen
@@ -160,8 +167,7 @@ class MainActivity : ComponentActivity() {
                                         colors = NavigationDrawerItemDefaults.colors(
                                             selectedContainerColor = Color(0xFF00E5FF).copy(alpha = 0.15f),
                                             selectedTextColor = Color(0xFF00E5FF),
-                                            unselectedTextColor = Color.Gray,
-                                            unselectedContainerColor = Color.Transparent
+                                            unselectedTextColor = Color.Gray
                                         )
                                     )
                                 }
@@ -172,10 +178,10 @@ class MainActivity : ComponentActivity() {
                             topBar = {
                                 CenterAlignedTopAppBar(
                                     title = {
-                                        Text("TURBO CORE",
+                                        Text(currentScreen.title, // Título dinâmico da tela
                                             color = Color(0xFF00E5FF),
                                             fontWeight = FontWeight.Bold,
-                                            style = MaterialTheme.typography.titleLarge
+                                            style = MaterialTheme.typography.titleMedium
                                         )
                                     },
                                     navigationIcon = {
@@ -188,11 +194,11 @@ class MainActivity : ComponentActivity() {
                                         }
                                     },
                                     colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                                        containerColor = Color.Transparent // Transparente para ver o fundo
+                                        containerColor = Color.Transparent
                                     )
                                 )
                             },
-                            containerColor = Color.Transparent // Transparente para ver o fundo
+                            containerColor = Color.Transparent
                         ) { innerPadding ->
                             Column(
                                 modifier = Modifier
@@ -205,14 +211,15 @@ class MainActivity : ComponentActivity() {
                                     CyberCard(borderColor = Color(0xFFb91c1c)) {
                                         Text("⚠️ SHIZUKU OFF", style = MaterialTheme.typography.titleLarge, color = Color(0xFFb91c1c))
                                         Text("Status: $shizukuState", color = Color.White)
-                                        Text("O app requer Shizuku para aplicar otimizações.", color = Color.Gray)
+                                        Text("O app requer Shizuku para funcionar.", color = Color.Gray)
                                     }
                                 } else {
                                     when (currentScreen) {
-                                        Screen.DASHBOARD -> DashboardScreen(ramUsage, shizukuState)
+                                        Screen.INICIO -> DashboardScreen(ramUsage, shizukuState)
+                                        Screen.DESEMPENHO -> DesempenhoScreen()
+                                        Screen.ECONOMIA -> EconomiaScreen()
                                         Screen.COMPETITIVO -> CompetitivoScreen()
-                                        Screen.BATERIA -> BateriaScreen()
-                                        Screen.SISTEMA -> SistemaScreen()
+                                        Screen.TERMINAL -> TerminalScreen()
                                     }
                                 }
                             }
@@ -233,26 +240,15 @@ class MainActivity : ComponentActivity() {
                 Text(ramUsage, style = MaterialTheme.typography.headlineMedium, color = Color(0xFF00E5FF))
             }
             CyberCard {
-                Text("SHIZUKU CORE", style = MaterialTheme.typography.labelMedium, color = Color.Gray)
+                Text("STATUS SHIZUKU", style = MaterialTheme.typography.labelMedium, color = Color.Gray)
                 Text(shizukuStatus, style = MaterialTheme.typography.titleMedium, color = Color.Green)
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            CyberButton("🧹 Limpar RAM (Kill-All)", Color(0xFF00E5FF)) {
-                runShizukuCommand("am kill-all")
             }
         }
     }
 
     @Composable
-    fun CompetitivoScreen() {
+    fun DesempenhoScreen() {
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            Text("MODOS DE PERFORMANCE", color = Color.White, style = MaterialTheme.typography.titleMedium)
-
-            CyberButton("🔥 Gamer Ultimate (No GOS)", Color(0xFFb91c1c)) {
-                // Desativa GOS
-                runShizukuCommand("pm disable-user --user 0 com.samsung.android.game.gos")
-            }
-
             CyberButton("☢️ MODO BRUTO", Color(0xFFFF9800)) {
                 // Sem termal, 360p, 120dpi
                 runShizukuCommand("settings put global power_manager_constants disable_thermal_control=true")
@@ -261,64 +257,115 @@ class MainActivity : ComponentActivity() {
                 runShizukuCommand("am kill-all")
             }
 
-            CyberButton("⚡ Usual Turbo", Color(0xFF00E5FF)) {
-                // Animações 0.5x
+            CyberButton("🚀 USUAL TURBO", Color(0xFF00E5FF)) {
                 runShizukuCommand("settings put global window_animation_scale 0.5")
                 runShizukuCommand("settings put global transition_animation_scale 0.5")
+                runShizukuCommand("settings put global animator_duration_scale 0.5")
             }
 
-            CyberButton("🚀 FF LISO (540p)", Color(0xFF00E5FF)) {
-                runShizukuCommand("wm size 540x960")
-                changeDpiSafely(160)
-                runShizukuCommand("am kill-all")
-            }
+            Spacer(Modifier.height(24.dp))
+            ResetButton()
         }
     }
 
     @Composable
-    fun BateriaScreen() {
+    fun EconomiaScreen() {
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            Text("GERENCIAMENTO DE ENERGIA", color = Color.White, style = MaterialTheme.typography.titleMedium)
-
-            CyberButton("🔋 Economia Normal", Color.Green) {
+            CyberButton("🔋 SUPER ECONOMIA", Color(0xFF4CAF50)) {
                 runShizukuCommand("settings put global low_power 1")
-            }
-
-            CyberButton("📉 Super Economia", Color(0xFF4CAF50)) {
-                runShizukuCommand("wm size 576x1280")
-                changeDpiSafely(240)
                 runShizukuCommand("svc bluetooth disable")
             }
 
-            CyberButton("🪫 Ultra Economia (Pixel)", Color.DarkGray) {
+            CyberButton("🪫 ULTRA ECONOMIA (Pixel)", Color.DarkGray) {
                 runShizukuCommand("wm size 360x800")
                 changeDpiSafely(120)
                 runShizukuCommand("settings put system screen_brightness 0")
                 runShizukuCommand("am kill-all")
             }
+
+            Spacer(Modifier.height(24.dp))
+            ResetButton()
         }
     }
 
     @Composable
-    fun SistemaScreen() {
+    fun CompetitivoScreen() {
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            Text("FERRAMENTAS DO SISTEMA", color = Color.White, style = MaterialTheme.typography.titleMedium)
-
-            CyberButton("🔄 Restaurar Original", Color.Gray) {
-                runShizukuCommand("wm size reset")
-                changeDpiSafely(null) // Reset DPI
-                runShizukuCommand("settings put global low_power 0")
-                runShizukuCommand("pm enable com.samsung.android.game.gos")
-                runShizukuCommand("settings put global window_animation_scale 1") // Reset padrão
+            CyberButton("🔥 GAMER ULTIMATE (No GOS)", Color(0xFFb91c1c)) {
+                runShizukuCommand("pm disable-user --user 0 com.samsung.android.game.gos")
             }
 
-            CyberButton("🧹 Limpar RAM", Color(0xFF00E5FF)) {
-                runShizukuCommand("am kill-all")
+            CyberButton("🎯 SENSI FREE FIRE (Capa)", Color(0xFF00E5FF)) {
+                changeDpiSafely(90)
+                runShizukuCommand("settings put system pointer_speed 7")
+            }
+
+            Spacer(Modifier.height(24.dp))
+            ResetButton()
+        }
+    }
+
+    @Composable
+    fun TerminalScreen() {
+        var command by remember { mutableStateOf("") }
+        var output by remember { mutableStateOf("Aguardando comando...") }
+        val scope = rememberCoroutineScope()
+
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            OutlinedTextField(
+                value = command,
+                onValueChange = { command = it },
+                label = { Text("Digite um comando (ex: wm size)") },
+                modifier = Modifier.fillMaxWidth(),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Color(0xFF00E5FF),
+                    unfocusedBorderColor = Color.Gray,
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White
+                ),
+                keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Go),
+                keyboardActions = KeyboardActions(onGo = {
+                    scope.launch { output = runShizukuCommandWithOutput(command) }
+                })
+            )
+
+            CyberButton("EXECUTAR", Color(0xFF00E5FF)) {
+                scope.launch {
+                    output = "Executando..."
+                    output = runShizukuCommandWithOutput(command)
+                }
+            }
+
+            Card(
+                modifier = Modifier.fillMaxWidth().height(300.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF171717)),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color.Gray)
+            ) {
+                Text(
+                    text = output,
+                    color = Color.Green,
+                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                    modifier = Modifier.padding(16.dp).verticalScroll(rememberScrollState())
+                )
             }
         }
     }
 
-    // --- COMPONENTES UI CUSTOMIZADOS ---
+    // --- COMPONENTES UI REUTILIZÁVEIS ---
+
+    @Composable
+    fun ResetButton() {
+        CyberButton("🔄 RESETAR TUDO", Color.Gray) {
+            runShizukuCommand("wm size reset")
+            changeDpiSafely(null)
+            runShizukuCommand("settings put global low_power 0")
+            runShizukuCommand("pm enable com.samsung.android.game.gos")
+            runShizukuCommand("settings put global window_animation_scale 1")
+            runShizukuCommand("settings put global transition_animation_scale 1")
+            runShizukuCommand("settings put global animator_duration_scale 1")
+            runShizukuCommand("settings put global power_manager_constants disable_thermal_control=false")
+        }
+    }
 
     @Composable
     fun CyberCard(borderColor: Color = Color(0xFF333333), content: @Composable ColumnScope.() -> Unit) {
@@ -380,6 +427,38 @@ class MainActivity : ComponentActivity() {
             )
             newProcessMethod.isAccessible = true
             newProcessMethod.invoke(null, arrayOf("sh", "-c", command), null, null)
+        }
+    }
+
+    private suspend fun runShizukuCommandWithOutput(command: String): String = withContext(Dispatchers.IO) {
+        try {
+            val shizukuClass = rikka.shizuku.Shizuku::class.java
+            val newProcessMethod = shizukuClass.getDeclaredMethod(
+                "newProcess",
+                Array<String>::class.java,
+                Array<String>::class.java,
+                String::class.java
+            )
+            newProcessMethod.isAccessible = true
+            val process = newProcessMethod.invoke(null, arrayOf("sh", "-c", command), null, null) as Process
+
+            val reader = BufferedReader(InputStreamReader(process.inputStream))
+            val output = StringBuilder()
+            var line: String?
+            while (reader.readLine().also { line = it } != null) {
+                output.append(line).append("\n")
+            }
+
+            // Verifica erros também
+            val errorReader = BufferedReader(InputStreamReader(process.errorStream))
+            while (errorReader.readLine().also { line = it } != null) {
+                output.append("ERRO: ").append(line).append("\n")
+            }
+
+            process.waitFor()
+            output.toString().ifEmpty { "Comando executado (sem saída)." }
+        } catch (e: Exception) {
+            "Erro ao executar: ${e.message}"
         }
     }
 }
