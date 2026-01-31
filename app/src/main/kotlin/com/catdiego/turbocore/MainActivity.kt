@@ -56,7 +56,8 @@ class MainActivity : ComponentActivity() {
             var ramUsage by remember { mutableStateOf("Calculando...") }
 
             LaunchedEffect(Unit) {
-                delay(1500)
+                // MediaTek Binder Deadlock Prevention: Increased delay to 2000ms
+                delay(2000)
                 safeRun {
                     try {
                         if (Shizuku.pingBinder()) {
@@ -118,8 +119,12 @@ class MainActivity : ComponentActivity() {
             )
 
             MaterialTheme(colorScheme = cyberpunkColors) {
-                Box(modifier = Modifier.fillMaxSize().background(Color(0xFF0A0A0A))) {
-                    // CORREÇÃO: Removemos o try-catch ao redor da Image
+                // Fail-Safe UI: Box with solid background fallback
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color(0xFF0A0A0A))
+                ) {
                     Image(
                         painter = painterResource(id = R.drawable.fundo_chip),
                         contentDescription = "Background",
@@ -137,7 +142,7 @@ class MainActivity : ComponentActivity() {
                             ) {
                                 Spacer(Modifier.height(24.dp))
                                 Text(
-                                    "TURBO CORE V115",
+                                    "TURBO CORE V119",
                                     modifier = Modifier.padding(start = 24.dp, bottom = 12.dp),
                                     style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
                                     color = Color(0xFF00E5FF)
