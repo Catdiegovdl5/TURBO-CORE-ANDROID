@@ -20,8 +20,20 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             var ramUsage by remember { mutableStateOf("Calculando...") }
-            val isShizukuReady = try { Shizuku.pingBinder() } catch (e: Exception) { false }
+            // Inicializa como false para evitar travamento no boot
+            var isShizukuReady by remember { mutableStateOf(false) }
 
+            // Verifica Shizuku com delay de segurança
+            LaunchedEffect(Unit) {
+                kotlinx.coroutines.delay(1000) 
+                isShizukuReady = try {
+                    Shizuku.pingBinder()
+                } catch (e: Exception) {
+                    false
+                }
+            }
+
+            // Monitor de RAM
             LaunchedEffect(Unit) {
                 while(true) {
                     try {
@@ -29,7 +41,7 @@ class MainActivity : ComponentActivity() {
                         val total = memInfo.first { it.contains("MemTotal") }.filter { it.isDigit() }.toLong() / 1024
                         val avail = memInfo.first { it.contains("MemAvailable") }.filter { it.isDigit() }.toLong() / 1024
                         ramUsage = "RAM: ${total - avail}MB / ${total}MB"
-                    } catch (e: Exception) { ramUsage = "RAM: Erro na leitura" }
+                    } catch (e: Exception) { ramUsage = "RAM: Erro" }
                     kotlinx.coroutines.delay(3000)
                 }
             }
@@ -40,8 +52,8 @@ class MainActivity : ComponentActivity() {
                 Card(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(ramUsage, color = Color.Green)
-                        Text(if(isShizukuReady) "SISTEMA PRONTO ✅" else "SHIZUKU NECESSÁRIO ❌", 
-                             color = if(isShizukuReady) Color.Cyan else Color.Red)
+                        Text(if(isShizukuReady) "SISTEMA PRONTO ✅" else "SHIZUKU: AGUARDANDO... ⏳", 
+                             color = if(isShizukuReady) Color.Cyan else Color.Yellow)
                     }
                 }
 
@@ -61,7 +73,7 @@ class MainActivity : ComponentActivity() {
                 Text("SISTEMA", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 16.dp))
 
                 Button(
-                    onClick = { runShizuku("wm size reset; wm density reset; settings put global window_animation_scale 1") },
+                    onClick = { changeDpiSafely(null); runShizuku("wm size reset") },
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray)
                 ) { Text("🔄 RESTAURAR PADRÃO") }
@@ -82,6 +94,7 @@ class MainActivity : ComponentActivity() {
     private fun runShizuku(command: String) {
         try {
             if (!Shizuku.pingBinder()) return
+            // Reflexão do Jules para burlar acesso privado
             val shizukuClass = rikka.shizuku.Shizuku::class.java
             val newProcessMethod = shizukuClass.getDeclaredMethod(
                 "newProcess", 
