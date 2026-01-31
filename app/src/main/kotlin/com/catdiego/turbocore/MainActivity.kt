@@ -1,13 +1,24 @@
 package com.catdiego.turbocore
 
+import android.content.Context
+import android.content.Intent
+import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.drawable.BitmapDrawable
+import android.graphics.drawable.Drawable
+import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -16,9 +27,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -32,6 +47,53 @@ import rikka.shizuku.Shizuku
 import java.io.BufferedReader
 import java.io.File
 import java.io.InputStreamReader
+
+// --- AppManager Logic Integrated ---
+
+data class AppInfo(
+    val name: String,
+    val packageName: String,
+    val icon: ImageBitmap?
+)
+
+object AppManager {
+    fun getInstalledApps(context: Context): List<AppInfo> {
+        val pm = context.packageManager
+        val apps = pm.getInstalledApplications(PackageManager.GET_META_DATA)
+        val appList = mutableListOf<AppInfo>()
+
+        for (app in apps) {
+            if ((app.flags and ApplicationInfo.FLAG_SYSTEM) == 0 || (app.flags and ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) != 0) {
+                try {
+                    val name = pm.getApplicationLabel(app).toString()
+                    val iconDrawable = pm.getApplicationIcon(app)
+                    val iconBitmap = drawableToBitmap(iconDrawable).asImageBitmap()
+                    appList.add(AppInfo(name, app.packageName, iconBitmap))
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+        }
+        return appList.sortedBy { it.name }
+    }
+
+    private fun drawableToBitmap(drawable: Drawable): Bitmap {
+        if (drawable is BitmapDrawable) {
+            return drawable.bitmap
+        }
+        val bitmap = Bitmap.createBitmap(
+            if (drawable.intrinsicWidth > 0) drawable.intrinsicWidth else 1,
+            if (drawable.intrinsicHeight > 0) drawable.intrinsicHeight else 1,
+            Bitmap.Config.ARGB_8888
+        )
+        val canvas = Canvas(bitmap)
+        drawable.setBounds(0, 0, canvas.width, canvas.height)
+        drawable.draw(canvas)
+        return bitmap
+    }
+}
+
+// --- MainActivity ---
 
 @OptIn(ExperimentalMaterial3Api::class)
 class MainActivity : ComponentActivity() {
@@ -81,7 +143,6 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            // Listener de Permissão
             DisposableEffect(Unit) {
                 val listener = Shizuku.OnRequestPermissionResultListener { _, grantResult ->
                     if (grantResult == PackageManager.PERMISSION_GRANTED) {
@@ -95,7 +156,6 @@ class MainActivity : ComponentActivity() {
                 onDispose { Shizuku.removeRequestPermissionResultListener(listener) }
             }
 
-            // Monitor de RAM
             LaunchedEffect(Unit) {
                 while(true) {
                     safeRun {
@@ -122,7 +182,7 @@ class MainActivity : ComponentActivity() {
 
             MaterialTheme(colorScheme = cyberpunkColors) {
                 Box(modifier = Modifier.fillMaxSize().background(Color(0xFF0A0A0A))) {
-                    // Imagem Direta (Sem try-catch para evitar erro de compilação)
+                    // Imagem Direta (Sem try-catch)
                     Image(
                         painter = painterResource(id = R.drawable.fundo_chip),
                         contentDescription = "Background",
