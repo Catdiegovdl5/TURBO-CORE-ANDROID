@@ -15,7 +15,6 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -27,7 +26,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
@@ -48,7 +46,7 @@ import java.io.BufferedReader
 import java.io.File
 import java.io.InputStreamReader
 
-// --- AppManager Logic Integrated ---
+// --- CLASSES SECUNDÁRIAS (V117) ---
 
 data class AppInfo(
     val name: String,
@@ -93,7 +91,7 @@ object AppManager {
     }
 }
 
-// --- MainActivity ---
+// --- CLASSE PRINCIPAL (V117) ---
 
 @OptIn(ExperimentalMaterial3Api::class)
 class MainActivity : ComponentActivity() {
@@ -117,7 +115,7 @@ class MainActivity : ComponentActivity() {
             var isShizukuReady by remember { mutableStateOf(false) }
             var ramUsage by remember { mutableStateOf("Calculando...") }
 
-            // Anti-Crash System (MediaTek)
+            // Anti-Crash System (MediaTek) - V117
             LaunchedEffect(Unit) {
                 delay(1500)
                 safeRun {
@@ -182,7 +180,7 @@ class MainActivity : ComponentActivity() {
 
             MaterialTheme(colorScheme = cyberpunkColors) {
                 Box(modifier = Modifier.fillMaxSize().background(Color(0xFF0A0A0A))) {
-                    // Imagem Direta (Sem try-catch)
+                    // UI SAFE: Sem try-catch no Image (V117)
                     Image(
                         painter = painterResource(id = R.drawable.fundo_chip),
                         contentDescription = "Background",
@@ -200,7 +198,7 @@ class MainActivity : ComponentActivity() {
                             ) {
                                 Spacer(Modifier.height(24.dp))
                                 Text(
-                                    "TURBO CORE V116",
+                                    "TURBO CORE V117",
                                     modifier = Modifier.padding(start = 24.dp, bottom = 12.dp),
                                     style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
                                     color = Color(0xFF00E5FF)
