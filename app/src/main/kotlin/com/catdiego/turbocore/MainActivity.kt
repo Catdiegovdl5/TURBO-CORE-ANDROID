@@ -248,12 +248,12 @@ class MainActivity : ComponentActivity() {
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Text("MODOS DE PERFORMANCE", color = Color.White, style = MaterialTheme.typography.titleMedium)
 
-            CyberButton("🔥 Gamer Ultimate (Mobile)", Color(0xFFb91c1c)) {
+            CyberButton("🔥 Gamer Ultimate (No GOS)", Color(0xFFb91c1c)) {
                 // Desativa GOS
                 runShizukuCommand("pm disable-user --user 0 com.samsung.android.game.gos")
             }
 
-            CyberButton("☢️ Ultimate Desempenho (Bruto)", Color(0xFFFF9800)) {
+            CyberButton("☢️ MODO BRUTO", Color(0xFFFF9800)) {
                 // Sem termal, 360p, 120dpi
                 runShizukuCommand("settings put global power_manager_constants disable_thermal_control=true")
                 runShizukuCommand("wm size 360x800")
@@ -290,7 +290,7 @@ class MainActivity : ComponentActivity() {
                 runShizukuCommand("svc bluetooth disable")
             }
 
-            CyberButton("🪫 Ultimate Economia (Deep)", Color.DarkGray) {
+            CyberButton("🪫 Ultra Economia (Pixel)", Color.DarkGray) {
                 runShizukuCommand("wm size 360x800")
                 changeDpiSafely(120)
                 runShizukuCommand("settings put system screen_brightness 0")
