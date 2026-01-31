@@ -119,7 +119,6 @@ class MainActivity : ComponentActivity() {
 
             MaterialTheme(colorScheme = cyberpunkColors) {
                 Box(modifier = Modifier.fillMaxSize().background(Color(0xFF0A0A0A))) {
-                    // CORREÇÃO: Removemos o try-catch ao redor da Image
                     Image(
                         painter = painterResource(id = R.drawable.fundo_chip),
                         contentDescription = "Background",
