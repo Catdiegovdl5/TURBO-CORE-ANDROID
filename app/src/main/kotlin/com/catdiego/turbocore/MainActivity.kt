@@ -9,7 +9,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import rikka.shizuku.Shizuku
-import java.io.OutputStream
 
 class MainActivity : ComponentActivity() {
 
@@ -17,52 +16,37 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         
         setContent {
-            // Verifica se o Shizuku está pronto
-            val isShizukuReady = try { Shizuku.pingBinder() } catch (e: Exception) { false }
-            var statusMessage by remember { mutableStateOf(if (isShizukuReady) "SHIZUKU ATIVO ✅" else "SHIZUKU NÃO DETECTADO ❌") }
+            var status by remember { mutableStateOf("Verificando Shizuku...") }
+            
+            LaunchedEffect(Unit) {
+                status = try {
+                    if (Shizuku.pingBinder()) "SHIZUKU ATIVO ✅" else "SHIZUKU PARADO ❌"
+                } catch (e: Exception) {
+                    "ERRO AO CONECTAR ⚠️"
+                }
+            }
 
             Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
                 Text("TURBO CORE + SHIZUKU", style = MaterialTheme.typography.headlineMedium)
-                Text(statusMessage, color = if (isShizukuReady) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error)
+                Text(status)
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                Button(
-                    onClick = {
-                        if (isShizukuReady) {
-                            executarComando("wm density 90\n")
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
+                Button(onClick = { runCmd("wm density 90") }, modifier = Modifier.fillMaxWidth()) {
                     Text("ATIVAR MODO CAPA (90 DPI)")
                 }
 
-                Button(
-                    onClick = {
-                        if (isShizukuReady) {
-                            executarComando("wm density reset\n")
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
-                ) {
+                Button(onClick = { runCmd("wm density reset") }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
                     Text("RESETAR DPI")
                 }
-                
-                Text("\nNota: Certifique-se que o Shizuku está rodando no Android 16.", 
-                     style = MaterialTheme.typography.bodySmall)
             }
         }
     }
 
-    private fun executarComando(comando: String) {
+    private fun runCmd(command: String) {
         try {
-            // Nova forma pública de chamar processos no Shizuku 13+
-            val process = Shizuku.newProcess(arrayOf("sh"), null, null)
-            val os: OutputStream = process.outputStream
-            os.write(comando.toByteArray())
-            os.flush()
-            os.close()
+            // Forma alternativa e segura para Shizuku 13+
+            Shizuku.newProcess(arrayOf("sh", "-c", command), null, null)
         } catch (e: Exception) {
             e.printStackTrace()
         }
