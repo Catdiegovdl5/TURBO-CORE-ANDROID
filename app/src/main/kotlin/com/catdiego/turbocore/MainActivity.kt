@@ -56,7 +56,7 @@ class MainActivity : ComponentActivity() {
             var ramUsage by remember { mutableStateOf("Calculando...") }
 
             LaunchedEffect(Unit) {
-                // MediaTek Binder Deadlock Prevention: Increased delay to 2000ms
+                // Stability: 2000ms delay for MediaTek Binder safety
                 delay(2000)
                 safeRun {
                     try {
@@ -119,7 +119,7 @@ class MainActivity : ComponentActivity() {
             )
 
             MaterialTheme(colorScheme = cyberpunkColors) {
-                // Fail-Safe UI: Box with solid background fallback
+                // UI Fail-Safe: Box with solid background color
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -142,7 +142,7 @@ class MainActivity : ComponentActivity() {
                             ) {
                                 Spacer(Modifier.height(24.dp))
                                 Text(
-                                    "TURBO CORE V119",
+                                    "TURBO CORE V121",
                                     modifier = Modifier.padding(start = 24.dp, bottom = 12.dp),
                                     style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
                                     color = Color(0xFF00E5FF)
@@ -230,6 +230,8 @@ class MainActivity : ComponentActivity() {
                 Text("STATUS SHIZUKU", style = MaterialTheme.typography.labelMedium, color = Color.Gray)
                 Text(shizukuStatus, style = MaterialTheme.typography.titleMedium, color = Color.Green)
             }
+            Spacer(Modifier.height(24.dp))
+            ResetButton()
         }
     }
 
@@ -327,6 +329,8 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.padding(16.dp).verticalScroll(rememberScrollState())
                 )
             }
+            Spacer(Modifier.height(12.dp))
+            ResetButton()
         }
     }
 
