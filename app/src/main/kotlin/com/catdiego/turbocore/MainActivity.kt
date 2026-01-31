@@ -1,6 +1,9 @@
 package com.catdiego.turbocore
 
+import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -8,6 +11,8 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -19,6 +24,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -50,11 +56,12 @@ class MainActivity : ComponentActivity() {
             var currentScreen by remember { mutableStateOf(Screen.INICIO) }
             val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
             val scope = rememberCoroutineScope()
-            
+
             var shizukuState by remember { mutableStateOf("Aguardando Sistema...") }
             var isShizukuReady by remember { mutableStateOf(false) }
             var ramUsage by remember { mutableStateOf("Calculando...") }
 
+            // Anti-Crash System (MediaTek)
             LaunchedEffect(Unit) {
                 delay(1500)
                 safeRun {
@@ -118,8 +125,9 @@ class MainActivity : ComponentActivity() {
             )
 
             MaterialTheme(colorScheme = cyberpunkColors) {
+                // FALLBACK: Box has solid background color (0xFF0A0A0A)
                 Box(modifier = Modifier.fillMaxSize().background(Color(0xFF0A0A0A))) {
-                    // CORREÇÃO: Removemos o try-catch ao redor da Image
+                    // UI SAFE: Sem try-catch no Image (V118)
                     Image(
                         painter = painterResource(id = R.drawable.fundo_chip),
                         contentDescription = "Background",
@@ -137,14 +145,14 @@ class MainActivity : ComponentActivity() {
                             ) {
                                 Spacer(Modifier.height(24.dp))
                                 Text(
-                                    "TURBO CORE V115",
+                                    "TURBO CORE V122",
                                     modifier = Modifier.padding(start = 24.dp, bottom = 12.dp),
                                     style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
                                     color = Color(0xFF00E5FF)
                                 )
                                 Divider(color = Color(0xFF333333))
                                 Spacer(Modifier.height(12.dp))
-                                
+
                                 Screen.values().forEach { screen ->
                                     NavigationDrawerItem(
                                         label = { Text(screen.title, fontWeight = FontWeight.Bold) },
@@ -167,12 +175,12 @@ class MainActivity : ComponentActivity() {
                         Scaffold(
                             topBar = {
                                 CenterAlignedTopAppBar(
-                                    title = { 
-                                        Text(currentScreen.title, 
+                                    title = {
+                                        Text(currentScreen.title,
                                             color = Color(0xFF00E5FF),
                                             fontWeight = FontWeight.Bold,
                                             style = MaterialTheme.typography.titleMedium
-                                        ) 
+                                        )
                                     },
                                     navigationIcon = {
                                         IconButton(onClick = { scope.launch { drawerState.open() } }) {
@@ -195,7 +203,7 @@ class MainActivity : ComponentActivity() {
                                     CyberCard(borderColor = Color(0xFFb91c1c)) {
                                         Text("⚠️ SHIZUKU OFF", style = MaterialTheme.typography.titleLarge, color = Color(0xFFb91c1c))
                                         Text("Status: $shizukuState", color = Color.White)
-                                        Text("O app requer Shizuku para funcionar.", color = Color.Gray)
+                                        Text("O app requer Shizuku.", color = Color.Gray)
                                     }
                                 } else {
                                     when (currentScreen) {
@@ -237,13 +245,12 @@ class MainActivity : ComponentActivity() {
                 changeDpiSafely(120)
                 runShizukuCommand("am kill-all")
             }
-            
             CyberButton("🚀 USUAL TURBO", Color(0xFF00E5FF)) {
                 runShizukuCommand("settings put global window_animation_scale 0.5")
                 runShizukuCommand("settings put global transition_animation_scale 0.5")
                 runShizukuCommand("settings put global animator_duration_scale 0.5")
             }
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(16.dp))
             ResetButton()
         }
     }
@@ -255,13 +262,13 @@ class MainActivity : ComponentActivity() {
                 runShizukuCommand("settings put global low_power 1")
                 runShizukuCommand("svc bluetooth disable")
             }
-            CyberButton("🪫 ULTRA ECONOMIA (Pixel)", Color.DarkGray) {
+            CyberButton("🪫 ULTRA ECONOMIA", Color.DarkGray) {
                 runShizukuCommand("wm size 360x800")
                 changeDpiSafely(120)
                 runShizukuCommand("settings put system screen_brightness 0")
                 runShizukuCommand("am kill-all")
             }
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(16.dp))
             ResetButton()
         }
     }
@@ -269,14 +276,14 @@ class MainActivity : ComponentActivity() {
     @Composable
     fun CompetitivoScreen() {
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            CyberButton("🔥 GAMER ULTIMATE (No GOS)", Color(0xFFb91c1c)) {
+            CyberButton("🔥 GAMER ULTIMATE", Color(0xFFb91c1c)) {
                 runShizukuCommand("pm disable-user --user 0 com.samsung.android.game.gos")
             }
-            CyberButton("🎯 SENSI FREE FIRE (Capa)", Color(0xFF00E5FF)) {
+            CyberButton("🎯 SENSI FREE FIRE", Color(0xFF00E5FF)) {
                 changeDpiSafely(90)
                 runShizukuCommand("settings put system pointer_speed 7")
             }
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(16.dp))
             ResetButton()
         }
     }
@@ -284,14 +291,14 @@ class MainActivity : ComponentActivity() {
     @Composable
     fun TerminalScreen() {
         var command by remember { mutableStateOf("") }
-        var output by remember { mutableStateOf("Aguardando comando...") }
+        var output by remember { mutableStateOf("Aguardando...") }
         val scope = rememberCoroutineScope()
 
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             OutlinedTextField(
                 value = command,
                 onValueChange = { command = it },
-                label = { Text("Digite um comando (ex: wm size)") },
+                label = { Text("Shell Command", color = Color.Gray) },
                 modifier = Modifier.fillMaxWidth(),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = Color(0xFF00E5FF),
@@ -300,14 +307,14 @@ class MainActivity : ComponentActivity() {
                     unfocusedTextColor = Color.White
                 ),
                 keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Go),
-                keyboardActions = KeyboardActions(onGo = { 
-                    scope.launch { output = runShizukuCommandWithOutput(command) }
+                keyboardActions = KeyboardActions(onGo = {
+                    scope.launch { output = runShizukuWithOutput(command) }
                 })
             )
             CyberButton("EXECUTAR", Color(0xFF00E5FF)) {
-                scope.launch { 
+                scope.launch {
                     output = "Executando..."
-                    output = runShizukuCommandWithOutput(command) 
+                    output = runShizukuWithOutput(command)
                 }
             }
             Card(
@@ -318,6 +325,7 @@ class MainActivity : ComponentActivity() {
                 Text(
                     text = output,
                     color = Color.Green,
+                    fontSize = 12.sp,
                     fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
                     modifier = Modifier.padding(16.dp).verticalScroll(rememberScrollState())
                 )
@@ -360,8 +368,8 @@ class MainActivity : ComponentActivity() {
             border = androidx.compose.foundation.BorderStroke(1.dp, color)
         ) {
             Text(
-                text, 
-                fontSize = 16.sp, 
+                text,
+                fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
                 color = if(color == Color.White || color == Color.Green || color == Color(0xFF00E5FF)) Color.Black else Color.White
             )
@@ -373,11 +381,11 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun changeDpiSafely(density: Int?) {
-        val command = if (density == null) "wm density reset" else {
+        val cmd = if (density == null) "wm density reset" else {
             if (density < 72 || density > 640) return
             "wm density $density"
         }
-        runShizukuCommand(command)
+        runShizukuCommand(cmd)
     }
 
     private fun runShizukuCommand(command: String) {
@@ -389,23 +397,23 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private suspend fun runShizukuCommandWithOutput(command: String): String = withContext(Dispatchers.IO) {
+    private suspend fun runShizukuWithOutput(command: String): String = withContext(Dispatchers.IO) {
         try {
             val shizukuClass = rikka.shizuku.Shizuku::class.java
             val newProcessMethod = shizukuClass.getDeclaredMethod("newProcess", Array<String>::class.java, Array<String>::class.java, String::class.java)
             newProcessMethod.isAccessible = true
             val process = newProcessMethod.invoke(null, arrayOf("sh", "-c", command), null, null) as Process
-            
+
             val reader = BufferedReader(InputStreamReader(process.inputStream))
             val output = StringBuilder()
             var line: String?
             while (reader.readLine().also { line = it } != null) { output.append(line).append("\n") }
-            
+
             val errorReader = BufferedReader(InputStreamReader(process.errorStream))
-            while (errorReader.readLine().also { line = it } != null) { output.append("ERRO: ").append(line).append("\n") }
-            
+            while (errorReader.readLine().also { line = it } != null) { output.append("[ERRO] ").append(line).append("\n") }
+
             process.waitFor()
-            output.toString().ifEmpty { "Comando executado (sem saída)." }
-        } catch (e: Exception) { "Erro ao executar: ${e.message}" }
+            output.toString().ifEmpty { "Sucesso" }
+        } catch (e: Exception) { "Falha: ${e.message}" }
     }
 }
