@@ -2,12 +2,7 @@ package com.catdiego.turbocore
 
 import android.content.Context
 import android.content.Intent
-import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
-import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.drawable.BitmapDrawable
-import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
@@ -26,11 +21,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -68,16 +60,6 @@ class MainActivity : ComponentActivity() {
             var shizukuState by remember { mutableStateOf("Aguardando Sistema...") }
             var isShizukuReady by remember { mutableStateOf(false) }
             var ramUsage by remember { mutableStateOf("Calculando...") }
-
-            // Background Image Fallback Logic
-            // We use a safe check by attempting to resolve the ID (although painterResource is lazy, we rely on try-catch during composition not being allowed, so we do logic here)
-            // But user requested "implement logic that uses a solid color... as fallback".
-            // Since we cannot easily detect "Image failed to load" inside Image composable without a custom painter,
-            // we will simply assume the resource exists (it was verified earlier) BUT if the user insists on fallback logic:
-            // We can wrap the painterResource call in a try block *outside* the UI tree if it were eager, but it's not.
-            // Best practice: The Box has a background color. If Image fails (crash), we can't catch it easily.
-            // However, we can guard the ID lookup if we were dynamic. Since it's R.drawable.fundo_chip, it's static.
-            // We will stick to the Box background as the visual fallback.
 
             // Anti-Crash System (MediaTek)
             LaunchedEffect(Unit) {
@@ -145,10 +127,7 @@ class MainActivity : ComponentActivity() {
             MaterialTheme(colorScheme = cyberpunkColors) {
                 // FALLBACK: Box has solid background color (0xFF0A0A0A)
                 Box(modifier = Modifier.fillMaxSize().background(Color(0xFF0A0A0A))) {
-                    // Try to load image safely?
-                    // painterResource will crash if ID is invalid. We assume R.drawable.fundo_chip is valid as per previous checks.
-                    // If it crashes at runtime (ResourceNotFound), there is no easy try-catch inside Composition.
-                    // We trust the resource exists.
+                    // UI SAFE: Sem try-catch no Image (V118)
                     Image(
                         painter = painterResource(id = R.drawable.fundo_chip),
                         contentDescription = "Background",
@@ -166,7 +145,7 @@ class MainActivity : ComponentActivity() {
                             ) {
                                 Spacer(Modifier.height(24.dp))
                                 Text(
-                                    "TURBO CORE V118",
+                                    "TURBO CORE V122",
                                     modifier = Modifier.padding(start = 24.dp, bottom = 12.dp),
                                     style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
                                     color = Color(0xFF00E5FF)
