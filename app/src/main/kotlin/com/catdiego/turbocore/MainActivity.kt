@@ -35,9 +35,10 @@ import java.io.BufferedReader
 import java.io.File
 import java.io.InputStreamReader
 
+@OptIn(ExperimentalMaterial3Api::class)
 class MainActivity : ComponentActivity() {
 
-    // DEFINIÇÃO DAS ABAS (NAVEGAÇÃO)
+    // DEFINIÇÃO DAS ABAS (NAVEGAÇÃO V116)
     enum class Screen(val title: String) {
         INICIO("🏠 INÍCIO"),
         DESEMPENHO("⚡ DESEMPENHO"),
@@ -59,12 +60,10 @@ class MainActivity : ComponentActivity() {
             var ramUsage by remember { mutableStateOf("Calculando RAM...") }
 
             // --- PROTEÇÃO ANTI-CRASH (MEDIATEK / ANDROID 16) ---
-            // Delay inicial para garantir que o driver 'mtkpower@impl' não cause deadlock no boot.
             LaunchedEffect(Unit) {
                 delay(1500)
                 safeRun {
                     try {
-                        // Verifica se Shizuku está rodando
                         if (Shizuku.pingBinder()) {
                             if (Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED) {
                                 isShizukuReady = true
@@ -87,7 +86,7 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            // LISTENER DE PERMISSÃO (ATUALIZAÇÃO EM TEMPO REAL)
+            // LISTENER DE PERMISSÃO
             DisposableEffect(Unit) {
                 val listener = Shizuku.OnRequestPermissionResultListener { _, grantResult ->
                     if (grantResult == PackageManager.PERMISSION_GRANTED) {
@@ -101,7 +100,7 @@ class MainActivity : ComponentActivity() {
                 onDispose { Shizuku.removeRequestPermissionResultListener(listener) }
             }
 
-            // MONITOR DE RAM (LOOP INFINITO)
+            // MONITOR DE RAM
             LaunchedEffect(Unit) {
                 while(true) {
                     safeRun {
@@ -120,17 +119,16 @@ class MainActivity : ComponentActivity() {
 
             // --- TEMA CYBERPUNK ---
             val cyberpunkColors = darkColorScheme(
-                primary = Color(0xFF00E5FF), // Cyan
-                background = Color(0xFF0A0A0A), // Black
-                surface = Color(0xFF171717), // Dark Grey
-                error = Color(0xFFB91C1C), // Red
+                primary = Color(0xFF00E5FF),
+                background = Color(0xFF0A0A0A),
+                surface = Color(0xFF171717),
+                error = Color(0xFFB91C1C),
                 onPrimary = Color.Black,
                 onBackground = Color.White,
                 onSurface = Color.White
             )
 
             MaterialTheme(colorScheme = cyberpunkColors) {
-                // BOX PARA FUNDO DA TELA
                 Box(modifier = Modifier.fillMaxSize().background(Color(0xFF0A0A0A))) {
 
                     // IMAGEM DE FUNDO (SEM TRY-CATCH)
@@ -142,7 +140,6 @@ class MainActivity : ComponentActivity() {
                         alpha = 0.2f
                     )
 
-                    // GAVETA DE NAVEGAÇÃO
                     ModalNavigationDrawer(
                         drawerState = drawerState,
                         drawerContent = {
@@ -152,7 +149,7 @@ class MainActivity : ComponentActivity() {
                             ) {
                                 Spacer(Modifier.height(24.dp))
                                 Text(
-                                    "TURBO CORE",
+                                    "TURBO CORE V116",
                                     modifier = Modifier.padding(start = 24.dp, bottom = 12.dp),
                                     style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
                                     color = Color(0xFF00E5FF)
@@ -207,7 +204,6 @@ class MainActivity : ComponentActivity() {
                                     .padding(16.dp)
                                     .verticalScroll(rememberScrollState())
                             ) {
-                                // AVISO SE SHIZUKU NÃO ESTIVER PRONTO
                                 if (!isShizukuReady) {
                                     CyberCard(borderColor = Color(0xFFB91C1C)) {
                                         Text("⚠️ SHIZUKU OFF", style = MaterialTheme.typography.titleLarge, color = Color(0xFFB91C1C))
@@ -217,7 +213,6 @@ class MainActivity : ComponentActivity() {
                                     Spacer(Modifier.height(16.dp))
                                 }
 
-                                // ROTEAMENTO DAS TELAS
                                 when (currentScreen) {
                                     Screen.INICIO -> InicioScreen(ramUsage, shizukuState)
                                     Screen.DESEMPENHO -> DesempenhoScreen()
@@ -253,7 +248,6 @@ class MainActivity : ComponentActivity() {
     fun DesempenhoScreen() {
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
             CyberButton("☢️ MODO BRUTO", Color(0xFFFF9800)) {
-                // No Thermal, 360p, 120dpi
                 runShizukuCommand("settings put global power_manager_constants disable_thermal_control=true")
                 runShizukuCommand("wm size 360x800")
                 changeDpiSafely(120)
@@ -412,7 +406,6 @@ class MainActivity : ComponentActivity() {
         runShizukuCommand(cmd)
     }
 
-    // Executa comando (Fire-and-Forget)
     private fun runShizukuCommand(command: String) {
         safeRun {
             val shizukuClass = rikka.shizuku.Shizuku::class.java
@@ -427,7 +420,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    // Executa comando e retorna saída (Para o Terminal)
     private suspend fun runShizukuWithOutput(command: String): String = withContext(Dispatchers.IO) {
         try {
             val shizukuClass = rikka.shizuku.Shizuku::class.java
@@ -447,7 +439,6 @@ class MainActivity : ComponentActivity() {
                 output.append(line).append("\n")
             }
 
-            // Captura erros também
             val errorReader = BufferedReader(InputStreamReader(process.errorStream))
             while (errorReader.readLine().also { line = it } != null) {
                 output.append("[ERRO] ").append(line).append("\n")
