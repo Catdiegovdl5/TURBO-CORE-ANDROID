@@ -21,6 +21,8 @@ import kotlinx.coroutines.launch
 import rikka.shizuku.Shizuku
 import java.io.File
 
+// Import necessário para corrigir o erro "Experimental API"
+@OptIn(ExperimentalMaterial3Api::class)
 class MainActivity : ComponentActivity() {
 
     enum class Screen(val title: String) {
