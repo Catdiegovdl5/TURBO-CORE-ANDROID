@@ -16,19 +16,10 @@ import java.io.File
 
 class MainActivity : ComponentActivity() {
 
-    private val REQUEST_CODE = 101
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
-        // Pede permissão ao Shizuku assim que abre
-        if (Shizuku.pingBinder() && Shizuku.checkSelfPermission() != 0) {
-            Shizuku.requestPermission(REQUEST_CODE)
-        }
-
         setContent {
             var ramUsage by remember { mutableStateOf("Calculando...") }
-            var cpuTemp by remember { mutableStateOf("Temp: --°C") }
             val isShizukuReady = try { Shizuku.pingBinder() } catch (e: Exception) { false }
 
             LaunchedEffect(Unit) {
@@ -38,26 +29,18 @@ class MainActivity : ComponentActivity() {
                         val total = memInfo.first { it.contains("MemTotal") }.filter { it.isDigit() }.toLong() / 1024
                         val avail = memInfo.first { it.contains("MemAvailable") }.filter { it.isDigit() }.toLong() / 1024
                         ramUsage = "RAM: ${total - avail}MB / ${total}MB"
-
-                        val tempFile = File("/sys/class/thermal/thermal_zone0/temp")
-                        if (tempFile.exists()) {
-                            val t = tempFile.readText().trim().toInt() / 1000
-                            cpuTemp = "TEMP: $t°C"
-                        }
-                    } catch (e: Exception) { ramUsage = "Erro de Leitura" }
-                    kotlinx.coroutines.delay(2000)
+                    } catch (e: Exception) { ramUsage = "RAM: Erro na leitura" }
+                    kotlinx.coroutines.delay(3000)
                 }
             }
 
             Column(modifier = Modifier.fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState())) {
                 Text("TURBO CORE V111", style = MaterialTheme.typography.headlineLarge, color = Color(0xFF00E5FF))
                 
-                Card(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                     colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A))) {
+                Card(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(ramUsage, color = Color.Green)
-                        Text(cpuTemp, color = Color.Yellow)
-                        Text(if(isShizukuReady) "MODO ADB: ATIVO ✅" else "MODO ADB: OFFLINE ❌", 
+                        Text(if(isShizukuReady) "SISTEMA PRONTO ✅" else "SHIZUKU NECESSÁRIO ❌", 
                              color = if(isShizukuReady) Color.Cyan else Color.Red)
                     }
                 }
@@ -73,10 +56,12 @@ class MainActivity : ComponentActivity() {
                 Button(
                     onClick = { runShizuku("wm size 540x960; wm density 160; am kill-all") },
                     modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
-                ) { Text("🚀 FF LISO (540p)") }
+                ) { Text("🚀 FF LISO (PERFORMANCE)") }
+
+                Text("SISTEMA", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 16.dp))
 
                 Button(
-                    onClick = { changeDpiSafely(null); runShizuku("wm size reset") },
+                    onClick = { runShizuku("wm size reset; wm density reset; settings put global window_animation_scale 1") },
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray)
                 ) { Text("🔄 RESTAURAR PADRÃO") }
@@ -85,19 +70,29 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun changeDpiSafely(density: Int?) {
-        try {
-            if (!Shizuku.pingBinder()) return
-            val command = if (density == null) "wm density reset" else "wm density $density"
-            if (density != null && (density < 72 || density > 640)) return
-            Shizuku.newProcess(arrayOf("sh", "-c", command), null, null)
-        } catch (e: Exception) { e.printStackTrace() }
+        val command = if (density == null) {
+            "wm density reset"
+        } else {
+            if (density < 72 || density > 640) return
+            "wm density $density"
+        }
+        runShizuku(command)
     }
 
     private fun runShizuku(command: String) {
         try {
-            if (Shizuku.pingBinder()) {
-                Shizuku.newProcess(arrayOf("sh", "-c", command), null, null)
-            }
-        } catch (e: Exception) { e.printStackTrace() }
+            if (!Shizuku.pingBinder()) return
+            val shizukuClass = rikka.shizuku.Shizuku::class.java
+            val newProcessMethod = shizukuClass.getDeclaredMethod(
+                "newProcess", 
+                Array<String>::class.java, 
+                Array<String>::class.java, 
+                String::class.java
+            )
+            newProcessMethod.isAccessible = true
+            newProcessMethod.invoke(null, arrayOf("sh", "-c", command), null, null)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 }
