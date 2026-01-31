@@ -73,6 +73,28 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    /**
+     * Altera a DPI do dispositivo de forma segura, respeitando limites físicos.
+     * @param density Valor da DPI (72-640) ou null para resetar ao padrão de fábrica.
+     */
+    private fun changeDpiSafely(density: Int?) {
+        try {
+            if (!Shizuku.pingBinder()) return
+
+            val command = if (density == null) {
+                "wm density reset"
+            } else {
+                // Validação de Segurança: Impede valores que podem brickar a UI
+                if (density < 72 || density > 640) return
+                "wm density $density"
+            }
+
+            Shizuku.newProcess(arrayOf("sh", "-c", command), null, null)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
     private fun runShizuku(command: String) {
         try {
             if (Shizuku.pingBinder()) {
