@@ -75,9 +75,14 @@ class MainActivity : ComponentActivity() {
 
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Button(onClick = {
-                                if (Shizuku.pingBinder()) {
-                                    Shizuku.requestPermission(REQUEST_CODE)
-                                } else {
+                                try {
+                                    if (Shizuku.pingBinder()) {
+                                        Shizuku.requestPermission(REQUEST_CODE)
+                                    } else {
+                                        // Se o binder não responde, abre o app Shizuku direto
+                                        launchShizukuApp(this@MainActivity)
+                                    }
+                                } catch (e: Exception) {
                                     launchShizukuApp(this@MainActivity)
                                 }
                             }, Modifier.weight(1f)) {
@@ -166,6 +171,8 @@ class MainActivity : ComponentActivity() {
             "Shizuku Parado (Abra o App Shizuku)"
         } else if (Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED) {
             "Conectado"
+        } else if (shizukuStatus == "Permissão Negada") {
+            "Configurações Restritas (Habilite Manualmente)"
         } else {
             "Aguardando Permissão"
         }
