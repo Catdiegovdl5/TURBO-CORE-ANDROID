@@ -3,11 +3,13 @@ package com.catdiego.turbocore.ui.screens
 import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.catdiego.turbocore.util.ShellEngine
@@ -18,6 +20,21 @@ import kotlinx.coroutines.launch
 fun PerformanceScreen() {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+
+    fun resetAll() {
+        scope.launch(Dispatchers.IO) {
+            ShellEngine.runShizukuCommand("wm size reset")
+            ShellEngine.runShizukuCommand("wm density reset")
+            ShellEngine.runShizukuCommand("settings put global low_power 0")
+            // Re-enable GOS (assuming it was suspended or disabled)
+            ShellEngine.runShizukuCommand("pm unsuspend com.samsung.android.game.gos")
+            ShellEngine.runShizukuCommand("pm enable com.samsung.android.game.gos")
+
+            launch(Dispatchers.Main) {
+                Toast.makeText(context, "All Settings Reset", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -32,7 +49,8 @@ fun PerformanceScreen() {
             onClick = {
                 scope.launch(Dispatchers.IO) {
                     // Sensi FF
-                    ShellEngine.runCommand("wm density 90")
+                    ShellEngine.runShizukuCommand("wm density 90")
+                    ShellEngine.runShizukuCommand("settings put system pointer_speed 7")
                     launch(Dispatchers.Main) {
                         Toast.makeText(context, "Sensi FF Applied", Toast.LENGTH_SHORT).show()
                     }
@@ -47,8 +65,9 @@ fun PerformanceScreen() {
             onClick = {
                 scope.launch(Dispatchers.IO) {
                     // Modo Bruto
-                    ShellEngine.runCommand("wm size 360x800")
-                    ShellEngine.runCommand("cmd thermalservice override_status 0")
+                    ShellEngine.runShizukuCommand("wm size 360x800")
+                    ShellEngine.runShizukuCommand("wm density 120")
+                    ShellEngine.runShizukuCommand("cmd thermalservice override_status 0")
                     launch(Dispatchers.Main) {
                         Toast.makeText(context, "Modo Bruto Applied", Toast.LENGTH_SHORT).show()
                     }
@@ -63,7 +82,7 @@ fun PerformanceScreen() {
             onClick = {
                 scope.launch(Dispatchers.IO) {
                     // Gamer Ultimate
-                    ShellEngine.runCommand("pm disable-user --user 0 com.samsung.android.game.gos")
+                    ShellEngine.runShizukuCommand("pm suspend com.samsung.android.game.gos")
                     launch(Dispatchers.Main) {
                         Toast.makeText(context, "Gamer Ultimate Applied", Toast.LENGTH_SHORT).show()
                     }
@@ -72,6 +91,16 @@ fun PerformanceScreen() {
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Gamer Ultimate")
+        }
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        Button(
+            onClick = { resetAll() },
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
+        ) {
+            Text("RESET ALL")
         }
     }
 }

@@ -69,4 +69,11 @@ object ShellEngine {
     fun runCommand(command: String): Process? {
         return newProcess(arrayOf("sh", "-c", command))
     }
+
+    /**
+     * Alias for runCommand to match specific request requirement.
+     */
+    fun runShizukuCommand(command: String): Process? {
+        return runCommand(command)
+    }
 }
