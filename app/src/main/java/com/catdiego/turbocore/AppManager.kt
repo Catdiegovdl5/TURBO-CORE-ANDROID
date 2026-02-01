@@ -26,7 +26,7 @@ object AppManager {
     }
 
     fun isShizukuInstalled(context: Context): Boolean {
-        val packages = listOf("rikka.app.shizuku", "moe.shizuku.privileged.api")
+        val packages = listOf("moe.shizuku.privileged.api", "rikka.app.shizuku")
         val pm = context.packageManager
         for (pkg in packages) {
             try {

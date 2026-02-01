@@ -74,8 +74,14 @@ class MainActivity : ComponentActivity() {
                         Spacer(Modifier.height(8.dp))
 
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Button(onClick = { Shizuku.requestPermission(REQUEST_CODE) }, Modifier.weight(1f)) {
-                                Text("PEDIR PERMISSÃO")
+                            Button(onClick = {
+                                if (Shizuku.pingBinder()) {
+                                    Shizuku.requestPermission(REQUEST_CODE)
+                                } else {
+                                    launchShizukuApp(this@MainActivity)
+                                }
+                            }, Modifier.weight(1f)) {
+                                Text("ATIVAR CONEXÃO")
                             }
                             Button(onClick = { updateStatus() }, Modifier.weight(1f)) {
                                 Text("ATUALIZAR")
@@ -141,11 +147,17 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun checkAndRequestShizukuPermission() {
-        if (Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED) {
-            shizukuStatus = "Conectado"
-        } else {
-            shizukuStatus = "Pedindo Permissão..."
-            Shizuku.requestPermission(REQUEST_CODE)
+        try {
+            if (Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED) {
+                shizukuStatus = "Conectado"
+            } else {
+                // Tenta o popup padrão
+                Shizuku.requestPermission(REQUEST_CODE)
+                // Se em 2 segundos não conectar, sugere abertura manual
+                shizukuStatus = "Autorize no App Shizuku..."
+            }
+        } catch (e: Exception) {
+            launchShizukuApp(this)
         }
     }
 
