@@ -44,7 +44,7 @@ class MainActivity : ComponentActivity() {
 
             LaunchedEffect(Unit) {
                 shizukuStatus = "Localizando motor..."
-                delay(800) // Tempo mínimo para o sistema processar o Manifesto
+                delay(2000) // Protocolo V152: Tempo para o sistema registrar o novo Provedor
                 val installed = AppManager.isShizukuInstalled(this@MainActivity)
                 if (!installed) {
                     shizukuStatus = "Shizuku não encontrado!"
