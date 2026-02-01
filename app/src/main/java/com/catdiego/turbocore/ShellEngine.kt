@@ -38,10 +38,6 @@ object ShellEngine {
                     val exitCode = process.waitFor()
                     return@withContext exitCode == 0
                 } else {
-                    // Fallback to su if Shizuku is not available (though we prioritize Shizuku)
-                    // Or simply fail if Shizuku is required by policy.
-                    // Given the instruction "Standardize on Shizuku", we will rely on it.
-                    // However, for robustness, if we can't use Shizuku, we return false.
                     return@withContext false
                 }
             } catch (e: Exception) {
@@ -54,15 +50,10 @@ object ShellEngine {
     suspend fun runCommands(commands: List<String>): Boolean {
          return withContext(Dispatchers.IO) {
             try {
-                // Delay once per batch or per command? "Boot delay" usually implies initialization,
-                // but "boot delay for MediaTek stability" in execution context might mean pacing.
-                // We will add the delay at the start of the batch.
                 delay(2000)
 
                 if (Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED) {
-                    // Running as a single script is often better
                     val script = commands.joinToString("\n")
-                    // Use Reflection
                     val method = Shizuku::class.java.getDeclaredMethod(
                         "newProcess",
                         Array<String>::class.java,
@@ -79,6 +70,37 @@ object ShellEngine {
             } catch (e: Exception) {
                 e.printStackTrace()
                 return@withContext false
+            }
+        }
+    }
+
+    suspend fun runCommandWithOutput(command: String): String {
+        return withContext(Dispatchers.IO) {
+            try {
+                if (Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED) {
+                    val method = Shizuku::class.java.getDeclaredMethod(
+                        "newProcess",
+                        Array<String>::class.java,
+                        Array<String>::class.java,
+                        String::class.java
+                    )
+                    method.isAccessible = true
+                    val process = method.invoke(null, arrayOf("sh", "-c", command), null, null) as Process
+
+                    val reader = BufferedReader(InputStreamReader(process.inputStream))
+                    val output = StringBuilder()
+                    var line: String?
+                    while (reader.readLine().also { line = it } != null) {
+                        output.append(line).append("\n")
+                    }
+                    process.waitFor()
+                    return@withContext output.toString()
+                } else {
+                    return@withContext "Erro: Permissão Shizuku negada."
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                return@withContext "Erro: ${e.message}"
             }
         }
     }

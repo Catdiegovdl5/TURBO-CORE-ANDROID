@@ -11,6 +11,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -151,6 +152,15 @@ fun MainScreen(
                     },
                     modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
                 )
+                NavigationDrawerItem(
+                    label = { Text("Terminal") },
+                    selected = currentScreen == "Terminal",
+                    onClick = {
+                        currentScreen = "Terminal"
+                        scope.launch { drawerState.close() }
+                    },
+                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                )
             }
         }
     ) {
@@ -195,6 +205,7 @@ fun MainScreen(
                     "Economia" -> EconomiaScreen(snackbarHostState)
                     "Desempenho" -> DesempenhoScreen(snackbarHostState)
                     "Competitivo" -> CompetitivoScreen(snackbarHostState)
+                    "Terminal" -> TerminalScreen(snackbarHostState)
                 }
             }
         }
@@ -261,6 +272,26 @@ fun ActionButton(
             )
         } else {
             Text(buttonText)
+        }
+    }
+}
+
+@Composable
+fun CyberCard(
+    title: String,
+    content: @Composable () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(8.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(title, style = MaterialTheme.typography.titleMedium, color = Color.Cyan)
+            Spacer(modifier = Modifier.height(8.dp))
+            content()
         }
     }
 }
@@ -338,8 +369,10 @@ fun EconomiaScreen(snackbarHostState: SnackbarHostState) {
         Text("Modo Economia", color = Color.White, style = MaterialTheme.typography.headlineSmall)
         Spacer(modifier = Modifier.height(16.dp))
 
-        ActionButton("Super Economia", snackbarHostState) { AppManager.enableSuperEconomy() }
-        ActionButton("Ultra Economia", snackbarHostState) { AppManager.enableUltraEconomy() }
+        CyberCard("Opções de Economia") {
+            ActionButton("Super Economia", snackbarHostState) { AppManager.enableSuperEconomy() }
+            ActionButton("Ultra Economia", snackbarHostState) { AppManager.enableUltraEconomy() }
+        }
 
         Spacer(modifier = Modifier.weight(1f))
         ResetButton(snackbarHostState)
@@ -358,8 +391,10 @@ fun DesempenhoScreen(snackbarHostState: SnackbarHostState) {
         Text("Modo Desempenho", color = Color.White, style = MaterialTheme.typography.headlineSmall)
         Spacer(modifier = Modifier.height(16.dp))
 
-        ActionButton("Modo Bruto (720p)", snackbarHostState) {
-            AppManager.applyGoldenRatioResolution(context, 720)
+        CyberCard("Resolução") {
+            ActionButton("Modo Bruto (720p)", snackbarHostState) {
+                AppManager.applyGoldenRatioResolution(context, 720)
+            }
         }
 
         Spacer(modifier = Modifier.weight(1f))
@@ -377,10 +412,77 @@ fun CompetitivoScreen(snackbarHostState: SnackbarHostState) {
         Text("Modo Competitivo", color = Color.White, style = MaterialTheme.typography.headlineSmall)
         Spacer(modifier = Modifier.height(16.dp))
 
-        ActionButton("Gamer Ultimate", snackbarHostState) { AppManager.enableGamerUltimate() }
-        ActionButton("Sensi Free Fire", snackbarHostState) { AppManager.enableSensiFreeFire() }
+        CyberCard("Gaming") {
+            ActionButton("Gamer Ultimate", snackbarHostState) { AppManager.enableGamerUltimate() }
+            ActionButton("Sensi Free Fire", snackbarHostState) { AppManager.enableSensiFreeFire() }
+        }
 
         Spacer(modifier = Modifier.weight(1f))
+        ResetButton(snackbarHostState)
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TerminalScreen(snackbarHostState: SnackbarHostState) {
+    var command by remember { mutableStateOf("") }
+    var outputLog by remember { mutableStateOf("") }
+    val scope = rememberCoroutineScope()
+
+    Column(
+        modifier = Modifier.fillMaxSize().padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text("Terminal", color = Color.White, style = MaterialTheme.typography.headlineSmall)
+        Spacer(modifier = Modifier.height(16.dp))
+
+        OutlinedTextField(
+            value = command,
+            onValueChange = { command = it },
+            label = { Text("Comando", color = Color.Gray) },
+            modifier = Modifier.fillMaxWidth(),
+            colors = TextFieldDefaults.outlinedTextFieldColors(
+                focusedTextColor = Color.Green,
+                unfocusedTextColor = Color.Green,
+                containerColor = Color(0xFF1E1E1E),
+                cursorColor = Color.Green
+            )
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Button(
+            onClick = {
+                scope.launch {
+                    outputLog = "Executando...\n" + outputLog
+                    val result = ShellEngine.runCommandWithOutput(command)
+                    outputLog = "> $command\n$result\n" + outputLog
+                    command = ""
+                }
+            },
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray)
+        ) {
+            Text("Executar", color = Color.Green)
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
+                .background(Color(0xFF0A0A0A))
+                .padding(8.dp)
+        ) {
+            LazyColumn {
+                item {
+                    Text(outputLog, color = Color.Green, style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
         ResetButton(snackbarHostState)
     }
 }
