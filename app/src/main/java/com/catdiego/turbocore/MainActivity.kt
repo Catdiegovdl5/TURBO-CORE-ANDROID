@@ -37,14 +37,11 @@ class MainActivity : ComponentActivity() {
             var terminalLog by remember { mutableStateOf("Aguardando comando...") }
 
             LaunchedEffect(Unit) {
-                delay(1000) // Tempo para o sistema estabilizar
-                val isInstalled = AppManager.isShizukuInstalled(this@MainActivity)
+                delay(500) // Busca relâmpago
+                val installed = AppManager.isShizukuInstalled(this@MainActivity)
 
-                if (!isInstalled) {
-                    shizukuStatus = "Shizuku não encontrado! Redirecionando..."
-                    delay(2000)
-                    openShizukuDownload(this@MainActivity)
-                } else {
+                if (installed) {
+                    // Se achou, tenta conectar ou pedir permissão
                     if (Shizuku.pingBinder()) {
                         if (Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED) {
                             shizukuStatus = "Conectado"
@@ -53,8 +50,14 @@ class MainActivity : ComponentActivity() {
                             Shizuku.requestPermission(REQUEST_CODE)
                         }
                     } else {
-                        shizukuStatus = "Serviço Shizuku Parado! Abra o app Shizuku e inicie o serviço."
+                        shizukuStatus = "Inicie o serviço dentro do app Shizuku!"
                     }
+                } else {
+                    // SÓ redireciona se REALMENTE não achar nenhum dos pacotes
+                    shizukuStatus = "Shizuku não encontrado! Redirecionando..."
+                    delay(1500)
+                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/RikkaApps/Shizuku/releases"))
+                    startActivity(intent)
                 }
             }
 
