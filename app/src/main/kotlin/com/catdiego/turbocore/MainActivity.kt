@@ -3,24 +3,21 @@ package com.catdiego.turbocore
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import rikka.shizuku.Shizuku
 import java.io.BufferedReader
 import java.io.InputStreamReader
-import com.catdiego.turbocore.R
 
 enum class Screen(val title: String) {
     INICIO("Inicio"),
@@ -69,25 +66,8 @@ class MainActivity : ComponentActivity() {
         }
 
         fun applySafeMode() {
-            // Safe Mode: 540p resolution and 210 DPI to prevent bricking
             runShizukuCommand("wm size 540x960")
             runShizukuCommand("wm density 210")
-        }
-
-        private fun calculateNewSize(targetWidth: Int): Int {
-            val output = runShizukuCommand("wm size")
-            val regex = Regex("Physical size: (\\d+)x(\\d+)")
-            val match = regex.find(output)
-
-            return if (match != null) {
-                val (widthStr, heightStr) = match.destructured
-                val width = widthStr.toFloat()
-                val height = heightStr.toFloat()
-                val aspectRatio = height / width
-                (targetWidth * aspectRatio).toInt()
-            } else {
-                (targetWidth * 2.22).toInt()
-            }
         }
     }
 }
@@ -112,12 +92,7 @@ fun MainContent() {
     }
 
     Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
-        Image(
-            painter = painterResource(id = R.drawable.fundo_chip),
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize()
-        )
+        // Removed Image for Bulletproof Boot
 
         ModalNavigationDrawer(
             drawerState = drawerState,
@@ -159,101 +134,18 @@ fun MainContent() {
                 },
                 containerColor = Color.Transparent
             ) { innerPadding ->
-                Box(modifier = Modifier.padding(innerPadding)) {
-                    when (currentScreen) {
-                        Screen.INICIO -> InicioScreen(shizukuAvailable)
-                        Screen.DESEMPENHO -> DesempenhoScreen()
-                        Screen.ECONOMIA -> EconomiaScreen()
-                        Screen.COMPETITIVO -> CompetitivoScreen()
-                        Screen.TERMINAL -> TerminalScreen()
+                Box(modifier = Modifier.padding(innerPadding).fillMaxSize(), contentAlignment = Alignment.Center) {
+                    if (currentScreen == Screen.INICIO) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("Turbo Core Ativo", color = Color.White)
+                            Spacer(Modifier.height(16.dp))
+                            Text("Shizuku: ${if (shizukuAvailable) "Conectado" else "Desconectado"}", color = Color.Gray)
+                        }
+                    } else {
+                        Text(currentScreen.title, color = Color.White)
                     }
                 }
             }
         }
-    }
-}
-
-@Composable
-fun ResetButton() {
-    Button(
-        onClick = {
-             // Default Reset Logic (could also trigger safe mode if preferred,
-             // but usually reset means 'wm size reset')
-             MainActivity.runShizukuCommand("wm size reset")
-             MainActivity.runShizukuCommand("wm density reset")
-        },
-        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFb91c1c)),
-        modifier = Modifier.fillMaxWidth().padding(top = 16.dp)
-    ) {
-        Text("Resetar Tudo")
-    }
-}
-
-@Composable
-fun SafeModeButton() {
-    Button(
-        onClick = { MainActivity.applySafeMode() },
-        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00E5FF)),
-        modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
-    ) {
-        Text("Modo Seguro (Anti-Brick)", color = Color.Black)
-    }
-}
-
-@Composable
-fun InicioScreen(shizukuAvailable: Boolean) {
-    Column(modifier = Modifier.padding(16.dp)) {
-        Text("Status Shizuku: ${if (shizukuAvailable) "Conectado" else "Desconectado"}", color = Color.White)
-        Spacer(modifier = Modifier.height(16.dp))
-        Text("RAM Usage: calculating...", color = Color.White)
-        LinearProgressIndicator(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-            color = MaterialTheme.colorScheme.primary
-        )
-        Spacer(modifier = Modifier.weight(1f))
-        SafeModeButton()
-        ResetButton()
-    }
-}
-
-@Composable
-fun DesempenhoScreen() {
-    Column(modifier = Modifier.padding(16.dp)) {
-        Button(onClick = {}, modifier = Modifier.fillMaxWidth()) { Text("Modo Bruto") }
-        Spacer(modifier = Modifier.height(8.dp))
-        Button(onClick = {}, modifier = Modifier.fillMaxWidth()) { Text("Usual Turbo") }
-        Spacer(modifier = Modifier.weight(1f))
-        ResetButton()
-    }
-}
-
-@Composable
-fun EconomiaScreen() {
-    Column(modifier = Modifier.padding(16.dp)) {
-        Button(onClick = {}, modifier = Modifier.fillMaxWidth()) { Text("Super Economia") }
-        Spacer(modifier = Modifier.height(8.dp))
-        Button(onClick = {}, modifier = Modifier.fillMaxWidth()) { Text("Ultra Economia") }
-        Spacer(modifier = Modifier.weight(1f))
-        ResetButton()
-    }
-}
-
-@Composable
-fun CompetitivoScreen() {
-    Column(modifier = Modifier.padding(16.dp)) {
-        Button(onClick = {}, modifier = Modifier.fillMaxWidth()) { Text("Gamer Ultimate") }
-        Spacer(modifier = Modifier.height(8.dp))
-        Button(onClick = {}, modifier = Modifier.fillMaxWidth()) { Text("Sensi Free Fire") }
-        Spacer(modifier = Modifier.weight(1f))
-        ResetButton()
-    }
-}
-
-@Composable
-fun TerminalScreen() {
-    Column(modifier = Modifier.padding(16.dp)) {
-        Text("Terminal Output:", color = Color.White)
-        Box(modifier = Modifier.weight(1f).fillMaxWidth().background(Color.Black.copy(alpha=0.5f)))
-        ResetButton()
     }
 }
