@@ -68,9 +68,14 @@ class MainActivity : ComponentActivity() {
             }
         }
 
+        fun applySafeMode() {
+            // Safe Mode: 540p resolution and 210 DPI to prevent bricking
+            runShizukuCommand("wm size 540x960")
+            runShizukuCommand("wm density 210")
+        }
+
         private fun calculateNewSize(targetWidth: Int): Int {
             val output = runShizukuCommand("wm size")
-            // Output format example: "Physical size: 1080x2400"
             val regex = Regex("Physical size: (\\d+)x(\\d+)")
             val match = regex.find(output)
 
@@ -81,7 +86,6 @@ class MainActivity : ComponentActivity() {
                 val aspectRatio = height / width
                 (targetWidth * aspectRatio).toInt()
             } else {
-                // Fallback if parsing fails (e.g. 20:9 ratio generic)
                 (targetWidth * 2.22).toInt()
             }
         }
@@ -96,9 +100,8 @@ fun MainContent() {
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
 
-    // Boot Safe Delay: 2000ms
     LaunchedEffect(Unit) {
-        delay(2000)
+        delay(2000) // Boot Safe Delay
         try {
             if (Shizuku.pingBinder()) {
                 shizukuAvailable = true
@@ -109,7 +112,6 @@ fun MainContent() {
     }
 
     Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
-        // Fallback background
         Image(
             painter = painterResource(id = R.drawable.fundo_chip),
             contentDescription = null,
@@ -155,7 +157,7 @@ fun MainContent() {
                         )
                     )
                 },
-                containerColor = Color.Transparent // Allow background image to show
+                containerColor = Color.Transparent
             ) { innerPadding ->
                 Box(modifier = Modifier.padding(innerPadding)) {
                     when (currentScreen) {
@@ -174,11 +176,27 @@ fun MainContent() {
 @Composable
 fun ResetButton() {
     Button(
-        onClick = { /* Reset logic */ },
+        onClick = {
+             // Default Reset Logic (could also trigger safe mode if preferred,
+             // but usually reset means 'wm size reset')
+             MainActivity.runShizukuCommand("wm size reset")
+             MainActivity.runShizukuCommand("wm density reset")
+        },
         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFb91c1c)),
         modifier = Modifier.fillMaxWidth().padding(top = 16.dp)
     ) {
         Text("Resetar Tudo")
+    }
+}
+
+@Composable
+fun SafeModeButton() {
+    Button(
+        onClick = { MainActivity.applySafeMode() },
+        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00E5FF)),
+        modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+    ) {
+        Text("Modo Seguro (Anti-Brick)", color = Color.Black)
     }
 }
 
@@ -193,6 +211,7 @@ fun InicioScreen(shizukuAvailable: Boolean) {
             color = MaterialTheme.colorScheme.primary
         )
         Spacer(modifier = Modifier.weight(1f))
+        SafeModeButton()
         ResetButton()
     }
 }

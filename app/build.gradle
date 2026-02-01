@@ -44,6 +44,10 @@ dependencies {
     implementation 'androidx.compose.ui:ui-graphics'
     implementation 'androidx.compose.material3:material3'
     
+    // Navigation & ViewModel - Added for Emergency Protocol V126
+    implementation "androidx.navigation:navigation-compose:2.6.0"
+    implementation "androidx.lifecycle:lifecycle-viewmodel-compose:2.6.1"
+
     // Shizuku API & Provider - Verified for TurboCore Architecture
     implementation "dev.rikka.shizuku:api:13.1.5"
     implementation "dev.rikka.shizuku:provider:13.1.5"
