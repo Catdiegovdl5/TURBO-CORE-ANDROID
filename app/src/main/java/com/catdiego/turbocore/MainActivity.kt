@@ -1,7 +1,10 @@
 package com.catdiego.turbocore
 
 import android.os.Bundle
+import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
@@ -34,8 +37,25 @@ class MainActivity : ComponentActivity() {
             var terminalLog by remember { mutableStateOf("Aguardando comando...") }
 
             LaunchedEffect(Unit) {
-                delay(1000)
-                updateStatus()
+                delay(1000) // Tempo para o sistema estabilizar
+                val isInstalled = AppManager.isShizukuInstalled(this@MainActivity)
+
+                if (!isInstalled) {
+                    shizukuStatus = "Shizuku não encontrado! Redirecionando..."
+                    delay(2000)
+                    openShizukuDownload(this@MainActivity)
+                } else {
+                    if (Shizuku.pingBinder()) {
+                        if (Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED) {
+                            shizukuStatus = "Conectado"
+                        } else {
+                            shizukuStatus = "Pedindo Permissão..."
+                            Shizuku.requestPermission(REQUEST_CODE)
+                        }
+                    } else {
+                        shizukuStatus = "Serviço Shizuku Parado! Abra o app Shizuku e inicie o serviço."
+                    }
+                }
             }
 
             Box(modifier = Modifier.fillMaxSize().background(Color(0xFF0A0A0A))) {
@@ -121,6 +141,11 @@ class MainActivity : ComponentActivity() {
         } else {
             "Aguardando Permissão"
         }
+    }
+
+    private fun openShizukuDownload(context: Context) {
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/RikkaApps/Shizuku/releases"))
+        context.startActivity(intent)
     }
 
     override fun onDestroy() {

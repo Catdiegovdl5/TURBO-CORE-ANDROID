@@ -1,5 +1,8 @@
 package com.catdiego.turbocore
 
+import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Build
 import rikka.shizuku.Shizuku
 import java.io.BufferedReader
 import java.io.InputStreamReader
@@ -19,5 +22,17 @@ object AppManager {
             process.waitFor()
             if (output.isEmpty()) "Sucesso" else output
         } catch (e: Exception) { "Erro: ${e.message}" }
+    }
+
+    fun isShizukuInstalled(context: Context): Boolean {
+        return try {
+            val packageName = "rikka.app.shizuku"
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                context.packageManager.getPackageInfo(packageName, PackageManager.PackageInfoFlags.of(0L))
+            } else {
+                context.packageManager.getPackageInfo(packageName, 0)
+            }
+            true
+        } catch (e: Exception) { false }
     }
 }
