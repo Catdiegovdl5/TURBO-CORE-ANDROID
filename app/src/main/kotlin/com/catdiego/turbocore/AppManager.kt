@@ -21,7 +21,7 @@ object AppManager {
     fun getInstalledApps(context: Context): List<AppInfo> {
         val pm = context.packageManager
         val apps = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            pm.getInstalledApplications(PackageManager.ApplicationInfoFlags.of(0))
+            pm.getInstalledApplications(PackageManager.ApplicationInfoFlags.of(0L))
         } else {
             pm.getInstalledApplications(PackageManager.GET_META_DATA)
         }
