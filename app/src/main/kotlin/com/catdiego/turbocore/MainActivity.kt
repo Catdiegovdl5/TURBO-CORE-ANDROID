@@ -12,11 +12,14 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -189,7 +192,7 @@ fun MainScreen(
                     navigationIcon = {
                         IconButton(onClick = { scope.launch { drawerState.open() } }) {
                             Icon(
-                                painter = painterResource(id = android.R.drawable.ic_menu_sort_by_size),
+                                imageVector = Icons.Default.Menu,
                                 contentDescription = "Menu"
                             )
                         }
@@ -208,14 +211,6 @@ fun MainScreen(
                     .background(Color(0xFF0A0A0A))
                     .padding(paddingValues)
             ) {
-                // Background Image
-                Image(
-                    painter = painterResource(id = R.drawable.fundo_chip),
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
-                )
-
                 // Screen Content
                 when (currentScreen) {
                     "Início" -> InicioScreen(isShizukuInstalled, isShizukuPermissionGranted, snackbarHostState)
@@ -452,44 +447,30 @@ fun CompetitivoScreen(snackbarHostState: SnackbarHostState) {
 @Composable
 fun AppsScreen(snackbarHostState: SnackbarHostState) {
     val context = LocalContext.current
-    var apps by remember { mutableStateOf(listOf<AppInfo>()) }
-    var isLoading by remember { mutableStateOf(true) }
-
-    LaunchedEffect(Unit) {
-        withContext(Dispatchers.IO) {
-            apps = AppManager.getInstalledApps(context)
-            isLoading = false
-        }
-    }
+    val apps = remember { AppManager.getInstalledApps(context) }
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         Text("Listagem de Apps", color = Color.Cyan, style = MaterialTheme.typography.headlineSmall)
         Spacer(modifier = Modifier.height(16.dp))
 
-        if (isLoading) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = Color.Cyan)
-            }
-        } else {
-            LazyColumn(modifier = Modifier.weight(1f)) {
-                items(apps.size) { index ->
-                    val app = apps[index]
-                    Card(
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E))
+        LazyColumn(modifier = Modifier.weight(1f)) {
+            items(apps.size) { index ->
+                val app = apps[index]
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E))
+                ) {
+                    Row(
+                        modifier = Modifier.padding(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(
-                            modifier = Modifier.padding(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            app.icon?.let {
-                                Image(bitmap = it, contentDescription = null, modifier = Modifier.size(48.dp))
-                            }
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Column {
-                                Text(app.name, color = Color.White, style = MaterialTheme.typography.bodyLarge)
-                                Text(app.packageName, color = Color.Gray, style = MaterialTheme.typography.bodySmall)
-                            }
+                        app.icon?.let {
+                            Image(bitmap = it, contentDescription = null, modifier = Modifier.size(48.dp))
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text(app.name, color = Color.White, style = MaterialTheme.typography.bodyLarge)
+                            Text(app.packageName, color = Color.Gray, style = MaterialTheme.typography.bodySmall)
                         }
                     }
                 }
