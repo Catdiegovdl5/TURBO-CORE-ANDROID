@@ -28,9 +28,22 @@ class TerminalViewModel : ViewModel() {
             _isRunning.value = true
             appendOutput("$ $command\n")
 
+            // Safety Checks
+            if (!ShellEngine.isAvailable()) {
+                appendOutput("Error: Shizuku service is not available (binder not received).\n")
+                _isRunning.value = false
+                return@launch
+            }
+
+            if (!ShellEngine.checkPermission()) {
+                appendOutput("Error: Shizuku permission denied.\n")
+                _isRunning.value = false
+                return@launch
+            }
+
             val process = ShellEngine.runCommand(command)
             if (process == null) {
-                appendOutput("Error: Failed to start process (Shizuku active?)\n")
+                appendOutput("Error: Failed to start process.\n")
                 _isRunning.value = false
                 return@launch
             }

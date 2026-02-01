@@ -15,6 +15,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.TurboCore">
         
+        <!-- Shizuku Provider Configuration -->
         <provider
             android:name="rikka.shizuku.ShizukuProvider"
             android:authorities="${applicationId}.shizuku"
