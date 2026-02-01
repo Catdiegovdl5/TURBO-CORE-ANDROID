@@ -8,6 +8,7 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -110,6 +111,12 @@ fun MainScreen(
     val scope = rememberCoroutineScope()
     var currentScreen by remember { mutableStateOf("Início") }
     val snackbarHostState = remember { SnackbarHostState() }
+
+    // Shared log state
+    val globalLogs = remember { mutableStateListOf<String>() }
+    val onLog: (String) -> Unit = { message ->
+        globalLogs.add(message)
+    }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -218,10 +225,10 @@ fun MainScreen(
                 // Screen Content
                 when (currentScreen) {
                     "Início" -> InicioScreen(isShizukuInstalled, isShizukuPermissionGranted, snackbarHostState)
-                    "Economia" -> EconomiaScreen(snackbarHostState)
-                    "Desempenho" -> DesempenhoScreen(snackbarHostState)
-                    "Competitivo" -> CompetitivoScreen(snackbarHostState)
-                    "Terminal" -> TerminalScreen(snackbarHostState)
+                    "Economia" -> EconomiaScreen(snackbarHostState, onLog)
+                    "Desempenho" -> DesempenhoScreen(snackbarHostState, onLog)
+                    "Competitivo" -> CompetitivoScreen(snackbarHostState, onLog)
+                    "Terminal" -> TerminalScreen(snackbarHostState, globalLogs, onLog)
                 }
             }
         }
@@ -250,6 +257,7 @@ fun ResetButton(snackbarHostState: SnackbarHostState) {
 fun ActionButton(
     text: String,
     snackbarHostState: SnackbarHostState,
+    onLog: (String) -> Unit,
     onClick: suspend () -> Boolean
 ) {
     val scope = rememberCoroutineScope()
@@ -262,17 +270,20 @@ fun ActionButton(
             if (!isLoading) {
                 scope.launch {
                     isLoading = true
+                    onLog("Aplicando $text...")
                     val success = onClick()
                     isLoading = false
                     if (success) {
                         buttonColor = Color.Green
                         buttonText = "Aplicado"
                         snackbarHostState.showSnackbar("$text Aplicado!")
+                        onLog("Sucesso: $text")
                         delay(2000)
                         buttonColor = Color(0xFFFF9800)
                         buttonText = text
                     } else {
                         snackbarHostState.showSnackbar("Erro: Falha ou Sem Permissão.")
+                        onLog("Erro: Falha ao aplicar $text")
                     }
                 }
             }
@@ -302,6 +313,7 @@ fun CyberCard(
             .fillMaxWidth()
             .padding(8.dp),
         colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E)),
+        border = BorderStroke(1.dp, Color.Cyan),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -376,7 +388,7 @@ fun InicioScreen(
 }
 
 @Composable
-fun EconomiaScreen(snackbarHostState: SnackbarHostState) {
+fun EconomiaScreen(snackbarHostState: SnackbarHostState, onLog: (String) -> Unit) {
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -386,8 +398,8 @@ fun EconomiaScreen(snackbarHostState: SnackbarHostState) {
         Spacer(modifier = Modifier.height(16.dp))
 
         CyberCard("Opções de Economia") {
-            ActionButton("Super Economia", snackbarHostState) { AppManager.enableSuperEconomy() }
-            ActionButton("Ultra Economia", snackbarHostState) { AppManager.enableUltraEconomy() }
+            ActionButton("Super Economia", snackbarHostState, onLog) { AppManager.enableSuperEconomy() }
+            ActionButton("Ultra Economia", snackbarHostState, onLog) { AppManager.enableUltraEconomy() }
         }
 
         Spacer(modifier = Modifier.weight(1f))
@@ -396,7 +408,7 @@ fun EconomiaScreen(snackbarHostState: SnackbarHostState) {
 }
 
 @Composable
-fun DesempenhoScreen(snackbarHostState: SnackbarHostState) {
+fun DesempenhoScreen(snackbarHostState: SnackbarHostState, onLog: (String) -> Unit) {
     val context = LocalContext.current
 
     Column(
@@ -407,9 +419,14 @@ fun DesempenhoScreen(snackbarHostState: SnackbarHostState) {
         Text("Modo Desempenho", color = Color.White, style = MaterialTheme.typography.headlineSmall)
         Spacer(modifier = Modifier.height(16.dp))
 
-        CyberCard("Resolução") {
-            ActionButton("Modo Safe (540x1200)", snackbarHostState) {
+        CyberCard("Resolução e Turbo") {
+            ActionButton("Modo Bruto (540p)", snackbarHostState, onLog) {
+                // 540p usually means height 540 or width 540. Previous was 540x1200.
+                // Assuming width 540.
                 ShellEngine.runCommand("wm size 540x1200")
+            }
+            ActionButton("Turbo Usual", snackbarHostState, onLog) {
+                AppManager.enableTurboUsual()
             }
         }
 
@@ -419,7 +436,7 @@ fun DesempenhoScreen(snackbarHostState: SnackbarHostState) {
 }
 
 @Composable
-fun CompetitivoScreen(snackbarHostState: SnackbarHostState) {
+fun CompetitivoScreen(snackbarHostState: SnackbarHostState, onLog: (String) -> Unit) {
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -429,11 +446,8 @@ fun CompetitivoScreen(snackbarHostState: SnackbarHostState) {
         Spacer(modifier = Modifier.height(16.dp))
 
         CyberCard("Gaming") {
-            ActionButton("DPI Safe (210)", snackbarHostState) {
-                ShellEngine.runCommand("wm density 210")
-            }
-            ActionButton("Gamer Ultimate", snackbarHostState) { AppManager.enableGamerUltimate() }
-            ActionButton("Sensi Free Fire", snackbarHostState) { AppManager.enableSensiFreeFire() }
+            ActionButton("Gamer Ultimate (Suspend GOS)", snackbarHostState, onLog) { AppManager.enableGamerUltimate() }
+            ActionButton("Sensi Free Fire (210 DPI)", snackbarHostState, onLog) { AppManager.enableSensiFreeFire() }
         }
 
         Spacer(modifier = Modifier.weight(1f))
@@ -443,9 +457,8 @@ fun CompetitivoScreen(snackbarHostState: SnackbarHostState) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TerminalScreen(snackbarHostState: SnackbarHostState) {
+fun TerminalScreen(snackbarHostState: SnackbarHostState, logs: MutableList<String>, onLog: (String) -> Unit) {
     var command by remember { mutableStateOf("") }
-    val outputLog = remember { mutableStateListOf<String>() }
     val scope = rememberCoroutineScope()
 
     Column(
@@ -474,9 +487,9 @@ fun TerminalScreen(snackbarHostState: SnackbarHostState) {
         Button(
             onClick = {
                 scope.launch {
-                    outputLog.add("> $command (Executando...)")
+                    onLog("> $command (Executando...)")
                     val result = ShellEngine.runCommandWithOutput(command)
-                    outputLog.add(result)
+                    onLog(result)
                     command = ""
                 }
             },
@@ -496,8 +509,8 @@ fun TerminalScreen(snackbarHostState: SnackbarHostState) {
                 .padding(8.dp)
         ) {
             LazyColumn {
-                items(outputLog.size) { index ->
-                    Text(outputLog[index], color = Color.Green, style = MaterialTheme.typography.bodySmall)
+                items(logs.size) { index ->
+                    Text(logs[index], color = Color.Green, style = MaterialTheme.typography.bodySmall)
                 }
             }
         }
