@@ -474,11 +474,11 @@ fun TerminalScreen(snackbarHostState: SnackbarHostState, logs: MutableList<Strin
             label = { Text("Comando", color = Color.Gray) },
             modifier = Modifier.fillMaxWidth(),
             colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = Color.Cyan,
+                unfocusedBorderColor = Color.Gray,
                 focusedTextColor = Color.Green,
                 unfocusedTextColor = Color.Green,
-                focusedContainerColor = Color(0xFF1E1E1E),
-                unfocusedContainerColor = Color(0xFF1E1E1E),
-                cursorColor = Color.Green
+                cursorColor = Color.Cyan
             )
         )
 
