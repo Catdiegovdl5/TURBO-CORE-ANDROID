@@ -1,7 +1,10 @@
 package com.catdiego.turbocore
 
+import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
@@ -11,6 +14,12 @@ import androidx.compose.ui.Modifier
 import com.catdiego.turbocore.ui.theme.TurboCoreTheme
 import com.catdiego.turbocore.ui.AppNavigation
 import rikka.shizuku.Shizuku
+import java.io.File
+import java.io.FileWriter
+import java.io.PrintWriter
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class MainActivity : ComponentActivity(), Shizuku.OnRequestPermissionResultListener {
 
@@ -32,9 +41,20 @@ class MainActivity : ComponentActivity(), Shizuku.OnRequestPermissionResultListe
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Register Shizuku listeners
-        Shizuku.addBinderReceivedListenerSticky(binderReceivedListener)
-        Shizuku.addRequestPermissionResultListener(this)
+        // Global Crash Handler
+        Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
+            handleCrash(thread, throwable)
+        }
+
+        // Shizuku Initialization with Safety Net
+        runCatching {
+            Shizuku.addBinderReceivedListenerSticky(binderReceivedListener)
+            Shizuku.addRequestPermissionResultListener(this)
+        }.onFailure { e ->
+            e.printStackTrace()
+            // Continue loading UI even if Shizuku fails
+            Toast.makeText(this, "Shizuku init failed: ${e.message}", Toast.LENGTH_LONG).show()
+        }
 
         setContent {
             TurboCoreTheme {
@@ -50,8 +70,10 @@ class MainActivity : ComponentActivity(), Shizuku.OnRequestPermissionResultListe
 
     override fun onDestroy() {
         super.onDestroy()
-        Shizuku.removeBinderReceivedListener(binderReceivedListener)
-        Shizuku.removeRequestPermissionResultListener(this)
+        runCatching {
+            Shizuku.removeBinderReceivedListener(binderReceivedListener)
+            Shizuku.removeRequestPermissionResultListener(this)
+        }
     }
 
     override fun onRequestPermissionResult(requestCode: Int, grantResult: Int) {
@@ -60,5 +82,22 @@ class MainActivity : ComponentActivity(), Shizuku.OnRequestPermissionResultListe
         } else {
             // Permission denied
         }
+    }
+
+    private fun handleCrash(thread: Thread, throwable: Throwable) {
+        try {
+            val crashLogFile = File(filesDir, "crash_log.txt")
+            val writer = PrintWriter(FileWriter(crashLogFile, true))
+            writer.println("Crash Date: ${SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date())}")
+            writer.println("Thread: ${thread.name}")
+            throwable.printStackTrace(writer)
+            writer.close()
+            Log.e("TurboCoreCrash", "Crash logged to ${crashLogFile.absolutePath}", throwable)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        // Let the system handle the crash (kill process)
+        android.os.Process.killProcess(android.os.Process.myPid())
+        System.exit(1)
     }
 }
