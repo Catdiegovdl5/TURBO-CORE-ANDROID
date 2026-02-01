@@ -1,10 +1,11 @@
 package com.catdiego.turbocore
 
+import android.content.Context
+import android.content.pm.PackageManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CutCornerShape
@@ -15,8 +16,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -76,6 +75,17 @@ class MainActivity : ComponentActivity() {
             runShizukuCommand("wm size 540x960")
             runShizukuCommand("wm density 210")
         }
+
+        private fun isShizukuInstalled(context: Context): Boolean {
+            return try {
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                    context.packageManager.getPackageInfo("moe.shizuku.privileged.api", PackageManager.PackageInfoFlags.of(0L))
+                } else {
+                    context.packageManager.getPackageInfo("moe.shizuku.privileged.api", 0)
+                }
+                true
+            } catch (e: Exception) { false }
+        }
     }
 }
 
@@ -132,22 +142,7 @@ fun MainContent() {
     }
 
     Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
-        // Fail-Safe Background: Black Box + Image with Alpha
-        // Removed try-catch as it's not supported in Composable functions.
-        // If resource is missing, app will crash, but fail-safe box is underneath.
-        // Assuming resource exists or crash is acceptable in dev.
-        // To be truly fail-safe without try-catch, we rely on the resource being valid.
-
-        // Failsafe: Image resource is 0 bytes (invalid), using black background only to prevent crash.
-        /*
-        Image(
-            painter = painterResource(id = R.drawable.fundo_chip),
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize(),
-            alpha = 0.2f
-        )
-        */
+        // Image component removed for Bulletproof Boot
 
         ModalNavigationDrawer(
             drawerState = drawerState,
@@ -290,7 +285,19 @@ fun TerminalScreen() {
     Column(modifier = Modifier.padding(16.dp)) {
         Text("Terminal Output:", color = MaterialTheme.colorScheme.primary)
         CyberCard(modifier = Modifier.weight(1f).fillMaxWidth()) {
-            Text("> Aguardando comandos...", color = Color.Green, modifier = Modifier.fillMaxSize())
+            var text by remember { mutableStateOf("") }
+            OutlinedTextField(
+                value = text,
+                onValueChange = { text = it },
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = Color.Gray,
+                    cursorColor = MaterialTheme.colorScheme.primary,
+                    focusedTextColor = Color.Green,
+                    unfocusedTextColor = Color.Green
+                ),
+                modifier = Modifier.fillMaxSize()
+            )
         }
         ResetButton()
     }

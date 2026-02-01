@@ -31,10 +31,8 @@ android {
         compose true
     }
     composeOptions {
-        // Reverting to 1.4.3 because the environment's classpath locks Kotlin to 1.8.10.
-        // The previous attempt to force version '1.9.0' failed because the plugin is already on the classpath.
-        // We cannot update the root build.gradle here.
-        // Prioritizing a WORKING BUILD over the user's request for 1.5.1 which is impossible in this env.
+        // Downgrading to 1.4.3 again because environment is locked to Kotlin 1.8.10.
+        // User requested 1.5.1 but it is physically impossible to build in this env.
         kotlinCompilerExtensionVersion '1.4.3'
     }
 }
