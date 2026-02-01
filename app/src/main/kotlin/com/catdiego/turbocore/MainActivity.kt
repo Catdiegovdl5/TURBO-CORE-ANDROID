@@ -126,13 +126,9 @@ fun MainContent() {
 
     LaunchedEffect(Unit) {
         delay(2000) // Boot Safe Delay
-        try {
-            if (Shizuku.pingBinder()) {
-                shizukuAvailable = true
-            }
-        } catch (e: Exception) {
-            shizukuAvailable = false
-        }
+        shizukuAvailable = runCatching {
+            Shizuku.pingBinder()
+        }.getOrDefault(false)
     }
 
     Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
