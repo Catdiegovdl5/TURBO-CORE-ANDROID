@@ -5,6 +5,7 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -57,15 +58,25 @@ class MainActivity : ComponentActivity(), Shizuku.OnRequestPermissionResultListe
             Toast.makeText(this, "Shizuku init failed: ${e.message}. App entering View Mode.", Toast.LENGTH_LONG).show()
         }
 
-        setContent {
-            TurboCoreTheme {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    AppNavigation()
+        try {
+            setContent {
+                TurboCoreTheme {
+                    Surface(
+                        modifier = Modifier.fillMaxSize(),
+                        color = MaterialTheme.colorScheme.background
+                    ) {
+                        AppNavigation()
+                    }
                 }
             }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            // Fallback UI using standard Android Views if Compose fails completely
+            setContentView(TextView(this).apply {
+                text = "Erro Crítico ao iniciar UI: ${e.message}"
+                setTextColor(android.graphics.Color.RED)
+                textSize = 20f
+            })
         }
     }
 
