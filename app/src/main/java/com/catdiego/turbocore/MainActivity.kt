@@ -192,10 +192,23 @@ fun MainScreen(
                     .padding(paddingValues)
             ) {
                 // Background Image
-                val painter = if (R.drawable.fundo_chip != 0) painterResource(id = R.drawable.fundo_chip) else null
-                if (painter != null) {
+                val context = LocalContext.current
+                val isResourceValid = remember {
+                    try {
+                        if (R.drawable.fundo_chip != 0) {
+                            context.getDrawable(R.drawable.fundo_chip)
+                            true
+                        } else {
+                            false
+                        }
+                    } catch (e: Exception) {
+                        false
+                    }
+                }
+
+                if (isResourceValid) {
                     Image(
-                        painter = painter,
+                        painter = painterResource(id = R.drawable.fundo_chip),
                         contentDescription = null,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize()
@@ -395,8 +408,8 @@ fun DesempenhoScreen(snackbarHostState: SnackbarHostState) {
         Spacer(modifier = Modifier.height(16.dp))
 
         CyberCard("Resolução") {
-            ActionButton("Modo Bruto (720p)", snackbarHostState) {
-                AppManager.applyGoldenRatioResolution(context, 720)
+            ActionButton("Modo Safe (540x1200)", snackbarHostState) {
+                ShellEngine.runCommand("wm size 540x1200")
             }
         }
 
@@ -416,6 +429,9 @@ fun CompetitivoScreen(snackbarHostState: SnackbarHostState) {
         Spacer(modifier = Modifier.height(16.dp))
 
         CyberCard("Gaming") {
+            ActionButton("DPI Safe (210)", snackbarHostState) {
+                ShellEngine.runCommand("wm density 210")
+            }
             ActionButton("Gamer Ultimate", snackbarHostState) { AppManager.enableGamerUltimate() }
             ActionButton("Sensi Free Fire", snackbarHostState) { AppManager.enableSensiFreeFire() }
         }
@@ -444,10 +460,11 @@ fun TerminalScreen(snackbarHostState: SnackbarHostState) {
             onValueChange = { command = it },
             label = { Text("Comando", color = Color.Gray) },
             modifier = Modifier.fillMaxWidth(),
-            colors = TextFieldDefaults.outlinedTextFieldColors(
+            colors = OutlinedTextFieldDefaults.colors(
                 focusedTextColor = Color.Green,
                 unfocusedTextColor = Color.Green,
-                containerColor = Color(0xFF1E1E1E),
+                focusedContainerColor = Color(0xFF1E1E1E),
+                unfocusedContainerColor = Color(0xFF1E1E1E),
                 cursorColor = Color.Green
             )
         )
