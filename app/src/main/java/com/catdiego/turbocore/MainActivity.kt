@@ -125,6 +125,15 @@ fun MainScreen(
                     modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
                 )
                 NavigationDrawerItem(
+                    label = { Text("Economia") },
+                    selected = currentScreen == "Economia",
+                    onClick = {
+                        currentScreen = "Economia"
+                        scope.launch { drawerState.close() }
+                    },
+                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                )
+                NavigationDrawerItem(
                     label = { Text("Desempenho") },
                     selected = currentScreen == "Desempenho",
                     onClick = {
@@ -182,7 +191,8 @@ fun MainScreen(
 
                 // Screen Content
                 when (currentScreen) {
-                    "Início" -> InicioScreen(isShizukuInstalled, isShizukuPermissionGranted)
+                    "Início" -> InicioScreen(isShizukuInstalled, isShizukuPermissionGranted, snackbarHostState)
+                    "Economia" -> EconomiaScreen(snackbarHostState)
                     "Desempenho" -> DesempenhoScreen(snackbarHostState)
                     "Competitivo" -> CompetitivoScreen(snackbarHostState)
                 }
@@ -192,9 +202,62 @@ fun MainScreen(
 }
 
 @Composable
+fun ResetButton(snackbarHostState: SnackbarHostState) {
+    val scope = rememberCoroutineScope()
+    Button(
+        onClick = {
+            scope.launch {
+                val success = AppManager.resetEverything()
+                if (success) snackbarHostState.showSnackbar("Sistema Resetado!")
+                else snackbarHostState.showSnackbar("Erro ao resetar.")
+            }
+        },
+        colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
+        modifier = Modifier.fillMaxWidth().padding(8.dp)
+    ) {
+        Text("Resetar Tudo")
+    }
+}
+
+@Composable
+fun ActionButton(
+    text: String,
+    snackbarHostState: SnackbarHostState,
+    onClick: suspend () -> Boolean
+) {
+    val scope = rememberCoroutineScope()
+    var buttonColor by remember { mutableStateOf(Color(0xFFFF9800)) } // Default Orange
+    var buttonText by remember { mutableStateOf(text) }
+
+    Button(
+        onClick = {
+            scope.launch {
+                val success = onClick()
+                if (success) {
+                    buttonColor = Color.Green
+                    buttonText = "Aplicado"
+                    snackbarHostState.showSnackbar("$text Aplicado!")
+                    delay(2000)
+                    buttonColor = Color(0xFFFF9800)
+                    buttonText = text
+                } else {
+                    snackbarHostState.showSnackbar("Erro: Falha ou Sem Permissão.")
+                }
+            }
+        },
+        colors = ButtonDefaults.buttonColors(containerColor = buttonColor),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp, horizontal = 8.dp)
+    ) {
+        Text(buttonText)
+    }
+}
+
+
+@Composable
 fun InicioScreen(
     isShizukuInstalled: Boolean,
-    isShizukuPermissionGranted: Boolean
+    isShizukuPermissionGranted: Boolean,
+    snackbarHostState: SnackbarHostState
 ) {
     val context = LocalContext.current
     var ramUsage by remember { mutableStateOf(0f) }
@@ -208,9 +271,10 @@ fun InicioScreen(
 
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp),
-        verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        Spacer(modifier = Modifier.height(32.dp))
+
         // Shizuku Status
         Text("Status Shizuku", color = Color.White, style = MaterialTheme.typography.titleMedium)
         Spacer(modifier = Modifier.height(4.dp))
@@ -245,71 +309,65 @@ fun InicioScreen(
             trackColor = Color.DarkGray
         )
         Text("${(ramUsage * 100).toInt()}%", color = Color.White)
+
+        Spacer(modifier = Modifier.weight(1f))
+        ResetButton(snackbarHostState)
+    }
+}
+
+@Composable
+fun EconomiaScreen(snackbarHostState: SnackbarHostState) {
+    Column(
+        modifier = Modifier.fillMaxSize().padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Spacer(modifier = Modifier.height(32.dp))
+        Text("Modo Economia", color = Color.White, style = MaterialTheme.typography.headlineSmall)
+        Spacer(modifier = Modifier.height(16.dp))
+
+        ActionButton("Super Economia", snackbarHostState) { AppManager.enableSuperEconomy() }
+        ActionButton("Ultra Economia", snackbarHostState) { AppManager.enableUltraEconomy() }
+
+        Spacer(modifier = Modifier.weight(1f))
+        ResetButton(snackbarHostState)
     }
 }
 
 @Composable
 fun DesempenhoScreen(snackbarHostState: SnackbarHostState) {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
 
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp),
-        verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Button(
-            onClick = {
-                scope.launch {
-                    val success = AppManager.applyGoldenRatioResolution(context, 720)
-                    if (success) snackbarHostState.showSnackbar("Modo Bruto Ativado!")
-                    else snackbarHostState.showSnackbar("Erro: Shizuku não autorizado.")
-                }
-            },
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9800))
-        ) {
-            Text("Modo Bruto (720p)")
-        }
-
+        Spacer(modifier = Modifier.height(32.dp))
+        Text("Modo Desempenho", color = Color.White, style = MaterialTheme.typography.headlineSmall)
         Spacer(modifier = Modifier.height(16.dp))
 
-        Button(
-            onClick = {
-                scope.launch {
-                    val success = AppManager.resetEverything()
-                    if (success) snackbarHostState.showSnackbar("Sistema Resetado!")
-                    else snackbarHostState.showSnackbar("Erro ao resetar.")
-                }
-            },
-            colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
-        ) {
-            Text("Resetar Tudo")
+        ActionButton("Modo Bruto (720p)", snackbarHostState) {
+            AppManager.applyGoldenRatioResolution(context, 720)
         }
+
+        Spacer(modifier = Modifier.weight(1f))
+        ResetButton(snackbarHostState)
     }
 }
 
 @Composable
 fun CompetitivoScreen(snackbarHostState: SnackbarHostState) {
-    val scope = rememberCoroutineScope()
-
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp),
-        verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-         Text("Modo Competitivo", color = Color.White)
-         Spacer(modifier = Modifier.height(16.dp))
-         Button(
-            onClick = {
-                scope.launch {
-                    val success = AppManager.resetEverything()
-                    if (success) snackbarHostState.showSnackbar("Sistema Resetado!")
-                    else snackbarHostState.showSnackbar("Erro ao resetar.")
-                }
-            },
-            colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
-        ) {
-            Text("Resetar Tudo")
-        }
+        Spacer(modifier = Modifier.height(32.dp))
+        Text("Modo Competitivo", color = Color.White, style = MaterialTheme.typography.headlineSmall)
+        Spacer(modifier = Modifier.height(16.dp))
+
+        ActionButton("Gamer Ultimate", snackbarHostState) { AppManager.enableGamerUltimate() }
+        ActionButton("Sensi Free Fire", snackbarHostState) { AppManager.enableSensiFreeFire() }
+
+        Spacer(modifier = Modifier.weight(1f))
+        ResetButton(snackbarHostState)
     }
 }
