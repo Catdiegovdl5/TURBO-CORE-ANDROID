@@ -60,7 +60,7 @@ fun TerminalScreen(
             onValueChange = { inputCommand = it },
             modifier = Modifier.fillMaxWidth(),
             label = { Text("Command", color = Color.LightGray) },
-            colors = TextFieldDefaults.outlinedTextFieldColors(
+            colors = OutlinedTextFieldDefaults.colors(
                 focusedTextColor = Color.White,
                 unfocusedTextColor = Color.White,
                 cursorColor = Color.Green,
