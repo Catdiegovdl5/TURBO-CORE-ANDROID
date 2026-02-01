@@ -21,8 +21,10 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import rikka.shizuku.Shizuku
 
 class MainActivity : ComponentActivity() {
@@ -98,6 +100,12 @@ class MainActivity : ComponentActivity() {
             // Ignore
         }
     }
+
+    companion object {
+        suspend fun runShizukuCommand(command: String): Boolean {
+            return AppManager.runCommand(command)
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -148,6 +156,15 @@ fun MainScreen(
                     selected = currentScreen == "Competitivo",
                     onClick = {
                         currentScreen = "Competitivo"
+                        scope.launch { drawerState.close() }
+                    },
+                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                )
+                NavigationDrawerItem(
+                    label = { Text("Apps") },
+                    selected = currentScreen == "Apps",
+                    onClick = {
+                        currentScreen = "Apps"
                         scope.launch { drawerState.close() }
                     },
                     modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
@@ -205,6 +222,7 @@ fun MainScreen(
                     "Economia" -> EconomiaScreen(snackbarHostState)
                     "Desempenho" -> DesempenhoScreen(snackbarHostState)
                     "Competitivo" -> CompetitivoScreen(snackbarHostState)
+                    "Apps" -> AppsScreen(snackbarHostState)
                     "Terminal" -> TerminalScreen(snackbarHostState)
                 }
             }
@@ -370,8 +388,12 @@ fun EconomiaScreen(snackbarHostState: SnackbarHostState) {
         Spacer(modifier = Modifier.height(16.dp))
 
         CyberCard("Opções de Economia") {
-            ActionButton("Super Economia", snackbarHostState) { AppManager.enableSuperEconomy() }
-            ActionButton("Ultra Economia", snackbarHostState) { AppManager.enableUltraEconomy() }
+            ActionButton("Super Economia", snackbarHostState) {
+                MainActivity.runShizukuCommand("settings put global low_power 1 && pm suspend com.google.android.gms")
+            }
+            ActionButton("Ultra Economia", snackbarHostState) {
+                MainActivity.runShizukuCommand("wm size 360x800 && settings put global low_power 1")
+            }
         }
 
         Spacer(modifier = Modifier.weight(1f))
@@ -381,8 +403,6 @@ fun EconomiaScreen(snackbarHostState: SnackbarHostState) {
 
 @Composable
 fun DesempenhoScreen(snackbarHostState: SnackbarHostState) {
-    val context = LocalContext.current
-
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -392,8 +412,11 @@ fun DesempenhoScreen(snackbarHostState: SnackbarHostState) {
         Spacer(modifier = Modifier.height(16.dp))
 
         CyberCard("Resolução") {
-            ActionButton("Modo Bruto (720p)", snackbarHostState) {
-                AppManager.applyGoldenRatioResolution(context, 720)
+            ActionButton("Modo Bruto", snackbarHostState) {
+                MainActivity.runShizukuCommand("wm size 540x1200 && wm density 210")
+            }
+            ActionButton("Usual Turbo", snackbarHostState) {
+                MainActivity.runShizukuCommand("wm size reset && wm density reset")
             }
         }
 
@@ -413,11 +436,65 @@ fun CompetitivoScreen(snackbarHostState: SnackbarHostState) {
         Spacer(modifier = Modifier.height(16.dp))
 
         CyberCard("Gaming") {
-            ActionButton("Gamer Ultimate", snackbarHostState) { AppManager.enableGamerUltimate() }
-            ActionButton("Sensi Free Fire", snackbarHostState) { AppManager.enableSensiFreeFire() }
+            ActionButton("Gamer Ultimate", snackbarHostState) {
+                MainActivity.runShizukuCommand("cmd power set-fixed-performance-mode-enabled true")
+            }
+            ActionButton("Sensi Free Fire", snackbarHostState) {
+                MainActivity.runShizukuCommand("wm density 180")
+            }
         }
 
         Spacer(modifier = Modifier.weight(1f))
+        ResetButton(snackbarHostState)
+    }
+}
+
+@Composable
+fun AppsScreen(snackbarHostState: SnackbarHostState) {
+    val context = LocalContext.current
+    var apps by remember { mutableStateOf(listOf<AppInfo>()) }
+    var isLoading by remember { mutableStateOf(true) }
+
+    LaunchedEffect(Unit) {
+        withContext(Dispatchers.IO) {
+            apps = AppManager.getInstalledApps(context)
+            isLoading = false
+        }
+    }
+
+    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+        Text("Listagem de Apps", color = Color.Cyan, style = MaterialTheme.typography.headlineSmall)
+        Spacer(modifier = Modifier.height(16.dp))
+
+        if (isLoading) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(color = Color.Cyan)
+            }
+        } else {
+            LazyColumn(modifier = Modifier.weight(1f)) {
+                items(apps.size) { index ->
+                    val app = apps[index]
+                    Card(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E))
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            app.icon?.let {
+                                Image(bitmap = it, contentDescription = null, modifier = Modifier.size(48.dp))
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text(app.name, color = Color.White, style = MaterialTheme.typography.bodyLarge)
+                                Text(app.packageName, color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+                            }
+                        }
+                    }
+                }
+            }
+        }
         ResetButton(snackbarHostState)
     }
 }
@@ -455,7 +532,7 @@ fun TerminalScreen(snackbarHostState: SnackbarHostState) {
             onClick = {
                 scope.launch {
                     outputLog = "Executando...\n" + outputLog
-                    val result = ShellEngine.runCommandWithOutput(command)
+                    val result = AppManager.runCommandWithOutput(command)
                     outputLog = "> $command\n$result\n" + outputLog
                     command = ""
                 }

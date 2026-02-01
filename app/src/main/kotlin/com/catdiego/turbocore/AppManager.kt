@@ -1,7 +1,13 @@
 package com.catdiego.turbocore
 
 import android.content.Context
+import android.app.ActivityManager
+import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.drawable.Drawable
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -9,15 +15,22 @@ import rikka.shizuku.Shizuku
 import java.io.BufferedReader
 import java.io.InputStreamReader
 
-object ShellEngine {
+data class AppInfo(
+    val name: String,
+    val packageName: String,
+    val icon: ImageBitmap?,
+    val isSystemApp: Boolean
+)
 
-    fun isShizukuAvailable(): Boolean {
-        return try {
-            Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED
-        } catch (e: Exception) {
-            false
-        }
-    }
+fun Drawable.toOptimalImageBitmap(): ImageBitmap {
+    val bitmap = Bitmap.createBitmap(128, 128, Bitmap.Config.ARGB_8888)
+    val canvas = android.graphics.Canvas(bitmap)
+    this.setBounds(0, 0, 128, 128)
+    this.draw(canvas)
+    return bitmap.asImageBitmap()
+}
+
+object AppManager {
 
     suspend fun runCommand(command: String): Boolean {
         return withContext(Dispatchers.IO) {
@@ -26,7 +39,6 @@ object ShellEngine {
                 delay(2000)
 
                 if (Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED) {
-                    // Use Reflection to access private newProcess as per PR 1 architecture
                     val method = Shizuku::class.java.getDeclaredMethod(
                         "newProcess",
                         Array<String>::class.java,
@@ -48,10 +60,9 @@ object ShellEngine {
     }
 
     suspend fun runCommands(commands: List<String>): Boolean {
-         return withContext(Dispatchers.IO) {
+        return withContext(Dispatchers.IO) {
             try {
                 delay(2000)
-
                 if (Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED) {
                     val script = commands.joinToString("\n")
                     val method = Shizuku::class.java.getDeclaredMethod(
@@ -103,5 +114,48 @@ object ShellEngine {
                 return@withContext "Erro: ${e.message}"
             }
         }
+    }
+
+    fun getRamUsage(context: Context): Float {
+        val memoryInfo = ActivityManager.MemoryInfo()
+        val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+        activityManager.getMemoryInfo(memoryInfo)
+
+        val totalMem = memoryInfo.totalMem.toFloat()
+        val availMem = memoryInfo.availMem.toFloat()
+        val usedMem = totalMem - availMem
+
+        return usedMem / totalMem
+    }
+
+    fun getInstalledApps(context: Context): List<AppInfo> {
+        val pm = context.packageManager
+        val apps = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            pm.getInstalledApplications(PackageManager.ApplicationInfoFlags.of(PackageManager.GET_META_DATA.toLong()))
+        } else {
+            pm.getInstalledApplications(PackageManager.GET_META_DATA)
+        }
+
+        // Filtering system apps to save RAM as requested
+        return apps.filter { (it.flags and ApplicationInfo.FLAG_SYSTEM) == 0 }
+            .map { app ->
+                AppInfo(
+                    name = app.loadLabel(pm).toString(),
+                    packageName = app.packageName,
+                    icon = app.loadIcon(pm).toOptimalImageBitmap(),
+                    isSystemApp = false
+                )
+            }
+    }
+
+    suspend fun resetEverything(): Boolean {
+        val commands = listOf(
+            "wm size reset",
+            "wm density reset",
+            "settings put global window_animation_scale 1.0",
+            "settings put global transition_animation_scale 1.0",
+            "settings put global animator_duration_scale 1.0"
+        )
+        return runCommands(commands)
     }
 }
