@@ -36,8 +36,25 @@ enum class Screen(val title: String) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 class MainActivity : ComponentActivity() {
+
+    private val REQUEST_CODE_SHIZUKU = 1001
+
+    // Listener for permission results
+    private val permissionListener = Shizuku.OnRequestPermissionResultListener { requestCode, grantResult ->
+        if (requestCode == REQUEST_CODE_SHIZUKU && grantResult == PackageManager.PERMISSION_GRANTED) {
+            // Permission granted
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Register Shizuku listener if binder is alive (or just register safely)
+        // runCatching to avoid crash if library is missing in runtime (though we depend on it)
+        runCatching {
+            Shizuku.addRequestPermissionResultListener(permissionListener)
+        }
+
         setContent {
             MaterialTheme(
                 colorScheme = darkColorScheme(
@@ -53,23 +70,28 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+        runCatching {
+            Shizuku.removeRequestPermissionResultListener(permissionListener)
+        }
+    }
+
     companion object {
         fun runShizukuCommand(command: String): String {
             return try {
+                // Reverting to Reflection because Shizuku.newProcess is private in API 13.1.5
+                // The user requested direct API, but it causes compilation error: "Cannot access 'newProcess': it is private in 'Shizuku'"
                 val shizukuClass = Class.forName("rikka.shizuku.Shizuku")
                 val newProcessMethod = shizukuClass.getMethod("newProcess", Array<String>::class.java, Array<String>::class.java, String::class.java)
                 val process = newProcessMethod.invoke(null, arrayOf("sh", "-c", command), null, null) as Process
 
                 val reader = BufferedReader(InputStreamReader(process.inputStream))
-                val output = StringBuilder()
-                var line: String?
-                while (reader.readLine().also { line = it } != null) {
-                    output.append(line).append("\n")
-                }
+                val result = reader.readText()
                 process.waitFor()
-                output.toString()
+                if (result.isEmpty()) "Comando executado (sem retorno)" else result
             } catch (e: Exception) {
-                "Error: ${e.message}"
+                "Erro: ${e.message}"
             }
         }
 
@@ -136,17 +158,25 @@ fun MainContent() {
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
 
+    // Permission Request Logic
+    val REQUEST_CODE_SHIZUKU = 1001
+
     LaunchedEffect(Unit) {
-        delay(2000) // Boot Safe Delay
-        shizukuAvailable = runCatching {
-            Shizuku.pingBinder()
-        }.getOrDefault(false)
+        delay(1000)
+        try {
+            if (Shizuku.pingBinder()) {
+                if (Shizuku.checkSelfPermission() != PackageManager.PERMISSION_GRANTED) {
+                    Shizuku.requestPermission(REQUEST_CODE_SHIZUKU)
+                } else {
+                    shizukuAvailable = true
+                }
+            }
+        } catch (e: Exception) {
+            shizukuAvailable = false
+        }
     }
 
     Box(modifier = Modifier.fillMaxSize().background(Color(0xFF0A0A0A))) {
-        // Image Protection: Background is handled by Box color above.
-        // No Image composable to load 'fundo_chip' to prevent ResourceNotFound crash.
-
         ModalNavigationDrawer(
             drawerState = drawerState,
             drawerContent = {
@@ -289,20 +319,42 @@ fun TerminalScreen() {
         Text("Terminal Output:", color = MaterialTheme.colorScheme.primary)
         CyberCard(modifier = Modifier.weight(1f).fillMaxWidth()) {
             var text by remember { mutableStateOf("") }
-            OutlinedTextField(
-                value = text,
-                onValueChange = { text = it },
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = Color.Green,
-                    unfocusedTextColor = Color.Green,
-                    focusedContainerColor = Color(0xFF1E1E1E),
-                    unfocusedContainerColor = Color(0xFF1E1E1E),
-                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    unfocusedBorderColor = Color.Gray,
-                    cursorColor = MaterialTheme.colorScheme.primary
-                ),
-                modifier = Modifier.fillMaxSize()
-            )
+            var output by remember { mutableStateOf("") }
+
+            Column {
+                OutlinedTextField(
+                    value = text,
+                    onValueChange = { text = it },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Color.Green,
+                        unfocusedTextColor = Color.Green,
+                        focusedContainerColor = Color(0xFF1E1E1E),
+                        unfocusedContainerColor = Color(0xFF1E1E1E),
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = Color.Gray,
+                        cursorColor = MaterialTheme.colorScheme.primary
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(Modifier.height(8.dp))
+
+                CyberButton(
+                    text = "EXECUTAR COMANDO",
+                    onClick = {
+                        output = MainActivity.runShizukuCommand(text)
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(Modifier.height(8.dp))
+
+                Text(
+                    text = output,
+                    color = Color.Green,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
         }
         ResetButton()
     }
