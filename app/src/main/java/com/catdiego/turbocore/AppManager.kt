@@ -14,6 +14,7 @@ object AppManager {
      * Uses reflection to access 'newProcess' which is hidden in the API jar but available at runtime.
      */
     fun runCommand(command: String): String {
+        if (!Shizuku.pingBinder()) return "Erro: Shizuku Parado"
         return try {
             val method = Shizuku::class.java.getDeclaredMethod(
                 "newProcess",
@@ -35,7 +36,7 @@ object AppManager {
 
     fun isShizukuInstalled(context: Context): Boolean {
         return try {
-            val packageName = "moe.shizuku.privileged.api"
+            val packageName = "rikka.app.shizuku"
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 context.packageManager.getPackageInfo(packageName, PackageManager.PackageInfoFlags.of(0L))
             } else {

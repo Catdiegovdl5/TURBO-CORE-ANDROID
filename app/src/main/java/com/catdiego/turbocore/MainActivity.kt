@@ -27,12 +27,16 @@ class MainActivity : ComponentActivity() {
             val scope = rememberCoroutineScope()
 
             LaunchedEffect(Unit) {
-                delay(1500)
-                if (Shizuku.pingBinder()) {
-                    if (Shizuku.checkSelfPermission() != PackageManager.PERMISSION_GRANTED) {
+                delay(2000)
+                try {
+                    if (Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED) {
+                        shizukuStatus = "Conectado"
+                    } else {
                         Shizuku.requestPermission(REQUEST_CODE_SHIZUKU)
-                    } else { shizukuStatus = "Conectado" }
-                } else { shizukuStatus = "Desconectado" }
+                    }
+                } catch (e: Exception) {
+                    shizukuStatus = "Serviço Shizuku não iniciado"
+                }
             }
 
             Box(modifier = Modifier.fillMaxSize().background(Color(0xFF0A0A0A))) {
@@ -40,6 +44,10 @@ class MainActivity : ComponentActivity() {
                     item {
                         Text("TURBO CORE v1.0", color = Color.Cyan, style = MaterialTheme.typography.headlineMedium)
                         Text("Shizuku: $shizukuStatus", color = if(shizukuStatus == "Conectado") Color.Green else Color.Red)
+
+                        Button(onClick = { Shizuku.requestPermission(REQUEST_CODE_SHIZUKU) }) {
+                            Text("FORÇAR PERMISSÃO")
+                        }
 
                         Spacer(Modifier.height(20.dp))
 
