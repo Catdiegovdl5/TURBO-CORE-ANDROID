@@ -2,6 +2,7 @@ package com.catdiego.turbocore
 
 import android.content.Context
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -16,6 +17,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -78,7 +80,7 @@ class MainActivity : ComponentActivity() {
 
         private fun isShizukuInstalled(context: Context): Boolean {
             return try {
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                     context.packageManager.getPackageInfo("moe.shizuku.privileged.api", PackageManager.PackageInfoFlags.of(0L))
                 } else {
                     context.packageManager.getPackageInfo("moe.shizuku.privileged.api", 0)
@@ -141,8 +143,9 @@ fun MainContent() {
         }.getOrDefault(false)
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
-        // Image component removed for Bulletproof Boot
+    Box(modifier = Modifier.fillMaxSize().background(Color(0xFF0A0A0A))) {
+        // Image Protection: Background is handled by Box color above.
+        // No Image composable to load 'fundo_chip' to prevent ResourceNotFound crash.
 
         ModalNavigationDrawer(
             drawerState = drawerState,
@@ -290,11 +293,13 @@ fun TerminalScreen() {
                 value = text,
                 onValueChange = { text = it },
                 colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = Color.Green,
+                    unfocusedTextColor = Color.Green,
+                    focusedContainerColor = Color(0xFF1E1E1E),
+                    unfocusedContainerColor = Color(0xFF1E1E1E),
                     focusedBorderColor = MaterialTheme.colorScheme.primary,
                     unfocusedBorderColor = Color.Gray,
-                    cursorColor = MaterialTheme.colorScheme.primary,
-                    focusedTextColor = Color.Green,
-                    unfocusedTextColor = Color.Green
+                    cursorColor = MaterialTheme.colorScheme.primary
                 ),
                 modifier = Modifier.fillMaxSize()
             )
