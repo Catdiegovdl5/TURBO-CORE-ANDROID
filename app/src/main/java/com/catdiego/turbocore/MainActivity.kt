@@ -43,13 +43,20 @@ class MainActivity : ComponentActivity() {
             var terminalLog by remember { mutableStateOf("Aguardando comando...") }
 
             LaunchedEffect(Unit) {
-                delay(3000)
-                if (shizukuStatus == "Verificando...") {
-                    val installed = AppManager.isShizukuInstalled(this@MainActivity)
-                    if (!installed) {
-                        shizukuStatus = "Shizuku não encontrado! Redirecionando..."
-                        delay(1500)
-                        openShizukuDownload(this@MainActivity)
+                delay(1000)
+                if (Shizuku.pingBinder()) {
+                    checkAndRequestShizukuPermission()
+                } else {
+                    shizukuStatus = "Shizuku em espera..."
+                    delay(2000)
+                    // Se ainda não pingou, tenta forçar a conexão verificando permissão
+                    try {
+                        Shizuku.requestPermission(REQUEST_CODE)
+                    } catch (e: Exception) {
+                        // Se crashar aqui, é porque o Shizuku REALMENTE não está rodando
+                        shizukuStatus = "Abrindo Shizuku para ativação..."
+                        delay(1000)
+                        launchShizukuApp(this@MainActivity)
                     }
                 }
             }
@@ -151,6 +158,21 @@ class MainActivity : ComponentActivity() {
     private fun openShizukuDownload(context: Context) {
         val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/RikkaApps/Shizuku/releases"))
         context.startActivity(intent)
+    }
+
+    private fun launchShizukuApp(context: Context) {
+        try {
+            val intent = context.packageManager.getLaunchIntentForPackage("rikka.app.shizuku")
+            if (intent != null) {
+                context.startActivity(intent)
+            } else {
+                // Se não achar o app, aí sim manda para o GitHub
+                val githubIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/RikkaApps/Shizuku/releases"))
+                context.startActivity(githubIntent)
+            }
+        } catch (e: Exception) {
+            shizukuStatus = "Erro ao abrir Shizuku: ${e.message}"
+        }
     }
 
     override fun onDestroy() {
