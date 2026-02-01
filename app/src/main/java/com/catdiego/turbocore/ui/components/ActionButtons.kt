@@ -1,6 +1,5 @@
 package com.catdiego.turbocore.ui.components
 
-import android.widget.Toast
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -11,7 +10,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import com.catdiego.turbocore.util.ShellEngine
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 @Composable
@@ -21,17 +19,14 @@ fun TurboActionButtons() {
 
     Button(
         onClick = {
-            scope.launch(Dispatchers.IO) {
+            scope.launch {
                 // Fail-Safe Reset
-                ShellEngine.runShizukuCommand("wm size reset")
-                ShellEngine.runShizukuCommand("wm density reset")
+                ShellEngine.runCommandWithFeedback(context, "wm size reset")
+                ShellEngine.runCommandWithFeedback(context, "wm density reset")
 
-                // Sensi FF - Safe Mode V128: Density 210
-                ShellEngine.runShizukuCommand("wm density 210")
-                ShellEngine.runShizukuCommand("settings put system pointer_speed 7")
-                launch(Dispatchers.Main) {
-                    Toast.makeText(context, "Sensi FF Applied", Toast.LENGTH_SHORT).show()
-                }
+                // Sensi FF
+                ShellEngine.runCommandWithFeedback(context, "wm density 210")
+                ShellEngine.runCommandWithFeedback(context, "settings put system pointer_speed 7")
             }
         },
         modifier = Modifier.fillMaxWidth()
@@ -41,22 +36,16 @@ fun TurboActionButtons() {
 
     Button(
         onClick = {
-            scope.launch(Dispatchers.IO) {
+            scope.launch {
                 // Fail-Safe Reset
-                ShellEngine.runShizukuCommand("wm size reset")
-                ShellEngine.runShizukuCommand("wm density reset")
+                ShellEngine.runCommandWithFeedback(context, "wm size reset")
+                ShellEngine.runCommandWithFeedback(context, "wm density reset")
 
-                // Modo Bruto - Safe Mode V128: 540x1200
-                ShellEngine.runShizukuCommand("wm size 540x1200")
-
-                // Samsung Kernel Tweaks
-                ShellEngine.runShizukuCommand("settings put global sem_enhanced_cpu_responsiveness 1")
-                ShellEngine.runShizukuCommand("settings put global multicore_packet_scheduler 1")
-                ShellEngine.runShizukuCommand("cmd thermalservice override_status 0")
-
-                launch(Dispatchers.Main) {
-                    Toast.makeText(context, "Modo Bruto Applied", Toast.LENGTH_SHORT).show()
-                }
+                // Modo Bruto
+                ShellEngine.runCommandWithFeedback(context, "wm size 540x1200")
+                ShellEngine.runCommandWithFeedback(context, "settings put global sem_enhanced_cpu_responsiveness 1")
+                ShellEngine.runCommandWithFeedback(context, "settings put global multicore_packet_scheduler 1")
+                ShellEngine.runCommandWithFeedback(context, "cmd thermalservice override_status 0")
             }
         },
         modifier = Modifier.fillMaxWidth()
@@ -66,12 +55,9 @@ fun TurboActionButtons() {
 
     Button(
         onClick = {
-            scope.launch(Dispatchers.IO) {
-                // Gamer Ultimate - Safe Mode V128: Suspend GOS
-                ShellEngine.runShizukuCommand("pm suspend com.samsung.android.game.gos")
-                launch(Dispatchers.Main) {
-                    Toast.makeText(context, "Gamer Ultimate Applied", Toast.LENGTH_SHORT).show()
-                }
+            scope.launch {
+                // Gamer Ultimate
+                ShellEngine.runCommandWithFeedback(context, "pm suspend com.samsung.android.game.gos")
             }
         },
         modifier = Modifier.fillMaxWidth()
@@ -87,18 +73,14 @@ fun ResetButton() {
 
     Button(
         onClick = {
-            scope.launch(Dispatchers.IO) {
-                ShellEngine.runShizukuCommand("wm size reset")
-                ShellEngine.runShizukuCommand("wm density reset")
-                ShellEngine.runShizukuCommand("settings put global low_power 0")
-                ShellEngine.runShizukuCommand("settings put global sem_enhanced_cpu_responsiveness 0")
-                ShellEngine.runShizukuCommand("settings put global multicore_packet_scheduler 0")
-                ShellEngine.runShizukuCommand("pm unsuspend com.samsung.android.game.gos")
-                ShellEngine.runShizukuCommand("pm enable com.samsung.android.game.gos")
-
-                launch(Dispatchers.Main) {
-                    Toast.makeText(context, "All Settings Reset", Toast.LENGTH_SHORT).show()
-                }
+            scope.launch {
+                ShellEngine.runCommandWithFeedback(context, "wm size reset")
+                ShellEngine.runCommandWithFeedback(context, "wm density reset")
+                ShellEngine.runCommandWithFeedback(context, "settings put global low_power 0")
+                ShellEngine.runCommandWithFeedback(context, "settings put global sem_enhanced_cpu_responsiveness 0")
+                ShellEngine.runCommandWithFeedback(context, "settings put global multicore_packet_scheduler 0")
+                ShellEngine.runCommandWithFeedback(context, "pm unsuspend com.samsung.android.game.gos")
+                ShellEngine.runCommandWithFeedback(context, "pm enable com.samsung.android.game.gos")
             }
         },
         modifier = Modifier.fillMaxWidth(),

@@ -1,6 +1,10 @@
 package com.catdiego.turbocore.util
 
+import android.content.Context
 import android.content.pm.PackageManager
+import android.widget.Toast
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import rikka.shizuku.Shizuku
 import java.io.File
 import java.lang.reflect.Method
@@ -9,22 +13,17 @@ object ShellEngine {
 
     /**
      * Checks if Shizuku service is available.
-     * Uses direct API.
      */
     fun isAvailable(): Boolean {
-        // Shizuku.pingBinder() returns true if the service is running and binder is alive
         return Shizuku.pingBinder()
     }
 
     /**
      * Checks if the app has permission to use Shizuku.
-     * Uses direct API.
      */
     fun checkPermission(): Boolean {
         return try {
             if (Shizuku.isPreV11()) {
-                // Pre-v11 Shizuku (adb) doesn't require explicit runtime permission in the same way,
-                // but typically checkSelfPermission is enough.
                 Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED
             } else {
                 Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED
@@ -37,17 +36,11 @@ object ShellEngine {
 
     /**
      * Executes a command using Shizuku.
-     *
-     * Note: This method uses Reflection because `Shizuku.newProcess` is currently inaccessible
-     * (marked private/hidden) in the `dev.rikka.shizuku:api` library version used, preventing
-     * direct Kotlin access.
-     *
-     * @param command The command and arguments to execute.
-     * @param env Environment variables (optional).
-     * @param dir Working directory (optional).
+     * Uses Reflection as a fallback if direct access fails (or if library hides it).
      */
     fun newProcess(command: Array<String>, env: Array<String>? = null, dir: File? = null): Process? {
         return try {
+            // Attempting direct access via Reflection to ensure compatibility
             val clazz = Class.forName("rikka.shizuku.Shizuku")
             val method: Method = clazz.getMethod(
                 "newProcess",
@@ -55,7 +48,6 @@ object ShellEngine {
                 Array<String>::class.java,
                 String::class.java
             )
-            // Pass dir as String path
             method.invoke(null, command, env, dir?.absolutePath) as? Process
         } catch (e: Exception) {
             e.printStackTrace()
@@ -64,16 +56,52 @@ object ShellEngine {
     }
 
     /**
-     * Helper to run a simple command string using "sh -c".
+     * Runs a command with "sh -c" prefix.
      */
     fun runCommand(command: String): Process? {
+        // Enforce sh -c for complex commands (wm, settings, etc)
         return newProcess(arrayOf("sh", "-c", command))
     }
 
     /**
-     * Alias for runCommand to match specific request requirement.
+     * Runs a command with UI feedback (Toast).
      */
-    fun runShizukuCommand(command: String): Process? {
-        return runCommand(command)
+    suspend fun runCommandWithFeedback(context: Context, command: String) {
+        withContext(Dispatchers.Main) {
+            Toast.makeText(context, "Enviando: $command", Toast.LENGTH_SHORT).show()
+        }
+
+        val process = withContext(Dispatchers.IO) {
+            runCommand(command)
+        }
+
+        withContext(Dispatchers.Main) {
+            if (process != null) {
+                // Wait for process in background to get exit code?
+                // Getting exit code here might block main thread if we wait immediately.
+                // Better to just say "Command Sent" or "Process Started".
+                // But the user wants "Sucesso" or "Erro".
+                // So we should wait in IO context.
+            } else {
+                Toast.makeText(context, "Erro: Falha ao iniciar processo Shizuku", Toast.LENGTH_LONG).show()
+            }
+        }
+
+        if (process != null) {
+            val exitCode = withContext(Dispatchers.IO) {
+                try {
+                    process.waitFor()
+                } catch (e: InterruptedException) {
+                    -1
+                }
+            }
+            withContext(Dispatchers.Main) {
+                if (exitCode == 0) {
+                    Toast.makeText(context, "Sucesso ($command)", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(context, "Erro: Código de saída $exitCode", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
     }
 }

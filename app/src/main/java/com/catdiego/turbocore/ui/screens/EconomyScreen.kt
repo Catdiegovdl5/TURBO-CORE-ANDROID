@@ -1,6 +1,5 @@
 package com.catdiego.turbocore.ui.screens
 
-import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
@@ -11,7 +10,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.catdiego.turbocore.util.ShellEngine
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 @Composable
@@ -32,13 +30,10 @@ fun EconomyScreen() {
 
         Button(
             onClick = {
-                scope.launch(Dispatchers.IO) {
+                scope.launch {
                     // Super Economia
-                    ShellEngine.runShizukuCommand("settings put global low_power 1")
-                    ShellEngine.runShizukuCommand("svc bluetooth disable")
-                    launch(Dispatchers.Main) {
-                        Toast.makeText(context, "Super Economy Applied", Toast.LENGTH_SHORT).show()
-                    }
+                    ShellEngine.runCommandWithFeedback(context, "settings put global low_power 1")
+                    ShellEngine.runCommandWithFeedback(context, "svc bluetooth disable")
                 }
             },
             modifier = Modifier.fillMaxWidth()
