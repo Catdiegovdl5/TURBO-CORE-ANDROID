@@ -25,6 +25,8 @@ fun PerformanceScreen() {
         ShellEngine.runShizukuCommand("wm size reset")
         ShellEngine.runShizukuCommand("wm density reset")
         ShellEngine.runShizukuCommand("settings put global low_power 0")
+        ShellEngine.runShizukuCommand("settings put global sem_enhanced_cpu_responsiveness 0")
+        ShellEngine.runShizukuCommand("settings put global multicore_packet_scheduler 0")
         // Re-enable GOS (assuming it was suspended or disabled)
         ShellEngine.runShizukuCommand("pm unsuspend com.samsung.android.game.gos")
         ShellEngine.runShizukuCommand("pm enable com.samsung.android.game.gos")
@@ -77,11 +79,16 @@ fun PerformanceScreen() {
                     ShellEngine.runShizukuCommand("wm density reset")
 
                     // Modo Bruto
-                    // Updated to 540x1200 as requested
+                    // Resolution 540x1200 (Safe Mode)
                     ShellEngine.runShizukuCommand("wm size 540x1200")
+
+                    // Kernel & Samsung Tweaks
+                    ShellEngine.runShizukuCommand("settings put global sem_enhanced_cpu_responsiveness 1")
+                    ShellEngine.runShizukuCommand("settings put global multicore_packet_scheduler 1")
                     ShellEngine.runShizukuCommand("cmd thermalservice override_status 0")
+
                     launch(Dispatchers.Main) {
-                        Toast.makeText(context, "Modo Bruto Applied", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "Modo Bruto (Safe) Applied", Toast.LENGTH_SHORT).show()
                     }
                 }
             },
