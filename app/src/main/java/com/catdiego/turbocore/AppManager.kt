@@ -58,8 +58,19 @@ object AppManager {
         return ShellEngine.runCommands(commands)
     }
 
+    suspend fun enableTurboUsual(): Boolean {
+        val commands = listOf(
+            "cmd package compile -m speed-profile -a",
+            "settings put global window_animation_scale 0.5",
+            "settings put global transition_animation_scale 0.5",
+            "settings put global animator_duration_scale 0.5"
+        )
+        return ShellEngine.runCommands(commands)
+    }
+
     suspend fun enableGamerUltimate(): Boolean {
         val commands = listOf(
+            "pm suspend com.samsung.android.game.gos",
             "cmd package compile -m speed -a",
             "settings put global window_animation_scale 0.0",
             "settings put global transition_animation_scale 0.0",
@@ -69,6 +80,10 @@ object AppManager {
     }
 
     suspend fun enableSensiFreeFire(): Boolean {
-        return ShellEngine.runCommand("settings put system pointer_speed 7")
+        val commands = listOf(
+            "settings put system pointer_speed 7",
+            "wm density 210"
+        )
+        return ShellEngine.runCommands(commands)
     }
 }

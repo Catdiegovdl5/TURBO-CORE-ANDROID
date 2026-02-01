@@ -8,6 +8,7 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -21,6 +22,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Menu
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import rikka.shizuku.Shizuku
@@ -111,6 +114,12 @@ fun MainScreen(
     var currentScreen by remember { mutableStateOf("Início") }
     val snackbarHostState = remember { SnackbarHostState() }
 
+    // Shared log state
+    val globalLogs = remember { mutableStateListOf<String>() }
+    val onLog: (String) -> Unit = { message ->
+        globalLogs.add(message)
+    }
+
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
@@ -172,7 +181,7 @@ fun MainScreen(
                     navigationIcon = {
                         IconButton(onClick = { scope.launch { drawerState.open() } }) {
                             Icon(
-                                painter = painterResource(id = android.R.drawable.ic_menu_sort_by_size),
+                                imageVector = Icons.Filled.Menu,
                                 contentDescription = "Menu"
                             )
                         }
@@ -192,20 +201,36 @@ fun MainScreen(
                     .padding(paddingValues)
             ) {
                 // Background Image
-                Image(
-                    painter = painterResource(id = R.drawable.fundo_chip),
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
-                )
+                val context = LocalContext.current
+                val isResourceValid = remember {
+                    try {
+                        if (R.drawable.fundo_chip != 0) {
+                            context.getDrawable(R.drawable.fundo_chip)
+                            true
+                        } else {
+                            false
+                        }
+                    } catch (e: Exception) {
+                        false
+                    }
+                }
+
+                if (isResourceValid) {
+                    Image(
+                        painter = painterResource(id = R.drawable.fundo_chip),
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
 
                 // Screen Content
                 when (currentScreen) {
                     "Início" -> InicioScreen(isShizukuInstalled, isShizukuPermissionGranted, snackbarHostState)
-                    "Economia" -> EconomiaScreen(snackbarHostState)
-                    "Desempenho" -> DesempenhoScreen(snackbarHostState)
-                    "Competitivo" -> CompetitivoScreen(snackbarHostState)
-                    "Terminal" -> TerminalScreen(snackbarHostState)
+                    "Economia" -> EconomiaScreen(snackbarHostState, onLog)
+                    "Desempenho" -> DesempenhoScreen(snackbarHostState, onLog)
+                    "Competitivo" -> CompetitivoScreen(snackbarHostState, onLog)
+                    "Terminal" -> TerminalScreen(snackbarHostState, globalLogs, onLog)
                 }
             }
         }
@@ -234,6 +259,7 @@ fun ResetButton(snackbarHostState: SnackbarHostState) {
 fun ActionButton(
     text: String,
     snackbarHostState: SnackbarHostState,
+    onLog: (String) -> Unit,
     onClick: suspend () -> Boolean
 ) {
     val scope = rememberCoroutineScope()
@@ -246,17 +272,20 @@ fun ActionButton(
             if (!isLoading) {
                 scope.launch {
                     isLoading = true
+                    onLog("A executar $text...")
                     val success = onClick()
                     isLoading = false
                     if (success) {
                         buttonColor = Color.Green
                         buttonText = "Aplicado"
                         snackbarHostState.showSnackbar("$text Aplicado!")
+                        onLog("Sucesso: $text")
                         delay(2000)
                         buttonColor = Color(0xFFFF9800)
                         buttonText = text
                     } else {
                         snackbarHostState.showSnackbar("Erro: Falha ou Sem Permissão.")
+                        onLog("Erro: Falha ao executar $text")
                     }
                 }
             }
@@ -286,6 +315,7 @@ fun CyberCard(
             .fillMaxWidth()
             .padding(8.dp),
         colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E)),
+        border = BorderStroke(1.dp, Color.Cyan),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -360,7 +390,7 @@ fun InicioScreen(
 }
 
 @Composable
-fun EconomiaScreen(snackbarHostState: SnackbarHostState) {
+fun EconomiaScreen(snackbarHostState: SnackbarHostState, onLog: (String) -> Unit) {
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -370,8 +400,8 @@ fun EconomiaScreen(snackbarHostState: SnackbarHostState) {
         Spacer(modifier = Modifier.height(16.dp))
 
         CyberCard("Opções de Economia") {
-            ActionButton("Super Economia", snackbarHostState) { AppManager.enableSuperEconomy() }
-            ActionButton("Ultra Economia", snackbarHostState) { AppManager.enableUltraEconomy() }
+            ActionButton("Super Economia", snackbarHostState, onLog) { AppManager.enableSuperEconomy() }
+            ActionButton("Ultra Economia", snackbarHostState, onLog) { AppManager.enableUltraEconomy() }
         }
 
         Spacer(modifier = Modifier.weight(1f))
@@ -380,7 +410,7 @@ fun EconomiaScreen(snackbarHostState: SnackbarHostState) {
 }
 
 @Composable
-fun DesempenhoScreen(snackbarHostState: SnackbarHostState) {
+fun DesempenhoScreen(snackbarHostState: SnackbarHostState, onLog: (String) -> Unit) {
     val context = LocalContext.current
 
     Column(
@@ -391,9 +421,14 @@ fun DesempenhoScreen(snackbarHostState: SnackbarHostState) {
         Text("Modo Desempenho", color = Color.White, style = MaterialTheme.typography.headlineSmall)
         Spacer(modifier = Modifier.height(16.dp))
 
-        CyberCard("Resolução") {
-            ActionButton("Modo Bruto (720p)", snackbarHostState) {
-                AppManager.applyGoldenRatioResolution(context, 720)
+        CyberCard("Resolução e Turbo") {
+            ActionButton("Modo Bruto (540p)", snackbarHostState, onLog) {
+                // 540p usually means height 540 or width 540. Previous was 540x1200.
+                // Assuming width 540.
+                ShellEngine.runCommand("wm size 540x1200")
+            }
+            ActionButton("Turbo Usual", snackbarHostState, onLog) {
+                AppManager.enableTurboUsual()
             }
         }
 
@@ -403,7 +438,7 @@ fun DesempenhoScreen(snackbarHostState: SnackbarHostState) {
 }
 
 @Composable
-fun CompetitivoScreen(snackbarHostState: SnackbarHostState) {
+fun CompetitivoScreen(snackbarHostState: SnackbarHostState, onLog: (String) -> Unit) {
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -413,8 +448,8 @@ fun CompetitivoScreen(snackbarHostState: SnackbarHostState) {
         Spacer(modifier = Modifier.height(16.dp))
 
         CyberCard("Gaming") {
-            ActionButton("Gamer Ultimate", snackbarHostState) { AppManager.enableGamerUltimate() }
-            ActionButton("Sensi Free Fire", snackbarHostState) { AppManager.enableSensiFreeFire() }
+            ActionButton("Gamer Ultimate (Suspend GOS)", snackbarHostState, onLog) { AppManager.enableGamerUltimate() }
+            ActionButton("Sensi FF (210 DPI)", snackbarHostState, onLog) { AppManager.enableSensiFreeFire() }
         }
 
         Spacer(modifier = Modifier.weight(1f))
@@ -424,9 +459,8 @@ fun CompetitivoScreen(snackbarHostState: SnackbarHostState) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TerminalScreen(snackbarHostState: SnackbarHostState) {
+fun TerminalScreen(snackbarHostState: SnackbarHostState, logs: MutableList<String>, onLog: (String) -> Unit) {
     var command by remember { mutableStateOf("") }
-    var outputLog by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
 
     Column(
@@ -441,11 +475,14 @@ fun TerminalScreen(snackbarHostState: SnackbarHostState) {
             onValueChange = { command = it },
             label = { Text("Comando", color = Color.Gray) },
             modifier = Modifier.fillMaxWidth(),
-            colors = TextFieldDefaults.outlinedTextFieldColors(
+            colors = OutlinedTextFieldDefaults.colors(
                 focusedTextColor = Color.Green,
                 unfocusedTextColor = Color.Green,
-                containerColor = Color(0xFF1E1E1E),
-                cursorColor = Color.Green
+                focusedContainerColor = Color(0xFF1E1E1E),
+                unfocusedContainerColor = Color(0xFF1E1E1E),
+                cursorColor = Color.Green,
+                focusedBorderColor = Color.Cyan,
+                unfocusedBorderColor = Color.Gray
             )
         )
 
@@ -454,9 +491,9 @@ fun TerminalScreen(snackbarHostState: SnackbarHostState) {
         Button(
             onClick = {
                 scope.launch {
-                    outputLog = "Executando...\n" + outputLog
+                    onLog("> $command (Executando...)")
                     val result = ShellEngine.runCommandWithOutput(command)
-                    outputLog = "> $command\n$result\n" + outputLog
+                    onLog(result)
                     command = ""
                 }
             },
@@ -476,8 +513,8 @@ fun TerminalScreen(snackbarHostState: SnackbarHostState) {
                 .padding(8.dp)
         ) {
             LazyColumn {
-                item {
-                    Text(outputLog, color = Color.Green, style = MaterialTheme.typography.bodySmall)
+                items(logs.size) { index ->
+                    Text(logs[index], color = Color.Green, style = MaterialTheme.typography.bodySmall)
                 }
             }
         }

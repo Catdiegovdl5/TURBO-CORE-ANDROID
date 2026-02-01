@@ -77,6 +77,9 @@ object ShellEngine {
     suspend fun runCommandWithOutput(command: String): String {
         return withContext(Dispatchers.IO) {
             try {
+                // Mandatory 2000ms delay for MediaTek stability
+                delay(2000)
+
                 if (Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED) {
                     val method = Shizuku::class.java.getDeclaredMethod(
                         "newProcess",
@@ -88,11 +91,20 @@ object ShellEngine {
                     val process = method.invoke(null, arrayOf("sh", "-c", command), null, null) as Process
 
                     val reader = BufferedReader(InputStreamReader(process.inputStream))
+                    val errorReader = BufferedReader(InputStreamReader(process.errorStream))
                     val output = StringBuilder()
                     var line: String?
+
+                    // Read StdOut
                     while (reader.readLine().also { line = it } != null) {
                         output.append(line).append("\n")
                     }
+
+                    // Read StdErr
+                    while (errorReader.readLine().also { line = it } != null) {
+                        output.append(line).append("\n")
+                    }
+
                     process.waitFor()
                     return@withContext output.toString()
                 } else {
