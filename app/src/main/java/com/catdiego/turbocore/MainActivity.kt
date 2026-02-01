@@ -228,27 +228,40 @@ fun ActionButton(
     val scope = rememberCoroutineScope()
     var buttonColor by remember { mutableStateOf(Color(0xFFFF9800)) } // Default Orange
     var buttonText by remember { mutableStateOf(text) }
+    var isLoading by remember { mutableStateOf(false) }
 
     Button(
         onClick = {
-            scope.launch {
-                val success = onClick()
-                if (success) {
-                    buttonColor = Color.Green
-                    buttonText = "Aplicado"
-                    snackbarHostState.showSnackbar("$text Aplicado!")
-                    delay(2000)
-                    buttonColor = Color(0xFFFF9800)
-                    buttonText = text
-                } else {
-                    snackbarHostState.showSnackbar("Erro: Falha ou Sem Permissão.")
+            if (!isLoading) {
+                scope.launch {
+                    isLoading = true
+                    val success = onClick()
+                    isLoading = false
+                    if (success) {
+                        buttonColor = Color.Green
+                        buttonText = "Aplicado"
+                        snackbarHostState.showSnackbar("$text Aplicado!")
+                        delay(2000)
+                        buttonColor = Color(0xFFFF9800)
+                        buttonText = text
+                    } else {
+                        snackbarHostState.showSnackbar("Erro: Falha ou Sem Permissão.")
+                    }
                 }
             }
         },
         colors = ButtonDefaults.buttonColors(containerColor = buttonColor),
         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp, horizontal = 8.dp)
     ) {
-        Text(buttonText)
+        if (isLoading) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(24.dp),
+                color = Color.White,
+                strokeWidth = 2.dp
+            )
+        } else {
+            Text(buttonText)
+        }
     }
 }
 
