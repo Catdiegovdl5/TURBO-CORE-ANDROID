@@ -21,15 +21,18 @@ fun PerformanceScreen() {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
+    fun performReset() {
+        ShellEngine.runShizukuCommand("wm size reset")
+        ShellEngine.runShizukuCommand("wm density reset")
+        ShellEngine.runShizukuCommand("settings put global low_power 0")
+        // Re-enable GOS (assuming it was suspended or disabled)
+        ShellEngine.runShizukuCommand("pm unsuspend com.samsung.android.game.gos")
+        ShellEngine.runShizukuCommand("pm enable com.samsung.android.game.gos")
+    }
+
     fun resetAll() {
         scope.launch(Dispatchers.IO) {
-            ShellEngine.runShizukuCommand("wm size reset")
-            ShellEngine.runShizukuCommand("wm density reset")
-            ShellEngine.runShizukuCommand("settings put global low_power 0")
-            // Re-enable GOS (assuming it was suspended or disabled)
-            ShellEngine.runShizukuCommand("pm unsuspend com.samsung.android.game.gos")
-            ShellEngine.runShizukuCommand("pm enable com.samsung.android.game.gos")
-
+            performReset()
             launch(Dispatchers.Main) {
                 Toast.makeText(context, "All Settings Reset", Toast.LENGTH_SHORT).show()
             }
@@ -48,8 +51,13 @@ fun PerformanceScreen() {
         Button(
             onClick = {
                 scope.launch(Dispatchers.IO) {
+                    // Fail-Safe Reset
+                    ShellEngine.runShizukuCommand("wm size reset")
+                    ShellEngine.runShizukuCommand("wm density reset")
+
                     // Sensi FF
-                    ShellEngine.runShizukuCommand("wm density 90")
+                    // Updated to minimum safety value 210
+                    ShellEngine.runShizukuCommand("wm density 210")
                     ShellEngine.runShizukuCommand("settings put system pointer_speed 7")
                     launch(Dispatchers.Main) {
                         Toast.makeText(context, "Sensi FF Applied", Toast.LENGTH_SHORT).show()
@@ -64,9 +72,13 @@ fun PerformanceScreen() {
         Button(
             onClick = {
                 scope.launch(Dispatchers.IO) {
+                    // Fail-Safe Reset
+                    ShellEngine.runShizukuCommand("wm size reset")
+                    ShellEngine.runShizukuCommand("wm density reset")
+
                     // Modo Bruto
-                    ShellEngine.runShizukuCommand("wm size 360x800")
-                    ShellEngine.runShizukuCommand("wm density 120")
+                    // Updated to 540x1200 as requested
+                    ShellEngine.runShizukuCommand("wm size 540x1200")
                     ShellEngine.runShizukuCommand("cmd thermalservice override_status 0")
                     launch(Dispatchers.Main) {
                         Toast.makeText(context, "Modo Bruto Applied", Toast.LENGTH_SHORT).show()
