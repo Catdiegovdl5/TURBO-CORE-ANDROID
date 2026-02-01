@@ -73,25 +73,23 @@ class MainActivity : ComponentActivity(), Shizuku.OnRequestPermissionResultListe
             e.printStackTrace()
             // Fallback UI using standard Android Views if Compose fails completely
             setContentView(TextView(this).apply {
-                text = "Erro Crítico ao iniciar UI: ${e.message}"
+                text = "Erro Crítico: ${e.message}"
                 setTextColor(android.graphics.Color.RED)
                 textSize = 20f
             })
         }
     }
 
-    // CÓDIGO ATUALIZADO PARA ANDROID 15/16
-    private fun isPackageInstalled(packageName: String, packageManager: PackageManager): Boolean {
+    // CORREÇÃO DA FUNÇÃO isShizukuInstalled (Modern Flags 2026)
+    private fun isShizukuInstalled(context: Context): Boolean {
         return try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                packageManager.getPackageInfo(packageName, PackageManager.PackageInfoFlags.of(0))
+                context.packageManager.getPackageInfo("moe.shizuku.privileged.api", PackageManager.PackageInfoFlags.of(0))
             } else {
-                packageManager.getPackageInfo(packageName, 0)
+                context.packageManager.getPackageInfo("moe.shizuku.privileged.api", 0)
             }
             true
-        } catch (e: PackageManager.NameNotFoundException) {
-            false
-        }
+        } catch (e: Exception) { false }
     }
 
     override fun onDestroy() {
