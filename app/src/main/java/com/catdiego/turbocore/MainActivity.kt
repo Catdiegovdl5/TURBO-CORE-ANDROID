@@ -270,7 +270,7 @@ fun ActionButton(
             if (!isLoading) {
                 scope.launch {
                     isLoading = true
-                    onLog("Aplicando $text...")
+                    onLog("A executar $text...")
                     val success = onClick()
                     isLoading = false
                     if (success) {
@@ -283,7 +283,7 @@ fun ActionButton(
                         buttonText = text
                     } else {
                         snackbarHostState.showSnackbar("Erro: Falha ou Sem Permissão.")
-                        onLog("Erro: Falha ao aplicar $text")
+                        onLog("Erro: Falha ao executar $text")
                     }
                 }
             }
@@ -447,7 +447,7 @@ fun CompetitivoScreen(snackbarHostState: SnackbarHostState, onLog: (String) -> U
 
         CyberCard("Gaming") {
             ActionButton("Gamer Ultimate (Suspend GOS)", snackbarHostState, onLog) { AppManager.enableGamerUltimate() }
-            ActionButton("Sensi Free Fire (210 DPI)", snackbarHostState, onLog) { AppManager.enableSensiFreeFire() }
+            ActionButton("Sensi FF (210 DPI)", snackbarHostState, onLog) { AppManager.enableSensiFreeFire() }
         }
 
         Spacer(modifier = Modifier.weight(1f))
