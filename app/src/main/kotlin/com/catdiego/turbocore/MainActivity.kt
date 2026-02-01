@@ -141,6 +141,9 @@ fun MainContent() {
         // If resource is missing, app will crash, but fail-safe box is underneath.
         // Assuming resource exists or crash is acceptable in dev.
         // To be truly fail-safe without try-catch, we rely on the resource being valid.
+
+        // Failsafe: Image resource is 0 bytes (invalid), using black background only to prevent crash.
+        /*
         Image(
             painter = painterResource(id = R.drawable.fundo_chip),
             contentDescription = null,
@@ -148,6 +151,7 @@ fun MainContent() {
             modifier = Modifier.fillMaxSize(),
             alpha = 0.2f
         )
+        */
 
         ModalNavigationDrawer(
             drawerState = drawerState,
