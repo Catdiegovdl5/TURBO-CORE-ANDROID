@@ -6,6 +6,8 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -16,6 +18,8 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import rikka.shizuku.Shizuku
+import java.io.BufferedReader
+import java.io.InputStreamReader
 import com.catdiego.turbocore.R
 
 enum class Screen(val title: String) {
@@ -40,6 +44,45 @@ class MainActivity : ComponentActivity() {
                 )
             ) {
                 MainContent()
+            }
+        }
+    }
+
+    companion object {
+        fun runShizukuCommand(command: String): String {
+            return try {
+                val shizukuClass = Class.forName("rikka.shizuku.Shizuku")
+                val newProcessMethod = shizukuClass.getMethod("newProcess", Array<String>::class.java, Array<String>::class.java, String::class.java)
+                val process = newProcessMethod.invoke(null, arrayOf("sh", "-c", command), null, null) as Process
+
+                val reader = BufferedReader(InputStreamReader(process.inputStream))
+                val output = StringBuilder()
+                var line: String?
+                while (reader.readLine().also { line = it } != null) {
+                    output.append(line).append("\n")
+                }
+                process.waitFor()
+                output.toString()
+            } catch (e: Exception) {
+                "Error: ${e.message}"
+            }
+        }
+
+        private fun calculateNewSize(targetWidth: Int): Int {
+            val output = runShizukuCommand("wm size")
+            // Output format example: "Physical size: 1080x2400"
+            val regex = Regex("Physical size: (\\d+)x(\\d+)")
+            val match = regex.find(output)
+
+            return if (match != null) {
+                val (widthStr, heightStr) = match.destructured
+                val width = widthStr.toFloat()
+                val height = heightStr.toFloat()
+                val aspectRatio = height / width
+                (targetWidth * aspectRatio).toInt()
+            } else {
+                // Fallback if parsing fails (e.g. 20:9 ratio generic)
+                (targetWidth * 2.22).toInt()
             }
         }
     }
@@ -99,9 +142,11 @@ fun MainContent() {
                         title = { Text(currentScreen.title) },
                         navigationIcon = {
                             IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                                // Simple hamburger icon manually or standard icon
-                                // Using a text placeholder "Menu" if icon not avail, or create a shape
-                                Text("Menu", color = MaterialTheme.colorScheme.primary)
+                                Icon(
+                                    imageVector = Icons.Default.Menu,
+                                    contentDescription = "Menu",
+                                    tint = Color.White
+                                )
                             }
                         },
                         colors = TopAppBarDefaults.topAppBarColors(
@@ -143,6 +188,10 @@ fun InicioScreen(shizukuAvailable: Boolean) {
         Text("Status Shizuku: ${if (shizukuAvailable) "Conectado" else "Desconectado"}", color = Color.White)
         Spacer(modifier = Modifier.height(16.dp))
         Text("RAM Usage: calculating...", color = Color.White)
+        LinearProgressIndicator(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+            color = MaterialTheme.colorScheme.primary
+        )
         Spacer(modifier = Modifier.weight(1f))
         ResetButton()
     }
