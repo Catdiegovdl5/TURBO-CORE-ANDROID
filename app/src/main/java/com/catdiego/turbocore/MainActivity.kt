@@ -192,12 +192,15 @@ fun MainScreen(
                     .padding(paddingValues)
             ) {
                 // Background Image
-                Image(
-                    painter = painterResource(id = R.drawable.fundo_chip),
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
-                )
+                val painter = if (R.drawable.fundo_chip != 0) painterResource(id = R.drawable.fundo_chip) else null
+                if (painter != null) {
+                    Image(
+                        painter = painter,
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
 
                 // Screen Content
                 when (currentScreen) {
