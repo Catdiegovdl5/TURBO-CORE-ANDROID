@@ -26,18 +26,21 @@ object AppManager {
     }
 
     fun isShizukuInstalled(context: Context): Boolean {
-        val packageName = "rikka.app.shizuku"
+        val packages = listOf("rikka.app.shizuku", "moe.shizuku.privileged.api")
         val pm = context.packageManager
-        return try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                pm.getPackageInfo(packageName, PackageManager.PackageInfoFlags.of(0L))
-            } else {
-                pm.getPackageInfo(packageName, 0)
+        for (pkg in packages) {
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    pm.getPackageInfo(pkg, PackageManager.PackageInfoFlags.of(0L))
+                } else {
+                    pm.getPackageInfo(pkg, 0)
+                }
+                return true
+            } catch (e: Exception) {
+                continue
             }
-            true
-        } catch (e: Exception) {
-            false
         }
+        return false
     }
 
     /**

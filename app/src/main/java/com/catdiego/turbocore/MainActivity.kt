@@ -43,21 +43,25 @@ class MainActivity : ComponentActivity() {
             var terminalLog by remember { mutableStateOf("Aguardando comando...") }
 
             LaunchedEffect(Unit) {
-                delay(1000)
+                shizukuStatus = "Localizando motor..."
+                delay(800) // Tempo mínimo para o sistema processar o Manifesto
+                val installed = AppManager.isShizukuInstalled(this@MainActivity)
+                if (!installed) {
+                    shizukuStatus = "Shizuku não encontrado!"
+                    delay(1000)
+                    // REDIRECIONAMENTO IMEDIATO PARA DOWNLOAD
+                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/RikkaApps/Shizuku/releases"))
+                    startActivity(intent)
+                    return@LaunchedEffect
+                }
+                // Se está instalado, checamos se o motor está ligado
                 if (Shizuku.pingBinder()) {
                     checkAndRequestShizukuPermission()
                 } else {
-                    shizukuStatus = "Shizuku em espera..."
-                    delay(2000)
-                    // Se ainda não pingou, tenta forçar a conexão verificando permissão
-                    try {
-                        Shizuku.requestPermission(REQUEST_CODE)
-                    } catch (e: Exception) {
-                        // Se crashar aqui, é porque o Shizuku REALMENTE não está rodando
-                        shizukuStatus = "Abrindo Shizuku para ativação..."
-                        delay(1000)
-                        launchShizukuApp(this@MainActivity)
-                    }
+                    shizukuStatus = "Motor desligado! Ativando..."
+                    delay(1000)
+                    // FORÇA A ABERTURA DO APP SHIZUKU PARA O USUÁRIO LIGAR
+                    launchShizukuApp(this@MainActivity)
                 }
             }
 
@@ -163,15 +167,18 @@ class MainActivity : ComponentActivity() {
     private fun launchShizukuApp(context: Context) {
         try {
             val intent = context.packageManager.getLaunchIntentForPackage("rikka.app.shizuku")
+                ?: context.packageManager.getLaunchIntentForPackage("moe.shizuku.privileged.api")
+
             if (intent != null) {
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 context.startActivity(intent)
             } else {
-                // Se não achar o app, aí sim manda para o GitHub
+                // Se o intent falhar por segurança do Android 15, tenta via URI
                 val githubIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/RikkaApps/Shizuku/releases"))
                 context.startActivity(githubIntent)
             }
         } catch (e: Exception) {
-            shizukuStatus = "Erro ao abrir Shizuku: ${e.message}"
+            shizukuStatus = "Erro de I/O: Reinstale o Shizuku"
         }
     }
 
