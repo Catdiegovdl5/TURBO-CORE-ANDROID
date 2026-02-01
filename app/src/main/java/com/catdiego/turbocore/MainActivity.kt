@@ -80,17 +80,17 @@ class MainActivity : ComponentActivity(), Shizuku.OnRequestPermissionResultListe
         }
     }
 
-    // Helper for safe PackageInfo retrieval (Compliance with Android 13+)
-    private fun getPackageInfoSafe(packageName: String) {
-        try {
+    // CÓDIGO ATUALIZADO PARA ANDROID 15/16
+    private fun isPackageInstalled(packageName: String, packageManager: PackageManager): Boolean {
+        return try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 packageManager.getPackageInfo(packageName, PackageManager.PackageInfoFlags.of(0))
             } else {
-                @Suppress("DEPRECATION")
                 packageManager.getPackageInfo(packageName, 0)
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
+            true
+        } catch (e: PackageManager.NameNotFoundException) {
+            false
         }
     }
 
