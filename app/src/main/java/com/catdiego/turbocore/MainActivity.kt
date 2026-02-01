@@ -22,6 +22,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Menu
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import rikka.shizuku.Shizuku
@@ -179,7 +181,7 @@ fun MainScreen(
                     navigationIcon = {
                         IconButton(onClick = { scope.launch { drawerState.open() } }) {
                             Icon(
-                                painter = painterResource(id = android.R.drawable.ic_menu_sort_by_size),
+                                imageVector = Icons.Filled.Menu,
                                 contentDescription = "Menu"
                             )
                         }
@@ -474,11 +476,13 @@ fun TerminalScreen(snackbarHostState: SnackbarHostState, logs: MutableList<Strin
             label = { Text("Comando", color = Color.Gray) },
             modifier = Modifier.fillMaxWidth(),
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = Color.Cyan,
-                unfocusedBorderColor = Color.Gray,
                 focusedTextColor = Color.Green,
                 unfocusedTextColor = Color.Green,
-                cursorColor = Color.Cyan
+                focusedContainerColor = Color(0xFF1E1E1E),
+                unfocusedContainerColor = Color(0xFF1E1E1E),
+                cursorColor = Color.Green,
+                focusedBorderColor = Color.Cyan,
+                unfocusedBorderColor = Color.Gray
             )
         )
 
