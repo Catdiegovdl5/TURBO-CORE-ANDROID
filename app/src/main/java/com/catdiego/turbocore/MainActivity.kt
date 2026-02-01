@@ -28,36 +28,29 @@ class MainActivity : ComponentActivity() {
         shizukuStatus = if (grantResult == PackageManager.PERMISSION_GRANTED) "Conectado" else "Permissão Negada"
     }
 
+    private val binderListener = Shizuku.OnBinderReceivedListener {
+        checkAndRequestShizukuPermission()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         runCatching { Shizuku.addRequestPermissionResultListener(permissionListener) }
+        runCatching { Shizuku.addBinderReceivedListener(binderListener) }
+        if (Shizuku.pingBinder()) { checkAndRequestShizukuPermission() }
 
         setContent {
             var terminalLog by remember { mutableStateOf("Aguardando comando...") }
 
             LaunchedEffect(Unit) {
-                delay(500) // Busca relâmpago
-                val installed = AppManager.isShizukuInstalled(this@MainActivity)
-
-                if (installed) {
-                    // Se achou, tenta conectar ou pedir permissão
-                    if (Shizuku.pingBinder()) {
-                        if (Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED) {
-                            shizukuStatus = "Conectado"
-                        } else {
-                            shizukuStatus = "Pedindo Permissão..."
-                            Shizuku.requestPermission(REQUEST_CODE)
-                        }
-                    } else {
-                        shizukuStatus = "Inicie o serviço dentro do app Shizuku!"
+                delay(3000)
+                if (shizukuStatus == "Verificando...") {
+                    val installed = AppManager.isShizukuInstalled(this@MainActivity)
+                    if (!installed) {
+                        shizukuStatus = "Shizuku não encontrado! Redirecionando..."
+                        delay(1500)
+                        openShizukuDownload(this@MainActivity)
                     }
-                } else {
-                    // SÓ redireciona se REALMENTE não achar nenhum dos pacotes
-                    shizukuStatus = "Shizuku não encontrado! Redirecionando..."
-                    delay(1500)
-                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/RikkaApps/Shizuku/releases"))
-                    startActivity(intent)
                 }
             }
 
@@ -136,6 +129,15 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun checkAndRequestShizukuPermission() {
+        if (Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED) {
+            shizukuStatus = "Conectado"
+        } else {
+            shizukuStatus = "Pedindo Permissão..."
+            Shizuku.requestPermission(REQUEST_CODE)
+        }
+    }
+
     private fun updateStatus() {
         shizukuStatus = if (!Shizuku.pingBinder()) {
             "Shizuku Parado (Abra o App Shizuku)"
@@ -154,5 +156,6 @@ class MainActivity : ComponentActivity() {
     override fun onDestroy() {
         super.onDestroy()
         runCatching { Shizuku.removeRequestPermissionResultListener(permissionListener) }
+        runCatching { Shizuku.removeBinderReceivedListener(binderListener) }
     }
 }
