@@ -1,8 +1,11 @@
 package com.catdiego.turbocore
 
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
@@ -23,32 +26,66 @@ import rikka.shizuku.Shizuku
 
 class MainActivity : ComponentActivity() {
 
+    private var isShizukuInstalledState by mutableStateOf(false)
+    private var isShizukuPermissionGrantedState by mutableStateOf(false)
+
     // Shizuku permission listener
     private val permissionListener = Shizuku.OnRequestPermissionResultListener { requestCode, grantResult ->
-        // Handle permission result if needed
+        if (grantResult == PackageManager.PERMISSION_GRANTED) {
+            isShizukuPermissionGrantedState = true
+        } else {
+            isShizukuPermissionGrantedState = false
+            runOnUiThread {
+                Toast.makeText(
+                    this,
+                    "Acesso negado. O Turbo Core precisa do Shizuku para otimizar o sistema.",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Register Shizuku listener
-        try {
-            Shizuku.addRequestPermissionResultListener(permissionListener)
-            if (Shizuku.checkSelfPermission() != PackageManager.PERMISSION_GRANTED) {
-                if (Shizuku.isPreV11()) {
-                    // Pre-v11 handling
+        // 1. INSTALLATION CHECK
+        isShizukuInstalledState = isShizukuInstalled(this)
+
+        // Register Shizuku listener if installed
+        if (isShizukuInstalledState) {
+            try {
+                Shizuku.addRequestPermissionResultListener(permissionListener)
+                if (Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED) {
+                    isShizukuPermissionGrantedState = true
                 } else {
-                    Shizuku.requestPermission(0)
+                    if (Shizuku.isPreV11()) {
+                        // Pre-v11 handling
+                    } else {
+                        Shizuku.requestPermission(0)
+                    }
                 }
+            } catch (e: Exception) {
+                // Shizuku service might not be running even if installed
+                isShizukuPermissionGrantedState = false
             }
-        } catch (e: Exception) {
-            // Shizuku not available
         }
 
         setContent {
             MaterialTheme {
-                MainScreen()
+                MainScreen(
+                    isShizukuInstalled = isShizukuInstalledState,
+                    isShizukuPermissionGranted = isShizukuPermissionGrantedState
+                )
             }
+        }
+    }
+
+    private fun isShizukuInstalled(context: Context): Boolean {
+        return try {
+            context.packageManager.getPackageInfo("rikka.app.shizuku", 0)
+            true
+        } catch (e: PackageManager.NameNotFoundException) {
+            false
         }
     }
 
@@ -64,7 +101,10 @@ class MainActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreen() {
+fun MainScreen(
+    isShizukuInstalled: Boolean,
+    isShizukuPermissionGranted: Boolean
+) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     var currentScreen by remember { mutableStateOf("Início") }
@@ -142,7 +182,7 @@ fun MainScreen() {
 
                 // Screen Content
                 when (currentScreen) {
-                    "Início" -> InicioScreen()
+                    "Início" -> InicioScreen(isShizukuInstalled, isShizukuPermissionGranted)
                     "Desempenho" -> DesempenhoScreen(snackbarHostState)
                     "Competitivo" -> CompetitivoScreen(snackbarHostState)
                 }
@@ -152,7 +192,10 @@ fun MainScreen() {
 }
 
 @Composable
-fun InicioScreen() {
+fun InicioScreen(
+    isShizukuInstalled: Boolean,
+    isShizukuPermissionGranted: Boolean
+) {
     val context = LocalContext.current
     var ramUsage by remember { mutableStateOf(0f) }
 
@@ -168,6 +211,31 @@ fun InicioScreen() {
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        // Shizuku Status
+        Text("Status Shizuku", color = Color.White, style = MaterialTheme.typography.titleMedium)
+        Spacer(modifier = Modifier.height(4.dp))
+
+        if (!isShizukuInstalled) {
+            Text("Não Instalado", color = Color.Red)
+            Spacer(modifier = Modifier.height(8.dp))
+            Button(
+                onClick = {
+                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://shizuku.rikka.app"))
+                    context.startActivity(intent)
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = Color.Gray)
+            ) {
+                Text("Baixar Shizuku")
+            }
+        } else if (isShizukuPermissionGranted) {
+            Text("Funcionando (Permissão Concedida)", color = Color.Green)
+        } else {
+            Text("Permissão Pendente / Serviço Parado", color = Color.Yellow)
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // RAM Usage
         Text("Uso de RAM", color = Color.White)
         Spacer(modifier = Modifier.height(8.dp))
         LinearProgressIndicator(
