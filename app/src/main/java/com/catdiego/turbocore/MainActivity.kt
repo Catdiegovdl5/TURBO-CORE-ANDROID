@@ -14,7 +14,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import java.io.DataOutputStream
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -29,29 +29,37 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun MainScreen() {
-    // UI Fail-Safe: Box principal com fundo sólido
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFF0A0A0A))
-    ) {
-        // Imagem de fundo
-        Image(
-            painter = painterResource(id = R.drawable.fundo_chip),
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize()
-        )
+    val snackbarHostState = remember { SnackbarHostState() }
 
-        // Conteúdo com Tabs e Botão
-        ContentWithTabs()
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) }
+    ) { paddingValues ->
+        // UI Fail-Safe: Box principal com fundo sólido
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color(0xFF0A0A0A))
+                .padding(paddingValues)
+        ) {
+            // Imagem de fundo
+            Image(
+                painter = painterResource(id = R.drawable.fundo_chip),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+
+            // Conteúdo com Tabs e Botão
+            ContentWithTabs(snackbarHostState)
+        }
     }
 }
 
 @Composable
-fun ContentWithTabs() {
+fun ContentWithTabs(snackbarHostState: SnackbarHostState) {
     var selectedTabIndex by remember { mutableStateOf(0) }
     val tabs = listOf("Geral", "Sistema")
+    val scope = rememberCoroutineScope()
 
     Column(modifier = Modifier.fillMaxSize()) {
         TabRow(selectedTabIndex = selectedTabIndex) {
@@ -72,39 +80,20 @@ fun ContentWithTabs() {
         ) {
             // Reset Global: Botão 'Resetar Tudo' em todas as abas
             Button(
-                onClick = { executeResetCommands() },
+                onClick = {
+                    scope.launch {
+                        val success = AppManager.executeResetCommands()
+                        if (success) {
+                            snackbarHostState.showSnackbar("Comandos executados com sucesso.")
+                        } else {
+                            snackbarHostState.showSnackbar("Falha ao executar comandos.")
+                        }
+                    }
+                },
                 colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
             ) {
                 Text("Resetar Tudo")
             }
         }
     }
-}
-
-fun executeResetCommands() {
-    // Reset global: DPI, tamanho, animações
-    val commands = listOf(
-        "wm size reset",
-        "wm density reset",
-        "settings put global window_animation_scale 1.0",
-        "settings put global transition_animation_scale 1.0",
-        "settings put global animator_duration_scale 1.0"
-    )
-
-    Thread {
-        try {
-            // Tenta executar com root (su) para garantir permissões para wm e settings
-            val process = Runtime.getRuntime().exec("su")
-            val os = DataOutputStream(process.outputStream)
-            for (cmd in commands) {
-                os.writeBytes(cmd + "\n")
-            }
-            os.writeBytes("exit\n")
-            os.flush()
-            os.close()
-            process.waitFor()
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-    }.start()
 }
