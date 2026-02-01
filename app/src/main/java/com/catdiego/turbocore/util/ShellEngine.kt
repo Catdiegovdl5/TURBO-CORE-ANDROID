@@ -13,9 +13,15 @@ object ShellEngine {
 
     /**
      * Checks if Shizuku service is available.
+     * Wrapped in try-catch for safety.
      */
     fun isAvailable(): Boolean {
-        return Shizuku.pingBinder()
+        return try {
+            Shizuku.pingBinder()
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
     }
 
     /**
@@ -103,5 +109,14 @@ object ShellEngine {
                 }
             }
         }
+    }
+
+    /**
+     * Alias for runCommandWithFeedback to be used by UI components via runShizukuCommand logic if needed,
+     * but ActionButtons.kt uses runCommandWithFeedback directly.
+     * Keeping this for compatibility if referenced elsewhere.
+     */
+    fun runShizukuCommand(command: String): Process? {
+        return runCommand(command)
     }
 }

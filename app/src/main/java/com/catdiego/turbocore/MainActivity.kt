@@ -2,6 +2,7 @@ package com.catdiego.turbocore
 
 import android.content.Context
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
@@ -52,8 +53,8 @@ class MainActivity : ComponentActivity(), Shizuku.OnRequestPermissionResultListe
             Shizuku.addRequestPermissionResultListener(this)
         }.onFailure { e ->
             e.printStackTrace()
-            // Continue loading UI even if Shizuku fails
-            Toast.makeText(this, "Shizuku init failed: ${e.message}", Toast.LENGTH_LONG).show()
+            // Continue loading UI even if Shizuku fails (Safe Mode / View Mode)
+            Toast.makeText(this, "Shizuku init failed: ${e.message}. App entering View Mode.", Toast.LENGTH_LONG).show()
         }
 
         setContent {
@@ -65,6 +66,20 @@ class MainActivity : ComponentActivity(), Shizuku.OnRequestPermissionResultListe
                     AppNavigation()
                 }
             }
+        }
+    }
+
+    // Helper for safe PackageInfo retrieval (Compliance with Android 13+)
+    private fun getPackageInfoSafe(packageName: String) {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                packageManager.getPackageInfo(packageName, PackageManager.PackageInfoFlags.of(0))
+            } else {
+                @Suppress("DEPRECATION")
+                packageManager.getPackageInfo(packageName, 0)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
     }
 
