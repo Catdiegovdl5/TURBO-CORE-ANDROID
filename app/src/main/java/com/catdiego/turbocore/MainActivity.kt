@@ -429,7 +429,7 @@ fun CompetitivoScreen(snackbarHostState: SnackbarHostState) {
 @Composable
 fun TerminalScreen(snackbarHostState: SnackbarHostState) {
     var command by remember { mutableStateOf("") }
-    var outputLog by remember { mutableStateOf("") }
+    val outputLog = remember { mutableStateListOf<String>() }
     val scope = rememberCoroutineScope()
 
     Column(
@@ -457,9 +457,9 @@ fun TerminalScreen(snackbarHostState: SnackbarHostState) {
         Button(
             onClick = {
                 scope.launch {
-                    outputLog = "Executando...\n" + outputLog
+                    outputLog.add("> $command (Executando...)")
                     val result = ShellEngine.runCommandWithOutput(command)
-                    outputLog = "> $command\n$result\n" + outputLog
+                    outputLog.add(result)
                     command = ""
                 }
             },
@@ -479,8 +479,8 @@ fun TerminalScreen(snackbarHostState: SnackbarHostState) {
                 .padding(8.dp)
         ) {
             LazyColumn {
-                item {
-                    Text(outputLog, color = Color.Green, style = MaterialTheme.typography.bodySmall)
+                items(outputLog.size) { index ->
+                    Text(outputLog[index], color = Color.Green, style = MaterialTheme.typography.bodySmall)
                 }
             }
         }
