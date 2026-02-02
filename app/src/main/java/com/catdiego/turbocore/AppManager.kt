@@ -8,6 +8,10 @@ import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.os.BatteryManager
 import android.os.Build
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import rikka.shizuku.Shizuku
 import java.io.BufferedReader
 import java.io.InputStreamReader
@@ -17,7 +21,7 @@ object CompatibilityEngineV191 {
     val model: String = Build.MODEL.lowercase()
 
     fun isLowEnd(): Boolean {
-        return model.contains("c40") || model.contains("a01") || model.contains("core")
+        return model.contains("c40") || model.contains("a01") || model.contains("core") || model.contains("a07")
     }
 
     fun getBrandColor(): Long {
@@ -44,6 +48,12 @@ object CompatibilityEngineV191 {
 
         if (manufacturer.contains("samsung")) {
             finalCommands.add("settings put global sem_enhanced_cpu_speed 1")
+
+            // V192: Emergência Samsung SM-A075M / Galaxy A01
+            if (model.contains("sm-a075m") || model.contains("a01")) {
+                finalCommands.add("settings put global ram_expand_size_list 0")
+                finalCommands.add("cmd looper_stats disable")
+            }
         }
 
         if (manufacturer.contains("xiaomi") || manufacturer.contains("poco")) {
@@ -59,20 +69,37 @@ object CompatibilityEngineV191 {
 }
 
 object AppManager {
-    fun runCommand(command: String): String {
-        if (!Shizuku.pingBinder()) return "Erro: Serviço Shizuku parado no sistema!"
-        return try {
-            val method = Shizuku::class.java.getDeclaredMethod(
-                "newProcess",
-                Array<String>::class.java, Array<String>::class.java, String::class.java
-            )
-            method.isAccessible = true
-            val process = method.invoke(null, arrayOf("sh", "-c", command), null, null) as Process
-            val reader = BufferedReader(InputStreamReader(process.inputStream))
-            val output = reader.readText()
-            process.waitFor()
-            if (output.isEmpty()) "Sucesso" else output
-        } catch (e: Exception) { "Erro: ${e.message}" }
+    suspend fun runCommand(command: String): String = withContext(Dispatchers.IO) {
+        if (!Shizuku.pingBinder()) return@withContext "Erro: Serviço Shizuku parado no sistema!"
+
+        // V192: Proibição de wm size pesado em low-end Samsung
+        val isSamsungLowEnd = CompatibilityEngineV191.manufacturer.contains("samsung") &&
+                              CompatibilityEngineV191.isLowEnd()
+
+        val safeCommand = if (isSamsungLowEnd && command.contains("wm size") && !command.contains("reset")) {
+            command.replace(Regex("wm size \\d+x\\d+"), "echo 'wm size bloqueado por segurança'")
+        } else {
+            command
+        }
+
+        try {
+            withTimeout(3000L) {
+                val method = Shizuku::class.java.getDeclaredMethod(
+                    "newProcess",
+                    Array<String>::class.java, Array<String>::class.java, String::class.java
+                )
+                method.isAccessible = true
+                val process = method.invoke(null, arrayOf("sh", "-c", safeCommand), null, null) as Process
+                val reader = BufferedReader(InputStreamReader(process.inputStream))
+                val output = reader.readText()
+                process.waitFor()
+                if (output.isEmpty()) "Sucesso" else output
+            }
+        } catch (e: TimeoutCancellationException) {
+            "Erro: Timeout de 3s atingido!"
+        } catch (e: Exception) {
+            "Erro: ${e.message}"
+        }
     }
 
     fun isShizukuInstalled(context: Context): Boolean {
