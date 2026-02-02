@@ -1,74 +1,64 @@
 package com.catdiego.turbocore
 
 import android.content.Context
-import android.app.ActivityManager
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import android.content.pm.ApplicationInfo
+import android.content.pm.PackageManager
+import android.os.Build
+import rikka.shizuku.Shizuku
+import java.io.BufferedReader
+import java.io.InputStreamReader
 
 object AppManager {
-
-    fun getRamUsage(context: Context): Float {
-        val memoryInfo = ActivityManager.MemoryInfo()
-        val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-        activityManager.getMemoryInfo(memoryInfo)
-
-        val totalMem = memoryInfo.totalMem.toFloat()
-        val availMem = memoryInfo.availMem.toFloat()
-        val usedMem = totalMem - availMem
-
-        return usedMem / totalMem
+    fun runCommand(command: String): String {
+        if (!Shizuku.pingBinder()) return "Erro: Serviço Shizuku parado no sistema!"
+        return try {
+            val method = Shizuku::class.java.getDeclaredMethod(
+                "newProcess",
+                Array<String>::class.java, Array<String>::class.java, String::class.java
+            )
+            method.isAccessible = true
+            val process = method.invoke(null, arrayOf("sh", "-c", command), null, null) as Process
+            val reader = BufferedReader(InputStreamReader(process.inputStream))
+            val output = reader.readText()
+            process.waitFor()
+            if (output.isEmpty()) "Sucesso" else output
+        } catch (e: Exception) { "Erro: ${e.message}" }
     }
 
-    suspend fun applyGoldenRatioResolution(context: Context, width: Int = 720): Boolean {
-        return withContext(Dispatchers.IO) {
-            val metrics = context.resources.displayMetrics
-            val originalWidth = metrics.widthPixels
-            val originalHeight = metrics.heightPixels
-
-            val ratio = originalHeight.toFloat() / originalWidth.toFloat()
-            val newHeight = (width * ratio).toInt()
-
-            // Apply resolution using Shizuku
-            ShellEngine.runCommand("wm size ${width}x${newHeight}")
+    fun isShizukuInstalled(context: Context): Boolean {
+        val packages = listOf("moe.shizuku.privileged.api", "rikka.app.shizuku")
+        val pm = context.packageManager
+        for (pkg in packages) {
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    pm.getPackageInfo(pkg, PackageManager.PackageInfoFlags.of(0L))
+                } else {
+                    pm.getPackageInfo(pkg, 0)
+                }
+                return true
+            } catch (e: Exception) {
+                continue
+            }
         }
+        return false
     }
 
-    suspend fun resetEverything(): Boolean {
-        val commands = listOf(
-            "wm size reset",
-            "wm density reset",
-            "settings put global window_animation_scale 1.0",
-            "settings put global transition_animation_scale 1.0",
-            "settings put global animator_duration_scale 1.0",
-            "cmd package compile -m speed-profile -a" // 128px icon/optimization implied logic
-        )
-        return ShellEngine.runCommands(commands)
-    }
-
-    // New Features Placeholders
-    suspend fun enableSuperEconomy(): Boolean {
-        return ShellEngine.runCommand("settings put global low_power 1")
-    }
-
-    suspend fun enableUltraEconomy(): Boolean {
-        val commands = listOf(
-            "settings put global low_power 1",
-            "cmd power set-mode 1"
-        )
-        return ShellEngine.runCommands(commands)
-    }
-
-    suspend fun enableGamerUltimate(): Boolean {
-        val commands = listOf(
-            "cmd package compile -m speed -a",
-            "settings put global window_animation_scale 0.0",
-            "settings put global transition_animation_scale 0.0",
-            "settings put global animator_duration_scale 0.0"
-        )
-        return ShellEngine.runCommands(commands)
-    }
-
-    suspend fun enableSensiFreeFire(): Boolean {
-        return ShellEngine.runCommand("settings put system pointer_speed 7")
+    /**
+     * Returns a list of installed non-system apps.
+     * Optimized for RAM by filtering system apps (V140 requirement).
+     */
+    fun getFilteredApps(context: Context): List<String> {
+        return try {
+            val pm = context.packageManager
+            val apps = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                pm.getInstalledApplications(PackageManager.ApplicationInfoFlags.of(0L))
+            } else {
+                pm.getInstalledApplications(0)
+            }
+            apps.filter { (it.flags and ApplicationInfo.FLAG_SYSTEM) == 0 }
+                .map { it.loadLabel(pm).toString() }
+        } catch (e: Exception) {
+            listOf("Erro ao carregar apps")
+        }
     }
 }
