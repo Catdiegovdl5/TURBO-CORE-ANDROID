@@ -16,7 +16,22 @@ import rikka.shizuku.Shizuku
 import java.io.BufferedReader
 import java.io.InputStreamReader
 
-object CompatibilityEngineV191 {
+object ThermalWatchdog {
+    private var lastTemp: Float = 0f
+
+    fun getTemperature(context: Context): Float {
+        val intent = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+        val temp = intent?.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0) ?: 0
+        lastTemp = temp / 10f
+        return lastTemp
+    }
+
+    fun isOverheating(context: Context): Boolean {
+        return getTemperature(context) > 39.0f
+    }
+}
+
+object SmartCoreEngineV200 {
     val manufacturer: String = Build.MANUFACTURER.lowercase()
     val model: String = Build.MODEL.lowercase()
 
@@ -34,8 +49,8 @@ object CompatibilityEngineV191 {
 
     fun getBrandTitle(): String {
         return when {
-            manufacturer.contains("samsung") -> "TURBO CORE [SAMSUNG EDITION]"
-            manufacturer.contains("xiaomi") || manufacturer.contains("poco") -> "TURBO CORE [XIAOMI/POCO]"
+            manufacturer.contains("samsung") -> "TURBO CORE [ONE UI SAFE]"
+            manufacturer.contains("xiaomi") || manufacturer.contains("poco") -> "TURBO CORE [HYPEROS LEGACY]"
             else -> "TURBO CORE UNIVERSAL"
         }
     }
@@ -43,38 +58,51 @@ object CompatibilityEngineV191 {
     fun wrapCommand(command: String): String {
         val finalCommands = mutableListOf<String>()
 
-        // V191-B: Modo de compilação speed-profile para todos
-        finalCommands.add("cmd package compile -m speed-profile -a")
-
+        // V200: Modular Architecture
         if (manufacturer.contains("samsung")) {
-            finalCommands.add("settings put global sem_enhanced_cpu_speed 1")
+            // One UI Safe Profile
+            finalCommands.add("cmd package compile -m speed-profile -a")
+            finalCommands.add("settings put system pointer_speed 7")
+            finalCommands.add("settings put system touch_sensitivity 1")
+            finalCommands.add("am force-stop com.samsung.android.game.gametools")
 
-            // V192: Emergência Samsung SM-A075M / Galaxy A01
             if (model.contains("sm-a075m") || model.contains("a01")) {
                 finalCommands.add("settings put global ram_expand_size_list 0")
                 finalCommands.add("cmd looper_stats disable")
             }
-        }
-
-        if (manufacturer.contains("xiaomi") || manufacturer.contains("poco")) {
+        } else if (manufacturer.contains("xiaomi") || manufacturer.contains("poco")) {
+            // HyperOS Legacy Profile
             finalCommands.add("am force-stop com.miui.powerkeeper")
-            // Se o comando original tiver "wm size", removemos para Xiaomi se for arriscado
-            // Mas seguindo o protocolo, apenas aplicamos se necessário.
-            // Aqui manteremos o comando original mas adicionaremos o bypass do powerkeeper.
+            finalCommands.add("cmd package compile -m speed-profile -a")
+        } else {
+            finalCommands.add("cmd package compile -m speed-profile -a")
         }
 
-        finalCommands.add(command)
+        // V200: Trava Xiaomi - Bloqueia set-fixed-performance
+        var sanitizedCommand = command
+        if (manufacturer.contains("xiaomi") || manufacturer.contains("poco")) {
+            if (sanitizedCommand.contains("set-fixed-performance-mode-enabled true")) {
+                sanitizedCommand = sanitizedCommand.replace("cmd power set-fixed-performance-mode-enabled true", "echo 'Comando bloqueado no Xiaomi por segurança'")
+            }
+        }
+
+        finalCommands.add(sanitizedCommand)
         return finalCommands.joinToString(" && ")
     }
 }
 
 object AppManager {
-    suspend fun runCommand(command: String): String = withContext(Dispatchers.IO) {
+    suspend fun runCommand(context: Context, command: String): String = withContext(Dispatchers.IO) {
         if (!Shizuku.pingBinder()) return@withContext "Erro: Serviço Shizuku parado no sistema!"
 
+        // V200: Thermal Guard
+        if (ThermalWatchdog.isOverheating(context)) {
+            return@withContext "AVISO: Dispositivo superaquecido (${ThermalWatchdog.getTemperature(context)}°C). Resfriando dispositivo..."
+        }
+
         // V192: Proibição de wm size pesado em low-end Samsung
-        val isSamsungLowEnd = CompatibilityEngineV191.manufacturer.contains("samsung") &&
-                              CompatibilityEngineV191.isLowEnd()
+        val isSamsungLowEnd = SmartCoreEngineV200.manufacturer.contains("samsung") &&
+                              SmartCoreEngineV200.isLowEnd()
 
         val safeCommand = if (isSamsungLowEnd && command.contains("wm size") && !command.contains("reset")) {
             command.replace(Regex("wm size \\d+x\\d+"), "echo 'wm size bloqueado por segurança'")
