@@ -43,25 +43,12 @@ class MainActivity : ComponentActivity() {
             var terminalLog by remember { mutableStateOf("Aguardando comando...") }
 
             LaunchedEffect(Unit) {
-                shizukuStatus = "Localizando motor..."
-                delay(2000) // Protocolo V152: Tempo para o sistema registrar o novo Provedor
-                val installed = AppManager.isShizukuInstalled(this@MainActivity)
-                if (!installed) {
-                    shizukuStatus = "Shizuku não encontrado!"
-                    delay(1000)
-                    // REDIRECIONAMENTO IMEDIATO PARA DOWNLOAD
-                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/RikkaApps/Shizuku/releases"))
-                    startActivity(intent)
-                    return@LaunchedEffect
-                }
-                // Se está instalado, checamos se o motor está ligado
+                delay(1000)
                 if (Shizuku.pingBinder()) {
-                    checkAndRequestShizukuPermission()
+                    // Se o serviço está vivo, exige a tela de permissão na hora!
+                    Shizuku.requestPermission(REQUEST_CODE)
                 } else {
-                    shizukuStatus = "Motor desligado! Ativando..."
-                    delay(1000)
-                    // FORÇA A ABERTURA DO APP SHIZUKU PARA O USUÁRIO LIGAR
-                    launchShizukuApp(this@MainActivity)
+                    shizukuStatus = "Shizuku desligado no sistema!"
                 }
             }
 
