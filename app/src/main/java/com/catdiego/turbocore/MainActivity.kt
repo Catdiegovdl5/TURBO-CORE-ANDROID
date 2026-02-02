@@ -42,6 +42,9 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             var terminalLog by remember { mutableStateOf("Aguardando comando...") }
+            val brandColor = Color(CompatibilityEngineV191.getBrandColor())
+            val appTitle = CompatibilityEngineV191.getBrandTitle()
+            val isLowEnd = CompatibilityEngineV191.isLowEnd()
 
             LaunchedEffect(Unit) {
                 delay(1000)
@@ -56,7 +59,8 @@ class MainActivity : ComponentActivity() {
             Box(modifier = Modifier.fillMaxSize().background(Color(0xFF0A0A0A))) {
                 LazyColumn(modifier = Modifier.padding(16.dp)) {
                     item {
-                        Text("TURBO CORE v1.0", color = Color.Cyan, style = MaterialTheme.typography.headlineMedium)
+                        Text(appTitle, color = brandColor, style = MaterialTheme.typography.headlineMedium)
+                        Text("Protocolo: V140-Legacy [Bypass Active]", color = Color.Gray, style = MaterialTheme.typography.labelSmall)
                         Text("Status: $shizukuStatus", color = if(shizukuStatus == "Conectado") Color.Green else Color.Red)
 
                         Spacer(Modifier.height(16.dp))
@@ -71,22 +75,34 @@ class MainActivity : ComponentActivity() {
                                 Text(AppManager.getDeviceDisplayName(), color = Color.White, style = MaterialTheme.typography.titleMedium)
                                 Spacer(Modifier.height(4.dp))
                                 Text("SUGESTÃO:", color = Color.Gray, style = MaterialTheme.typography.labelSmall)
-                                Text(AppManager.getOptimizationLevelSuggestion(LocalContext.current), color = Color.Cyan, style = MaterialTheme.typography.bodyMedium)
+                                Text(AppManager.getOptimizationLevelSuggestion(LocalContext.current), color = brandColor, style = MaterialTheme.typography.bodyMedium)
                             }
                         }
 
                         Spacer(Modifier.height(16.dp))
 
-                        Button(
-                            onClick = {
-                                val commands = AppManager.getAutoOptimizationCommands(this@MainActivity)
-                                val combinedCommand = commands.joinToString(" && ")
-                                terminalLog = AppManager.runCommand(combinedCommand)
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color.Cyan, contentColor = Color.Black)
-                        ) {
-                            Text("APLICAR OTIMIZAÇÃO INTELIGENTE")
+                        if (!isLowEnd) {
+                            Button(
+                                onClick = {
+                                    val commands = AppManager.getAutoOptimizationCommands(this@MainActivity)
+                                    val combinedCommand = commands.joinToString(" && ")
+                                    terminalLog = AppManager.runCommand(CompatibilityEngineV191.wrapCommand(combinedCommand))
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = ButtonDefaults.buttonColors(containerColor = brandColor, contentColor = Color.Black)
+                            ) {
+                                Text("APLICAR OTIMIZAÇÃO INTELIGENTE")
+                            }
+                        } else {
+                            Button(
+                                onClick = {
+                                    terminalLog = AppManager.runCommand(CompatibilityEngineV191.wrapCommand("pm trim-caches 256M && settings put global low_power 1"))
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color.Yellow, contentColor = Color.Black)
+                            ) {
+                                Text("OTIMIZAR LOW-END (SAFE MODE)")
+                            }
                         }
 
                         Spacer(Modifier.height(16.dp))
@@ -116,13 +132,15 @@ class MainActivity : ComponentActivity() {
                         // CATEGORIA: DESEMPENHO (Performance)
                         Text("DESEMPENHO", color = Color.Gray, style = MaterialTheme.typography.titleSmall)
                         Button(onClick = {
-                            terminalLog = AppManager.runCommand("wm size 720x1600 && wm density 280")
+                            val cmd = if (CompatibilityEngineV191.manufacturer.contains("xiaomi")) "wm density 280" else "wm size 720x1600 && wm density 280"
+                            terminalLog = AppManager.runCommand(CompatibilityEngineV191.wrapCommand(cmd))
                         }, modifier = Modifier.fillMaxWidth()) { Text("Modo Bruto (720p)") }
 
                         Spacer(Modifier.height(8.dp))
 
                         Button(onClick = {
-                            terminalLog = AppManager.runCommand("wm size 540x1200 && wm density 210 && cmd power set-fixed-performance-mode-enabled true")
+                            val cmd = if (CompatibilityEngineV191.manufacturer.contains("xiaomi")) "wm density 210 && cmd power set-fixed-performance-mode-enabled true" else "wm size 540x1200 && wm density 210 && cmd power set-fixed-performance-mode-enabled true"
+                            terminalLog = AppManager.runCommand(CompatibilityEngineV191.wrapCommand(cmd))
                         }, modifier = Modifier.fillMaxWidth()) { Text("Turbo Máximo (Extremo)") }
 
                         Spacer(Modifier.height(16.dp))
@@ -130,13 +148,13 @@ class MainActivity : ComponentActivity() {
                         // CATEGORIA: ECONOMIA (Battery Saver)
                         Text("ECONOMIA", color = Color.Gray, style = MaterialTheme.typography.titleSmall)
                         Button(onClick = {
-                            terminalLog = AppManager.runCommand("settings put global low_power 1 && pm suspend com.google.android.gms")
+                            terminalLog = AppManager.runCommand(CompatibilityEngineV191.wrapCommand("settings put global low_power 1 && pm suspend com.google.android.gms"))
                         }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50))) { Text("Ultra Economia") }
 
                         Spacer(Modifier.height(8.dp))
 
                         Button(onClick = {
-                            terminalLog = AppManager.runCommand("wm size 360x800 && settings put global low_power 1 && cmd device_idle force-idle")
+                            terminalLog = AppManager.runCommand(CompatibilityEngineV191.wrapCommand("wm size 360x800 && settings put global low_power 1 && cmd device_idle force-idle"))
                         }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50))) { Text("Hibernação Total") }
 
                         Spacer(Modifier.height(16.dp))
@@ -144,19 +162,19 @@ class MainActivity : ComponentActivity() {
                         // CATEGORIA: COMPETITIVO (Gaming)
                         Text("COMPETITIVO", color = Color.Gray, style = MaterialTheme.typography.titleSmall)
                         Button(onClick = {
-                            terminalLog = AppManager.runCommand("settings put global window_animation_scale 0 && settings put global transition_animation_scale 0 && cmd power set-fixed-performance-mode-enabled true")
+                            terminalLog = AppManager.runCommand(CompatibilityEngineV191.wrapCommand("settings put global window_animation_scale 0 && settings put global transition_animation_scale 0 && cmd power set-fixed-performance-mode-enabled true"))
                         }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3))) { Text("FPS Boost") }
 
                         Spacer(Modifier.height(8.dp))
 
                         Button(onClick = {
-                            terminalLog = AppManager.runCommand("wm size reset && wm density 180 && settings put system pointer_speed 7")
+                            terminalLog = AppManager.runCommand(CompatibilityEngineV191.wrapCommand("wm size reset && wm density 180 && settings put system pointer_speed 7"))
                         }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3))) { Text("Extreme Sensi") }
 
                         Spacer(Modifier.height(24.dp))
 
                         Button(onClick = {
-                            terminalLog = AppManager.runCommand("wm size reset && wm density reset && settings put global low_power 0 && cmd power set-fixed-performance-mode-enabled false && pm unsuspend com.google.android.gms")
+                            terminalLog = AppManager.runCommand(CompatibilityEngineV191.wrapCommand("wm size reset && wm density reset && settings put global low_power 0 && cmd power set-fixed-performance-mode-enabled false && pm unsuspend com.google.android.gms"))
                         }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Color.Red)) { Text("RESETAR TUDO") }
 
                         Spacer(Modifier.height(20.dp))

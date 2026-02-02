@@ -12,6 +12,52 @@ import rikka.shizuku.Shizuku
 import java.io.BufferedReader
 import java.io.InputStreamReader
 
+object CompatibilityEngineV191 {
+    val manufacturer: String = Build.MANUFACTURER.lowercase()
+    val model: String = Build.MODEL.lowercase()
+
+    fun isLowEnd(): Boolean {
+        return model.contains("c40") || model.contains("a01") || model.contains("core")
+    }
+
+    fun getBrandColor(): Long {
+        return when {
+            manufacturer.contains("samsung") -> 0xFF2196F3 // Blue
+            manufacturer.contains("xiaomi") || manufacturer.contains("poco") -> 0xFFFF5722 // Orange
+            else -> 0xFF00E5FF // Cyan default
+        }
+    }
+
+    fun getBrandTitle(): String {
+        return when {
+            manufacturer.contains("samsung") -> "TURBO CORE [SAMSUNG EDITION]"
+            manufacturer.contains("xiaomi") || manufacturer.contains("poco") -> "TURBO CORE [XIAOMI/POCO]"
+            else -> "TURBO CORE UNIVERSAL"
+        }
+    }
+
+    fun wrapCommand(command: String): String {
+        val finalCommands = mutableListOf<String>()
+
+        // V191-B: Modo de compilação speed-profile para todos
+        finalCommands.add("cmd package compile -m speed-profile -a")
+
+        if (manufacturer.contains("samsung")) {
+            finalCommands.add("settings put global sem_enhanced_cpu_speed 1")
+        }
+
+        if (manufacturer.contains("xiaomi") || manufacturer.contains("poco")) {
+            finalCommands.add("am force-stop com.miui.powerkeeper")
+            // Se o comando original tiver "wm size", removemos para Xiaomi se for arriscado
+            // Mas seguindo o protocolo, apenas aplicamos se necessário.
+            // Aqui manteremos o comando original mas adicionaremos o bypass do powerkeeper.
+        }
+
+        finalCommands.add(command)
+        return finalCommands.joinToString(" && ")
+    }
+}
+
 object AppManager {
     fun runCommand(command: String): String {
         if (!Shizuku.pingBinder()) return "Erro: Serviço Shizuku parado no sistema!"
