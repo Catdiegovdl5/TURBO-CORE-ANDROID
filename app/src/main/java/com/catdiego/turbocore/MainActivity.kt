@@ -82,50 +82,50 @@ class MainActivity : ComponentActivity() {
 
                         Spacer(Modifier.height(20.dp))
 
-                        // DESEMPENHO
+                        // CATEGORIA: DESEMPENHO (Performance)
                         Text("DESEMPENHO", color = Color.Gray, style = MaterialTheme.typography.titleSmall)
                         Button(onClick = {
-                            terminalLog = AppManager.runCommand("wm size 540x1200 && wm density 210")
-                        }, modifier = Modifier.fillMaxWidth()) { Text("MODO BRUTO (720p)") }
+                            terminalLog = AppManager.runCommand("wm size 720x1600 && wm density 280")
+                        }, modifier = Modifier.fillMaxWidth()) { Text("HIGH PERFORMANCE") }
 
                         Spacer(Modifier.height(8.dp))
 
                         Button(onClick = {
-                            terminalLog = AppManager.runCommand("wm size reset && wm density reset")
-                        }, modifier = Modifier.fillMaxWidth()) { Text("USUAL TURBO") }
+                            terminalLog = AppManager.runCommand("wm size 540x1200 && wm density 210 && cmd power set-fixed-performance-mode-enabled true")
+                        }, modifier = Modifier.fillMaxWidth()) { Text("TURBO MÁXIMO") }
 
                         Spacer(Modifier.height(16.dp))
 
-                        // ECONOMIA
+                        // CATEGORIA: ECONOMIA (Battery Saver)
                         Text("ECONOMIA", color = Color.Gray, style = MaterialTheme.typography.titleSmall)
                         Button(onClick = {
                             terminalLog = AppManager.runCommand("settings put global low_power 1 && pm suspend com.google.android.gms")
-                        }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50))) { Text("SUPER ECONOMIA") }
+                        }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50))) { Text("POWER SAVER") }
 
                         Spacer(Modifier.height(8.dp))
 
                         Button(onClick = {
-                            terminalLog = AppManager.runCommand("wm size 360x800 && settings put global low_power 1")
-                        }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50))) { Text("ULTRA ECONOMIA") }
+                            terminalLog = AppManager.runCommand("wm size 360x800 && settings put global low_power 1 && cmd device_idle force-idle")
+                        }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50))) { Text("HIBERNAÇÃO TOTAL") }
 
                         Spacer(Modifier.height(16.dp))
 
-                        // COMPETITIVO
+                        // CATEGORIA: COMPETITIVO (Gaming)
                         Text("COMPETITIVO", color = Color.Gray, style = MaterialTheme.typography.titleSmall)
                         Button(onClick = {
-                            terminalLog = AppManager.runCommand("cmd power set-fixed-performance-mode-enabled true")
-                        }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3))) { Text("GAMER ULTIMATE") }
+                            terminalLog = AppManager.runCommand("cmd power set-fixed-performance-mode-enabled true && settings put global window_animation_scale 0 && settings put global transition_animation_scale 0")
+                        }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3))) { Text("FPS BOOST") }
 
                         Spacer(Modifier.height(8.dp))
 
                         Button(onClick = {
-                            terminalLog = AppManager.runCommand("wm density 180")
-                        }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3))) { Text("SENSI FREE FIRE") }
+                            terminalLog = AppManager.runCommand("wm density 180 && settings put system pointer_speed 7")
+                        }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3))) { Text("EXTREME SENSI") }
 
                         Spacer(Modifier.height(24.dp))
 
                         Button(onClick = {
-                            terminalLog = AppManager.runCommand("wm size reset && wm density reset && settings put global low_power 0")
+                            terminalLog = AppManager.runCommand("wm size reset && wm density reset && settings put global low_power 0 && cmd power set-fixed-performance-mode-enabled false && pm unsafe-reset com.google.android.gms")
                         }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Color.Red)) { Text("RESETAR TUDO") }
 
                         Spacer(Modifier.height(20.dp))
