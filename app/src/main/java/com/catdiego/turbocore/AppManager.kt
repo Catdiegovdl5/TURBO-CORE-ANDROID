@@ -101,12 +101,17 @@ object AppManager {
         if (manufacturer.contains("SAMSUNG")) {
             commands.add("cmd power set-fixed-performance-mode-enabled true")
             commands.add("settings put global adaptive_battery_management 0")
-            // Proportional size (simulated 0.75x)
+            // V155: Desativar pacotes de log desnecessários
+            commands.add("pm disable-user com.samsung.android.logcollector")
+            commands.add("pm disable-user com.sec.android.app.logviewer")
+            // Proportional size (V155: 0.75x simulation)
             commands.add("wm size 720x1600")
             commands.add("wm density 280")
         } else if (manufacturer.contains("XIAOMI") || manufacturer.contains("POCO")) {
             commands.add("cmd thermalservice override 1")
             commands.add("settings put system power_mode 1")
+            // V155: Limpeza de cache de apps de segurança
+            commands.add("pm clear com.miui.securitycenter")
             commands.add("pm trim-caches 128M")
         } else if (manufacturer.contains("MOTOROLA")) {
             commands.add("settings put global window_animation_scale 0.25")
