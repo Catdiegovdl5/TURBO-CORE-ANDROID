@@ -43,243 +43,161 @@ class MainActivity : ComponentActivity() {
         if (Shizuku.pingBinder()) { checkAndRequestShizukuPermission() }
 
         setContent {
-            var terminalLog by remember { mutableStateOf("Aguardando comando...") }
-            val brandColor = Color(SmartCoreEngineV200.getBrandColor())
-            val appTitle = SmartCoreEngineV200.getBrandTitle()
-            val isLowEnd = SmartCoreEngineV200.isLowEnd()
+            TurboCoreUI()
+        }
+    }
 
-            var currentTemp by remember { mutableStateOf(0f) }
-            val isShizukuLimited = remember { mutableStateOf(false) }
+    @Composable
+    fun TurboCoreUI() {
+        var selectedTab by remember { mutableStateOf(0) }
+        val tabs = listOf("UNIVERSAL", SmartCoreEngineV205.brand, "SISTEMA")
+        var terminalLog by remember { mutableStateOf("Aguardando comando...") }
+        val brandColor = Color(SmartCoreEngineV205.getBrandColor())
 
-            LaunchedEffect(Unit) {
-                while(true) {
-                    currentTemp = ThermalWatchdog.getTemperature(this@MainActivity)
-                    delay(60000) // 60 segundos conforme protocolo V200
+        var currentTemp by remember { mutableStateOf(0f) }
+        val isShizukuLimited = remember { mutableStateOf(false) }
+
+        LaunchedEffect(Unit) {
+            while(true) {
+                currentTemp = ThermalWatchdog.getTemperature(this@MainActivity)
+                if (currentTemp > 39) {
+                    terminalLog = AppManager.runCommand(this@MainActivity, "cmd package compile --reset -a")
+                }
+                delay(60000)
+            }
+        }
+
+        LaunchedEffect(shizukuStatus) {
+            if (Shizuku.pingBinder()) {
+                isShizukuLimited.value = try {
+                    val method = Shizuku::class.java.getDeclaredMethod("isLimited")
+                    method.invoke(null) as Boolean
+                } catch (e: Exception) {
+                    false
                 }
             }
+        }
 
-            LaunchedEffect(shizukuStatus) {
-                if (Shizuku.pingBinder()) {
-                    isShizukuLimited.value = try {
-                        val method = Shizuku::class.java.getDeclaredMethod("isLimited")
-                        method.invoke(null) as Boolean
-                    } catch (e: Exception) {
-                        false
+        Scaffold(
+            floatingActionButton = {
+                FloatingActionButton(
+                    onClick = {
+                        lifecycleScope.launch {
+                            if (currentTemp < 38) {
+                                terminalLog = AppManager.runCommand(this@MainActivity, SmartCoreEngineV205.wrapCommand("cmd package compile -m speed-profile -f com.dts.freefireth"))
+                            } else {
+                                terminalLog = "Erro: Dispositivo muito quente (${currentTemp}°C) para o modo Free Fire."
+                            }
+                        }
+                    },
+                    containerColor = Color.Red,
+                    contentColor = Color.White
+                ) {
+                    Text("FF", style = MaterialTheme.typography.labelLarge)
+                }
+            }
+        ) { paddingValues ->
+            Column(Modifier.fillMaxSize().background(Color(0xFF0A0A0A)).padding(paddingValues)) {
+                TabRow(selectedTabIndex = selectedTab, containerColor = Color.Black, contentColor = Color.Cyan) {
+                    tabs.forEachIndexed { index, title ->
+                        Tab(selected = selectedTab == index, onClick = { selectedTab = index }, text = { Text(title) })
                     }
                 }
-            }
 
-            LaunchedEffect(Unit) {
-                delay(1000)
-                if (Shizuku.pingBinder()) {
-                    // Protocolo V153: Sempre verifique antes de pedir
-                    checkAndRequestShizukuPermission()
-                } else {
-                    shizukuStatus = "Shizuku desligado no sistema!"
-                }
-            }
-
-            Box(modifier = Modifier.fillMaxSize().background(Color(0xFF0A0A0A))) {
-                LazyColumn(modifier = Modifier.padding(16.dp)) {
+                LazyColumn(Modifier.padding(16.dp)) {
                     item {
-                        Text(appTitle, color = brandColor, style = MaterialTheme.typography.headlineMedium)
-                        Text("Protocolo: V200 [Smart-Core Active]", color = Color.Gray, style = MaterialTheme.typography.labelSmall)
-                        Text("Status: $shizukuStatus | Temp: ${currentTemp}°C", color = if(currentTemp > 39) Color.Red else Color.Green)
+                        Text("Status: $shizukuStatus | Temp: ${currentTemp}°C",
+                            color = if(currentTemp > 39) Color.Red else Color.Green,
+                            style = MaterialTheme.typography.bodySmall)
 
                         if (currentTemp > 39) {
-                            Spacer(Modifier.height(8.dp))
-                            Text(
-                                "AVISO: DISPOSITIVO SUPERAQUECIDO! RESFRIANDO...",
-                                color = Color.Red,
-                                style = MaterialTheme.typography.bodySmall,
-                                modifier = Modifier.background(Color.White.copy(alpha = 0.1f)).padding(4.dp)
-                            )
+                            Text("AVISO: SUPERAQUECIMENTO DETECTADO! RESFRIANDO...", color = Color.Red)
                         }
 
                         if (isShizukuLimited.value) {
-                            Spacer(Modifier.height(8.dp))
-                            Text(
-                                "ERRO: ATIVE 'DESATIVAR MONITORAMENTO DE PERMISSÕES' NO PC",
-                                color = Color.Red,
-                                style = MaterialTheme.typography.bodySmall,
-                                modifier = Modifier.background(Color.White.copy(alpha = 0.1f)).padding(4.dp)
-                            )
+                            Text("ERRO: ATIVE 'DESATIVAR MONITORAMENTO DE PERMISSÕES'", color = Color.Red)
                         }
 
-                        Spacer(Modifier.height(16.dp))
-
-                        // PROTOCOLO V155: CARD DE INTELIGÊNCIA DE HARDWARE
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A))
-                        ) {
-                            Column(modifier = Modifier.padding(12.dp)) {
-                                Text("DISPOSITIVO DETECTADO:", color = Color.Gray, style = MaterialTheme.typography.labelSmall)
-                                Text(AppManager.getDeviceDisplayName(), color = Color.White, style = MaterialTheme.typography.titleMedium)
-                                Spacer(Modifier.height(4.dp))
-                                Text("SUGESTÃO:", color = Color.Gray, style = MaterialTheme.typography.labelSmall)
-                                Text(AppManager.getOptimizationLevelSuggestion(LocalContext.current), color = brandColor, style = MaterialTheme.typography.bodyMedium)
-                            }
-                        }
-
-                        Spacer(Modifier.height(16.dp))
-
-                        if (!isLowEnd) {
+                        if (shizukuStatus == "Shizuku não instalado!") {
                             Button(
                                 onClick = {
-                                    lifecycleScope.launch {
-                                        val commands = AppManager.getAutoOptimizationCommands(this@MainActivity)
-                                        val combinedCommand = commands.joinToString(" && ")
-                                        terminalLog = AppManager.runCommand(this@MainActivity, SmartCoreEngineV200.wrapCommand(combinedCommand))
-                                    }
+                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://shizuku.rikka.app/download/"))
+                                    this@MainActivity.startActivity(intent)
                                 },
-                                modifier = Modifier.fillMaxWidth(),
-                                enabled = !isShizukuLimited.value && currentTemp <= 39,
-                                colors = ButtonDefaults.buttonColors(containerColor = brandColor, contentColor = Color.Black)
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color.Blue)
                             ) {
-                                Text("APLICAR OTIMIZAÇÃO INTELIGENTE")
-                            }
-                        } else {
-                            Button(
-                                onClick = {
-                                    lifecycleScope.launch {
-                                        terminalLog = AppManager.runCommand(this@MainActivity, SmartCoreEngineV200.wrapCommand("pm trim-caches 256M && settings put global low_power 1"))
-                                    }
-                                },
-                                modifier = Modifier.fillMaxWidth(),
-                                enabled = !isShizukuLimited.value && currentTemp <= 39,
-                                colors = ButtonDefaults.buttonColors(containerColor = Color.Yellow, contentColor = Color.Black)
-                            ) {
-                                Text("OTIMIZAR LOW-END (SAFE MODE)")
+                                Text("BAIXAR SHIZUKU", color = Color.White)
                             }
                         }
 
                         Spacer(Modifier.height(16.dp))
+                    }
 
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Button(onClick = {
-                                try {
-                                    if (Shizuku.pingBinder()) {
-                                        Shizuku.requestPermission(REQUEST_CODE)
-                                    } else {
-                                        // Se o binder não responde, abre o app Shizuku direto
-                                        launchShizukuApp(this@MainActivity)
+                    when (selectedTab) {
+                        0 -> { // ABA UNIVERSAL
+                            items(SmartCoreEngineV205.getUniversalCommands().size) { i ->
+                                val cmd = SmartCoreEngineV205.getUniversalCommands()[i]
+                                PerformanceButton(cmd.first, cmd.second) {
+                                    lifecycleScope.launch {
+                                        terminalLog = AppManager.runCommand(this@MainActivity, SmartCoreEngineV205.wrapCommand(cmd.second))
                                     }
-                                } catch (e: Exception) {
-                                    launchShizukuApp(this@MainActivity)
                                 }
-                            }, Modifier.weight(1f)) {
-                                Text("ATIVAR CONEXÃO")
-                            }
-                            Button(onClick = { updateStatus() }, Modifier.weight(1f)) {
-                                Text("ATUALIZAR")
                             }
                         }
-
-                        Spacer(Modifier.height(20.dp))
-
-                        // CATEGORIA: DESEMPENHO (Performance)
-                        Text("DESEMPENHO", color = Color.Gray, style = MaterialTheme.typography.titleSmall)
-                        Button(onClick = {
-                            lifecycleScope.launch {
-                                // V140 Requisito: wm size 540x1200 && wm density 210
-                                terminalLog = AppManager.runCommand(this@MainActivity, SmartCoreEngineV200.wrapCommand("wm size 540x1200 && wm density 210"))
+                        1 -> { // ABA ESPECÍFICA (SAMSUNG/XIAOMI)
+                            items(SmartCoreEngineV205.getSpecificCommands().size) { i ->
+                                val cmd = SmartCoreEngineV205.getSpecificCommands()[i]
+                                PerformanceButton(cmd.first, cmd.second, brandColor) {
+                                    lifecycleScope.launch {
+                                        terminalLog = AppManager.runCommand(this@MainActivity, SmartCoreEngineV205.wrapCommand(cmd.second))
+                                    }
+                                }
                             }
-                        }, modifier = Modifier.fillMaxWidth(), enabled = !isShizukuLimited.value && currentTemp <= 39) { Text("Modo Bruto") }
-
-                        Spacer(Modifier.height(8.dp))
-
-                        Button(onClick = {
-                            lifecycleScope.launch {
-                                // V140 Requisito: wm size reset && wm density reset
-                                terminalLog = AppManager.runCommand(this@MainActivity, SmartCoreEngineV200.wrapCommand("wm size reset && wm density reset"))
+                        }
+                        2 -> { // STATUS E LOGS
+                            item {
+                                Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A))) {
+                                    Column(Modifier.padding(16.dp)) {
+                                        Text("LOG DE SISTEMA", color = Color.Cyan)
+                                        Spacer(Modifier.height(8.dp))
+                                        Text(terminalLog, color = Color.Green, style = MaterialTheme.typography.bodySmall)
+                                    }
+                                }
                             }
-                        }, modifier = Modifier.fillMaxWidth(), enabled = !isShizukuLimited.value && currentTemp <= 39) { Text("Usual Turbo") }
-
-                        Spacer(Modifier.height(16.dp))
-
-                        // CATEGORIA: ECONOMIA (Battery Saver)
-                        Text("ECONOMIA", color = Color.Gray, style = MaterialTheme.typography.titleSmall)
-                        Button(onClick = {
-                            lifecycleScope.launch {
-                                terminalLog = AppManager.runCommand(this@MainActivity, SmartCoreEngineV200.wrapCommand("settings put global low_power 1 && pm suspend com.google.android.gms"))
-                            }
-                        }, modifier = Modifier.fillMaxWidth(), enabled = !isShizukuLimited.value && currentTemp <= 39, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50))) { Text("Super Economia") }
-
-                        Spacer(Modifier.height(8.dp))
-
-                        Button(onClick = {
-                            lifecycleScope.launch {
-                                terminalLog = AppManager.runCommand(this@MainActivity, SmartCoreEngineV200.wrapCommand("wm size 360x800 && settings put global low_power 1"))
-                            }
-                        }, modifier = Modifier.fillMaxWidth(), enabled = !isShizukuLimited.value && currentTemp <= 39, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50))) { Text("Ultra Economia") }
-
-                        Spacer(Modifier.height(16.dp))
-
-                        // CATEGORIA: COMPETITIVO (Gaming)
-                        Text("COMPETITIVO", color = Color.Gray, style = MaterialTheme.typography.titleSmall)
-                        Button(onClick = {
-                            lifecycleScope.launch {
-                                terminalLog = AppManager.runCommand(this@MainActivity, SmartCoreEngineV200.wrapCommand("cmd power set-fixed-performance-mode-enabled true"))
-                            }
-                        }, modifier = Modifier.fillMaxWidth(), enabled = !isShizukuLimited.value && currentTemp <= 39, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3))) { Text("Gamer Ultimate") }
-
-                        Spacer(Modifier.height(8.dp))
-
-                        Button(onClick = {
-                            lifecycleScope.launch {
-                                terminalLog = AppManager.runCommand(this@MainActivity, SmartCoreEngineV200.wrapCommand("wm density 180"))
-                            }
-                        }, modifier = Modifier.fillMaxWidth(), enabled = !isShizukuLimited.value && currentTemp <= 39, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3))) { Text("Sensi Free Fire") }
-
-                        Spacer(Modifier.height(24.dp))
-
-                        Button(onClick = {
-                            lifecycleScope.launch {
-                                terminalLog = AppManager.runCommand(this@MainActivity, SmartCoreEngineV200.wrapCommand("wm size reset && wm density reset && settings put global low_power 0 && cmd power set-fixed-performance-mode-enabled false && pm unsuspend com.google.android.gms"))
-                            }
-                        }, modifier = Modifier.fillMaxWidth(), enabled = !isShizukuLimited.value, colors = ButtonDefaults.buttonColors(containerColor = Color.Red)) { Text("RESETAR TUDO") }
-
-                        Spacer(Modifier.height(20.dp))
-
-                        Text("SAÍDA DO SISTEMA:", color = Color.Cyan)
-                        Text(terminalLog, color = Color.Green, modifier = Modifier.background(Color.Black).padding(8.dp).fillMaxWidth())
+                        }
                     }
                 }
             }
         }
     }
 
+    @Composable
+    fun PerformanceButton(title: String, command: String, color: Color = Color.Cyan, onClick: () -> Unit) {
+        Button(
+            onClick = onClick,
+            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = color, contentColor = Color.Black)
+        ) {
+            Text(title)
+        }
+    }
+
     private fun checkAndRequestShizukuPermission() {
+        if (!AppManager.isShizukuInstalled(this)) {
+            shizukuStatus = "Shizuku não instalado!"
+            return
+        }
         try {
             if (Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED) {
                 shizukuStatus = "Conectado"
             } else {
-                // Tenta o popup padrão
                 Shizuku.requestPermission(REQUEST_CODE)
-                // Se em 2 segundos não conectar, sugere abertura manual
                 shizukuStatus = "Autorize no App Shizuku..."
             }
         } catch (e: Exception) {
             launchShizukuApp(this)
         }
-    }
-
-    private fun updateStatus() {
-        shizukuStatus = if (!Shizuku.pingBinder()) {
-            "Shizuku Parado (Abra o App Shizuku)"
-        } else if (Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED) {
-            "Conectado"
-        } else if (shizukuStatus == "Permissão Negada") {
-            "Configurações Restritas (Habilite Manualmente)"
-        } else {
-            "Aguardando Permissão"
-        }
-    }
-
-    private fun openShizukuDownload(context: Context) {
-        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/RikkaApps/Shizuku/releases"))
-        context.startActivity(intent)
     }
 
     private fun launchShizukuApp(context: Context) {

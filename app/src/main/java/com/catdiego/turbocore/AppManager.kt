@@ -31,8 +31,8 @@ object ThermalWatchdog {
     }
 }
 
-object SmartCoreEngineV200 {
-    val manufacturer: String = Build.MANUFACTURER.lowercase()
+object SmartCoreEngineV205 {
+    val brand: String = Build.MANUFACTURER.uppercase()
     val model: String = Build.MODEL.lowercase()
 
     fun isLowEnd(): Boolean {
@@ -41,49 +41,64 @@ object SmartCoreEngineV200 {
 
     fun getBrandColor(): Long {
         return when {
-            manufacturer.contains("samsung") -> 0xFF2196F3 // Blue
-            manufacturer.contains("xiaomi") || manufacturer.contains("poco") -> 0xFFFF5722 // Orange
+            brand.contains("SAMSUNG") -> 0xFF2196F3 // Blue
+            brand.contains("XIAOMI") || brand.contains("POCO") -> 0xFFFF5722 // Orange
             else -> 0xFF00E5FF // Cyan default
         }
     }
 
-    fun getBrandTitle(): String {
+    // TABELA DE MODOS POR MARCA (V205)
+    fun getSpecificCommands(): List<Pair<String, String>> {
         return when {
-            manufacturer.contains("samsung") -> "TURBO CORE [ONE UI SAFE]"
-            manufacturer.contains("xiaomi") || manufacturer.contains("poco") -> "TURBO CORE [HYPEROS LEGACY]"
-            else -> "TURBO CORE UNIVERSAL"
+            brand.contains("SAMSUNG") -> listOf(
+                "MIRA LEVE PRO" to "settings put system pointer_speed 7 && settings put system touch_sensitivity 1",
+                "GAME BOOSTER FIX" to "am force-stop com.samsung.android.game.gametools && am force-stop com.samsung.android.game.gamehome",
+                "ULTRA GRAPHICS (VULKAN)" to "settings put global debug.hwui.renderer skiavk && settings put global sys.use_fifo_ui 1",
+                "ONE UI PERF" to "settings put system game_performance 1",
+                "DEX SPEED (SAFE)" to "cmd package compile -m speed-profile -f com.dts.freefireth",
+                "RAM PLUS OFF" to "settings put global ram_expand_size_list 0"
+            )
+            brand.contains("XIAOMI") || brand.contains("POCO") -> listOf(
+                "BYPASS JOYOSE" to "am force-stop com.xiaomi.joyose && pm suspend com.xiaomi.joyose",
+                "PERFORMANCE MODE" to "settings put system power_mode 1",
+                "THERMAL OVERRIDE" to "settings put global thermal_limit_strategy 0 && cmd thermalservice override 1",
+                "DEX SPEED (SAFE)" to "cmd package compile -m speed-profile -f com.dts.freefireth",
+                "LIMPAR SEGURANÇA" to "pm clear com.miui.securitycenter"
+            )
+            else -> listOf(
+                "MAX PERFORMANCE" to "cmd power set-fixed-performance-mode-enabled true",
+                "DEX SPEED (AOT)" to "cmd package compile -m speed -a"
+            )
         }
+    }
+
+    // MODOS UNIVERSAIS (GAVETA GERAL - V205)
+    fun getUniversalCommands(): List<Pair<String, String>> {
+        return listOf(
+            "FLUIDEZ 0.5x" to "settings put global window_animation_scale 0.5 && settings put global transition_animation_scale 0.5 && settings put global animator_duration_scale 0.5",
+            "LIMPEZA DE RAM" to "am kill-all && pm trim-caches 1024M",
+            "LATÊNCIA ZERO" to "settings put global touch_latency_mode 1",
+            "SUSPENDER GMS (GHOST)" to "pm suspend com.google.android.gms"
+        )
     }
 
     fun wrapCommand(command: String): String {
         val finalCommands = mutableListOf<String>()
 
-        // V200: Modular Architecture
-        if (manufacturer.contains("samsung")) {
-            // One UI Safe Profile
-            finalCommands.add("cmd package compile -m speed-profile -a")
+        if (brand.contains("SAMSUNG")) {
+            // Samsung permite alterar a sensibilidade de toque livremente
             finalCommands.add("settings put system pointer_speed 7")
             finalCommands.add("settings put system touch_sensitivity 1")
-            finalCommands.add("am force-stop com.samsung.android.game.gametools")
-
-            if (model.contains("sm-a075m") || model.contains("a01")) {
-                finalCommands.add("settings put global ram_expand_size_list 0")
-                finalCommands.add("cmd looper_stats disable")
-            }
-        } else if (manufacturer.contains("xiaomi") || manufacturer.contains("poco")) {
-            // HyperOS Legacy Profile
-            finalCommands.add("am force-stop com.miui.powerkeeper")
-            finalCommands.add("cmd package compile -m speed-profile -a")
-        } else {
-            finalCommands.add("cmd package compile -m speed-profile -a")
         }
 
-        // V200: Trava Xiaomi - Bloqueia set-fixed-performance
+        // V205: Trava Xiaomi - Bloqueia set-fixed-performance
         var sanitizedCommand = command
-        if (manufacturer.contains("xiaomi") || manufacturer.contains("poco")) {
+        if (brand.contains("XIAOMI") || brand.contains("POCO")) {
             if (sanitizedCommand.contains("set-fixed-performance-mode-enabled true")) {
                 sanitizedCommand = sanitizedCommand.replace("cmd power set-fixed-performance-mode-enabled true", "echo 'Comando bloqueado no Xiaomi por segurança'")
             }
+            // Xiaomi Bypasses
+            finalCommands.add("am force-stop com.miui.powerkeeper")
         }
 
         finalCommands.add(sanitizedCommand)
@@ -95,36 +110,32 @@ object AppManager {
     suspend fun runCommand(context: Context, command: String): String = withContext(Dispatchers.IO) {
         if (!Shizuku.pingBinder()) return@withContext "Erro: Serviço Shizuku parado no sistema!"
 
-        // V200: Thermal Guard
         if (ThermalWatchdog.isOverheating(context)) {
-            return@withContext "AVISO: Dispositivo superaquecido (${ThermalWatchdog.getTemperature(context)}°C). Resfriando dispositivo..."
+            val resetCmd = "cmd package compile --reset -a"
+            runDirectCommand(resetCmd)
+            return@withContext "AVISO: Temperatura Crítica (${ThermalWatchdog.getTemperature(context)}°C). Sistema Resetado!"
         }
 
-        // V192: Proibição de wm size pesado em low-end Samsung
-        val isSamsungLowEnd = SmartCoreEngineV200.manufacturer.contains("samsung") &&
-                              SmartCoreEngineV200.isLowEnd()
+        val isSamsungLowEnd = SmartCoreEngineV205.brand.contains("SAMSUNG") &&
+                              SmartCoreEngineV205.isLowEnd()
 
         val safeCommand = if (isSamsungLowEnd && command.contains("wm size") && !command.contains("reset")) {
-            command.replace(Regex("wm size \\d+x\\d+"), "echo 'wm size bloqueado por segurança'")
+            command.replace(Regex("wm size \\d+x\\d+"), "echo 'wm size bloqueado'")
         } else {
             command
         }
 
         try {
             withTimeout(3000L) {
-                val method = Shizuku::class.java.getDeclaredMethod(
-                    "newProcess",
-                    Array<String>::class.java, Array<String>::class.java, String::class.java
-                )
-                method.isAccessible = true
-                val process = method.invoke(null, arrayOf("sh", "-c", safeCommand), null, null) as Process
+                // Remoção de reflexão desnecessária: newProcess é público na v13.1.5
+                val process = Shizuku.newProcess(arrayOf("sh", "-c", safeCommand), null, null)
                 val reader = BufferedReader(InputStreamReader(process.inputStream))
                 val output = reader.readText()
                 process.waitFor()
                 if (output.isEmpty()) "Sucesso" else output
             }
         } catch (e: TimeoutCancellationException) {
-            "Erro: Timeout de 3s atingido!"
+            "Erro: Timeout!"
         } catch (e: Exception) {
             "Erro: ${e.message}"
         }
@@ -148,109 +159,19 @@ object AppManager {
         return false
     }
 
-    /**
-     * Returns a list of installed non-system apps.
-     * Optimized for RAM by filtering system apps (V140 requirement).
-     */
-    fun getFilteredApps(context: Context): List<String> {
-        return try {
-            val pm = context.packageManager
-            val apps = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                pm.getInstalledApplications(PackageManager.ApplicationInfoFlags.of(0L))
-            } else {
-                pm.getInstalledApplications(0)
-            }
-            apps.filter { (it.flags and ApplicationInfo.FLAG_SYSTEM) == 0 }
-                .map { it.loadLabel(pm).toString() }
-        } catch (e: Exception) {
-            listOf("Erro ao carregar apps")
-        }
-    }
-
     fun getDeviceDisplayName(): String {
         return "${Build.MANUFACTURER} ${Build.MODEL}"
     }
 
-    fun getTotalRamGb(context: Context): Long {
-        val actManager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-        val memInfo = ActivityManager.MemoryInfo()
-        actManager.getMemoryInfo(memInfo)
-        return memInfo.totalMem / (1024 * 1024 * 1024)
-    }
-
-    fun getBatteryLevel(context: Context): Int {
-        val batteryStatus: Intent? = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
-        return batteryStatus?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
-    }
-
-    fun getOptimizationLevelSuggestion(context: Context): String {
-        val ram = getTotalRamGb(context)
-        val manufacturer = Build.MANUFACTURER.uppercase()
-        val model = Build.MODEL.uppercase()
-
-        return when {
-            model.contains("SM-A075M") -> "Otimização OneUI Pro Detectada. Sugerimos o Modo Bruto (720p) para estabilizar o frame rate sem perder visibilidade."
-            ram < 4 -> "Perfil Econômico (Dispositivo de Entrada)"
-            ram > 8 -> "Perfil Ultra Performance"
-            manufacturer.contains("SAMSUNG") -> "Otimização OneUI Pro"
-            manufacturer.contains("XIAOMI") || manufacturer.contains("POCO") -> "Game Turbo Boost"
-            else -> "Otimização de Sistema Padrão"
-        }
-    }
-
-    fun getAutoOptimizationCommands(context: Context): List<String> {
-        val commands = mutableListOf<String>()
-        val manufacturer = Build.MANUFACTURER.uppercase()
-        val model = Build.MODEL.uppercase()
-        val ram = getTotalRamGb(context)
-        val battery = getBatteryLevel(context)
-
-        // V156: Se SM-A075M e bateria < 30%, aplica preset de economia extrema
-        if (model.contains("SM-A075M") && battery < 30 && battery != -1) {
-            commands.add("wm size 540x1200")
-            commands.add("wm density 210")
-            commands.add("pm suspend com.google.android.gms")
-            return commands // Retorna cedo para priorizar economia se bateria estiver crítica
-        }
-
-        // Universal optimizations
-        commands.add("settings put global window_animation_scale 0.5")
-        commands.add("settings put global transition_animation_scale 0.5")
-        commands.add("settings put global animator_duration_scale 0.5")
-
-        // Brand specific
-        if (manufacturer.contains("SAMSUNG")) {
-            commands.add("cmd power set-fixed-performance-mode-enabled true")
-            commands.add("settings put global adaptive_battery_management 0")
-            // V155: Desativar pacotes de log desnecessários
-            commands.add("pm disable-user com.samsung.android.logcollector")
-            commands.add("pm disable-user com.sec.android.app.logviewer")
-            // Proportional size (V155: 0.75x simulation)
-            commands.add("wm size 720x1600")
-            commands.add("wm density 280")
-        } else if (manufacturer.contains("XIAOMI") || manufacturer.contains("POCO")) {
-            commands.add("cmd thermalservice override 1")
-            commands.add("settings put system power_mode 1")
-            // V155: Limpeza de cache de apps de segurança
-            commands.add("pm clear com.miui.securitycenter")
-            commands.add("pm trim-caches 128M")
-        } else if (manufacturer.contains("MOTOROLA")) {
-            commands.add("settings put global window_animation_scale 0.25")
-            commands.add("setprop dalvik.vm.dex2oat-flags --compiler-filter=speed")
-        }
-
-        // RAM specific
-        if (ram < 4) {
-            commands.add("pm trim-caches 256M")
-            commands.add("settings put global low_power 1")
-            commands.add("wm size 540x1200")
-            commands.add("wm density 210")
-        } else if (ram > 8) {
-            commands.add("cmd power set-fixed-performance-mode-enabled true")
-            commands.add("wm size reset")
-            commands.add("wm density reset")
-        }
-
-        return commands
+    // Helper para comandos diretos sem timeout/verificações extras (usado no Thermal Guard)
+    private fun runDirectCommand(command: String) {
+        try {
+            val method = Shizuku::class.java.getDeclaredMethod(
+                "newProcess",
+                Array<String>::class.java, Array<String>::class.java, String::class.java
+            )
+            method.isAccessible = true
+            method.invoke(null, arrayOf("sh", "-c", command), null, null)
+        } catch (e: Exception) {}
     }
 }
