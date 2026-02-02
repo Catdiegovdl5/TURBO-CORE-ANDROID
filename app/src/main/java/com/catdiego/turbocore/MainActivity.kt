@@ -1,20 +1,21 @@
 package com.catdiego.turbocore
 
-import android.os.Bundle
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.delay
@@ -24,7 +25,6 @@ import rikka.shizuku.Shizuku
 class MainActivity : ComponentActivity() {
     private val REQUEST_CODE = 1001
 
-    // Estado global para atualizar a UI quando a permissão for concedida
     private var shizukuStatus by mutableStateOf("Verificando...")
 
     private val permissionListener = Shizuku.OnRequestPermissionResultListener { _, grantResult ->
@@ -51,8 +51,8 @@ class MainActivity : ComponentActivity() {
     fun TurboCoreUI() {
         var selectedTab by remember { mutableStateOf(0) }
         val categories = ModeCategory.values()
+        val tabs = categories.map { it.name } + "APPS"
         var terminalLog by remember { mutableStateOf("Aguardando comando...") }
-        val brandColor = Color(SmartCoreEngineV206.getBrandColor())
 
         var currentTemp by remember { mutableStateOf(0f) }
         val isShizukuLimited = remember { mutableStateOf(false) }
@@ -72,11 +72,11 @@ class MainActivity : ComponentActivity() {
                 isShizukuLimited.value = try {
                     val method = Shizuku::class.java.getDeclaredMethod("isLimited")
                     method.invoke(null) as Boolean
-                } catch (e: Exception) {
-                    false
-                }
+                } catch (e: Exception) { false }
             }
         }
+
+        val appsList = remember { AppManager.getInstalledApps(this@MainActivity, false) }
 
         Scaffold(
             floatingActionButton = {
@@ -101,8 +101,8 @@ class MainActivity : ComponentActivity() {
                     contentColor = Color.Cyan,
                     edgePadding = 16.dp
                 ) {
-                    categories.forEachIndexed { index, cat ->
-                        Tab(selected = selectedTab == index, onClick = { selectedTab = index }, text = { Text(cat.name) })
+                    tabs.forEachIndexed { index, title ->
+                        Tab(selected = selectedTab == index, onClick = { selectedTab = index }, text = { Text(title) })
                     }
                 }
 
@@ -136,15 +136,21 @@ class MainActivity : ComponentActivity() {
                         Spacer(Modifier.height(8.dp))
                     }
 
-                    val currentCategory = categories[selectedTab]
-                    val modes = SmartCoreEngineV206.getModesByCategory(currentCategory)
+                    if (selectedTab < categories.size) {
+                        val currentCategory = categories[selectedTab]
+                        val modes = SmartCoreEngineV206.getModesByCategory(currentCategory)
 
-                    items(modes.size) { i ->
-                        val mode = modes[i]
-                        ModeCard(mode) {
-                            lifecycleScope.launch {
-                                terminalLog = AppManager.runMode(this@MainActivity, mode)
+                        items(modes.size) { i ->
+                            val mode = modes[i]
+                            ModeCard(mode) {
+                                lifecycleScope.launch {
+                                    terminalLog = AppManager.runMode(this@MainActivity, mode)
+                                }
                             }
+                        }
+                    } else {
+                        items(appsList.size) { i ->
+                            AppCard(appsList[i])
                         }
                     }
                 }
@@ -165,9 +171,9 @@ class MainActivity : ComponentActivity() {
             colors = CardDefaults.cardColors(containerColor = Color(0xFF151515))
         ) {
             Column(Modifier.padding(12.dp)) {
-                Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(mode.title, style = MaterialTheme.typography.titleMedium, color = Color.White, modifier = Modifier.weight(1f))
-                    Surface(shape = androidx.compose.foundation.shape.CircleShape, color = riskColor.copy(alpha = 0.2f)) {
+                    Surface(shape = CircleShape, color = riskColor.copy(alpha = 0.2f)) {
                         Text("RISK ${mode.riskLevel}", color = riskColor, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp))
                     }
                 }
@@ -175,10 +181,28 @@ class MainActivity : ComponentActivity() {
                 Spacer(Modifier.height(8.dp))
                 Button(
                     onClick = onClick,
-                    modifier = Modifier.align(androidx.compose.ui.Alignment.End),
+                    modifier = Modifier.align(Alignment.End),
                     colors = ButtonDefaults.buttonColors(containerColor = Color.Cyan, contentColor = Color.Black)
                 ) {
                     Text("ATIVAR", style = MaterialTheme.typography.labelMedium)
+                }
+            }
+        }
+    }
+
+    @Composable
+    fun AppCard(app: AppInfo) {
+        Card(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF151515))
+        ) {
+            Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(app.name, style = MaterialTheme.typography.titleSmall, color = Color.White)
+                    Text(app.packageName, style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                }
+                if (app.isSystem) {
+                    Text("SYSTEM", color = Color.Yellow, style = MaterialTheme.typography.labelSmall)
                 }
             }
         }
@@ -210,7 +234,6 @@ class MainActivity : ComponentActivity() {
                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 context.startActivity(intent)
             } else {
-                // Se o intent falhar por segurança do Android 15, tenta via URI
                 val githubIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/RikkaApps/Shizuku/releases"))
                 context.startActivity(githubIntent)
             }
