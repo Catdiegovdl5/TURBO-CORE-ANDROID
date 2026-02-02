@@ -50,9 +50,9 @@ class MainActivity : ComponentActivity() {
     @Composable
     fun TurboCoreUI() {
         var selectedTab by remember { mutableStateOf(0) }
-        val tabs = listOf("UNIVERSAL", SmartCoreEngineV205.brand, "SISTEMA")
+        val categories = ModeCategory.values()
         var terminalLog by remember { mutableStateOf("Aguardando comando...") }
-        val brandColor = Color(SmartCoreEngineV205.getBrandColor())
+        val brandColor = Color(SmartCoreEngineV206.getBrandColor())
 
         var currentTemp by remember { mutableStateOf(0f) }
         val isShizukuLimited = remember { mutableStateOf(false) }
@@ -61,7 +61,7 @@ class MainActivity : ComponentActivity() {
             while(true) {
                 currentTemp = ThermalWatchdog.getTemperature(this@MainActivity)
                 if (currentTemp > 39) {
-                    terminalLog = AppManager.runCommand(this@MainActivity, "cmd package compile --reset -a")
+                    terminalLog = AppManager.runRawCommand("cmd package compile --reset -a")
                 }
                 delay(60000)
             }
@@ -83,11 +83,8 @@ class MainActivity : ComponentActivity() {
                 FloatingActionButton(
                     onClick = {
                         lifecycleScope.launch {
-                            if (currentTemp < 38) {
-                                terminalLog = AppManager.runCommand(this@MainActivity, SmartCoreEngineV205.wrapCommand("cmd package compile -m speed-profile -f com.dts.freefireth"))
-                            } else {
-                                terminalLog = "Erro: Dispositivo muito quente (${currentTemp}°C) para o modo Free Fire."
-                            }
+                            val modeFF = OptimizationMode(999, "Mode Free Fire", "", "cmd package compile -m speed-profile -f com.dts.freefireth", ModeCategory.CHIMERA, 3)
+                            terminalLog = AppManager.runMode(this@MainActivity, modeFF)
                         }
                     },
                     containerColor = Color.Red,
@@ -98,24 +95,25 @@ class MainActivity : ComponentActivity() {
             }
         ) { paddingValues ->
             Column(Modifier.fillMaxSize().background(Color(0xFF0A0A0A)).padding(paddingValues)) {
-                TabRow(selectedTabIndex = selectedTab, containerColor = Color.Black, contentColor = Color.Cyan) {
-                    tabs.forEachIndexed { index, title ->
-                        Tab(selected = selectedTab == index, onClick = { selectedTab = index }, text = { Text(title) })
+                ScrollableTabRow(
+                    selectedTabIndex = selectedTab,
+                    containerColor = Color.Black,
+                    contentColor = Color.Cyan,
+                    edgePadding = 16.dp
+                ) {
+                    categories.forEachIndexed { index, cat ->
+                        Tab(selected = selectedTab == index, onClick = { selectedTab = index }, text = { Text(cat.name) })
                     }
                 }
 
                 LazyColumn(Modifier.padding(16.dp)) {
                     item {
                         Text("Status: $shizukuStatus | Temp: ${currentTemp}°C",
-                            color = if(currentTemp > 39) Color.Red else Color.Green,
+                            color = if(currentTemp > 38) Color.Red else Color.Green,
                             style = MaterialTheme.typography.bodySmall)
 
-                        if (currentTemp > 39) {
-                            Text("AVISO: SUPERAQUECIMENTO DETECTADO! RESFRIANDO...", color = Color.Red)
-                        }
-
                         if (isShizukuLimited.value) {
-                            Text("ERRO: ATIVE 'DESATIVAR MONITORAMENTO DE PERMISSÕES'", color = Color.Red)
+                            Text("ERRO: ATIVE 'DESATIVAR MONITORAMENTO DE PERMISSÕES'", color = Color.Red, style = MaterialTheme.typography.labelSmall)
                         }
 
                         if (shizukuStatus == "Shizuku não instalado!") {
@@ -131,39 +129,21 @@ class MainActivity : ComponentActivity() {
                             }
                         }
 
-                        Spacer(Modifier.height(16.dp))
+                        Card(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A))) {
+                            Text(terminalLog, color = Color.Green, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(8.dp))
+                        }
+
+                        Spacer(Modifier.height(8.dp))
                     }
 
-                    when (selectedTab) {
-                        0 -> { // ABA UNIVERSAL
-                            items(SmartCoreEngineV205.getUniversalCommands().size) { i ->
-                                val cmd = SmartCoreEngineV205.getUniversalCommands()[i]
-                                PerformanceButton(cmd.first, cmd.second) {
-                                    lifecycleScope.launch {
-                                        terminalLog = AppManager.runCommand(this@MainActivity, SmartCoreEngineV205.wrapCommand(cmd.second))
-                                    }
-                                }
-                            }
-                        }
-                        1 -> { // ABA ESPECÍFICA (SAMSUNG/XIAOMI)
-                            items(SmartCoreEngineV205.getSpecificCommands().size) { i ->
-                                val cmd = SmartCoreEngineV205.getSpecificCommands()[i]
-                                PerformanceButton(cmd.first, cmd.second, brandColor) {
-                                    lifecycleScope.launch {
-                                        terminalLog = AppManager.runCommand(this@MainActivity, SmartCoreEngineV205.wrapCommand(cmd.second))
-                                    }
-                                }
-                            }
-                        }
-                        2 -> { // STATUS E LOGS
-                            item {
-                                Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A))) {
-                                    Column(Modifier.padding(16.dp)) {
-                                        Text("LOG DE SISTEMA", color = Color.Cyan)
-                                        Spacer(Modifier.height(8.dp))
-                                        Text(terminalLog, color = Color.Green, style = MaterialTheme.typography.bodySmall)
-                                    }
-                                }
+                    val currentCategory = categories[selectedTab]
+                    val modes = SmartCoreEngineV206.getModesByCategory(currentCategory)
+
+                    items(modes.size) { i ->
+                        val mode = modes[i]
+                        ModeCard(mode) {
+                            lifecycleScope.launch {
+                                terminalLog = AppManager.runMode(this@MainActivity, mode)
                             }
                         }
                     }
@@ -173,13 +153,34 @@ class MainActivity : ComponentActivity() {
     }
 
     @Composable
-    fun PerformanceButton(title: String, command: String, color: Color = Color.Cyan, onClick: () -> Unit) {
-        Button(
-            onClick = onClick,
+    fun ModeCard(mode: OptimizationMode, onClick: () -> Unit) {
+        val riskColor = when(mode.riskLevel) {
+            1 -> Color.Green
+            2 -> Color.Yellow
+            else -> Color.Red
+        }
+
+        Card(
             modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = color, contentColor = Color.Black)
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF151515))
         ) {
-            Text(title)
+            Column(Modifier.padding(12.dp)) {
+                Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                    Text(mode.title, style = MaterialTheme.typography.titleMedium, color = Color.White, modifier = Modifier.weight(1f))
+                    Surface(shape = androidx.compose.foundation.shape.CircleShape, color = riskColor.copy(alpha = 0.2f)) {
+                        Text("RISK ${mode.riskLevel}", color = riskColor, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp))
+                    }
+                }
+                Text(mode.description, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                Spacer(Modifier.height(8.dp))
+                Button(
+                    onClick = onClick,
+                    modifier = Modifier.align(androidx.compose.ui.Alignment.End),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Cyan, contentColor = Color.Black)
+                ) {
+                    Text("ATIVAR", style = MaterialTheme.typography.labelMedium)
+                }
+            }
         }
     }
 
