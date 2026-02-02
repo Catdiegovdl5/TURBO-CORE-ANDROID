@@ -1,488 +1,226 @@
 package com.catdiego.turbocore
 
+import android.os.Bundle
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
-import android.os.Bundle
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import rikka.shizuku.Shizuku
 
 class MainActivity : ComponentActivity() {
+    private val REQUEST_CODE = 1001
 
-    private var isShizukuInstalledState by mutableStateOf(false)
-    private var isShizukuPermissionGrantedState by mutableStateOf(false)
+    // Estado global para atualizar a UI quando a permissão for concedida
+    private var shizukuStatus by mutableStateOf("Verificando...")
 
-    // Shizuku permission listener
-    private val permissionListener = Shizuku.OnRequestPermissionResultListener { requestCode, grantResult ->
-        if (grantResult == PackageManager.PERMISSION_GRANTED) {
-            isShizukuPermissionGrantedState = true
-        } else {
-            isShizukuPermissionGrantedState = false
-            runOnUiThread {
-                Toast.makeText(
-                    this,
-                    "Acesso negado. O Turbo Core precisa do Shizuku para otimizar o sistema.",
-                    Toast.LENGTH_LONG
-                ).show()
-            }
-        }
+    private val permissionListener = Shizuku.OnRequestPermissionResultListener { _, grantResult ->
+        shizukuStatus = if (grantResult == PackageManager.PERMISSION_GRANTED) "Conectado" else "Permissão Negada"
+    }
+
+    private val binderListener = Shizuku.OnBinderReceivedListener {
+        checkAndRequestShizukuPermission()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // 1. INSTALLATION CHECK
-        isShizukuInstalledState = isShizukuInstalled(this)
+        runCatching { Shizuku.addRequestPermissionResultListener(permissionListener) }
+        runCatching { Shizuku.addBinderReceivedListener(binderListener) }
+        if (Shizuku.pingBinder()) { checkAndRequestShizukuPermission() }
 
-        // Register Shizuku listener if installed
-        if (isShizukuInstalledState) {
-            try {
-                Shizuku.addRequestPermissionResultListener(permissionListener)
-                if (Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED) {
-                    isShizukuPermissionGrantedState = true
-                } else {
-                    if (Shizuku.isPreV11()) {
-                        // Pre-v11 handling
-                    } else {
-                        Shizuku.requestPermission(0)
-                    }
+        setContent {
+            TurboCoreUI()
+        }
+    }
+
+    @Composable
+    fun TurboCoreUI() {
+        var selectedTab by remember { mutableStateOf(0) }
+        val tabs = listOf("UNIVERSAL", SmartCoreEngineV205.brand, "SISTEMA")
+        var terminalLog by remember { mutableStateOf("Aguardando comando...") }
+        val brandColor = Color(SmartCoreEngineV205.getBrandColor())
+
+        var currentTemp by remember { mutableStateOf(0f) }
+        val isShizukuLimited = remember { mutableStateOf(false) }
+
+        LaunchedEffect(Unit) {
+            while(true) {
+                currentTemp = ThermalWatchdog.getTemperature(this@MainActivity)
+                if (currentTemp > 39) {
+                    terminalLog = AppManager.runCommand(this@MainActivity, "cmd package compile --reset -a")
                 }
-            } catch (e: Exception) {
-                // Shizuku service might not be running even if installed
-                isShizukuPermissionGrantedState = false
+                delay(60000)
             }
         }
 
-        setContent {
-            MaterialTheme {
-                MainScreen(
-                    isShizukuInstalled = isShizukuInstalledState,
-                    isShizukuPermissionGranted = isShizukuPermissionGrantedState
-                )
+        LaunchedEffect(shizukuStatus) {
+            if (Shizuku.pingBinder()) {
+                isShizukuLimited.value = try {
+                    val method = Shizuku::class.java.getDeclaredMethod("isLimited")
+                    method.invoke(null) as Boolean
+                } catch (e: Exception) {
+                    false
+                }
+            }
+        }
+
+        Scaffold(
+            floatingActionButton = {
+                FloatingActionButton(
+                    onClick = {
+                        lifecycleScope.launch {
+                            if (currentTemp < 38) {
+                                terminalLog = AppManager.runCommand(this@MainActivity, SmartCoreEngineV205.wrapCommand("cmd package compile -m speed-profile -f com.dts.freefireth"))
+                            } else {
+                                terminalLog = "Erro: Dispositivo muito quente (${currentTemp}°C) para o modo Free Fire."
+                            }
+                        }
+                    },
+                    containerColor = Color.Red,
+                    contentColor = Color.White
+                ) {
+                    Text("FF", style = MaterialTheme.typography.labelLarge)
+                }
+            }
+        ) { paddingValues ->
+            Column(Modifier.fillMaxSize().background(Color(0xFF0A0A0A)).padding(paddingValues)) {
+                TabRow(selectedTabIndex = selectedTab, containerColor = Color.Black, contentColor = Color.Cyan) {
+                    tabs.forEachIndexed { index, title ->
+                        Tab(selected = selectedTab == index, onClick = { selectedTab = index }, text = { Text(title) })
+                    }
+                }
+
+                LazyColumn(Modifier.padding(16.dp)) {
+                    item {
+                        Text("Status: $shizukuStatus | Temp: ${currentTemp}°C",
+                            color = if(currentTemp > 39) Color.Red else Color.Green,
+                            style = MaterialTheme.typography.bodySmall)
+
+                        if (currentTemp > 39) {
+                            Text("AVISO: SUPERAQUECIMENTO DETECTADO! RESFRIANDO...", color = Color.Red)
+                        }
+
+                        if (isShizukuLimited.value) {
+                            Text("ERRO: ATIVE 'DESATIVAR MONITORAMENTO DE PERMISSÕES'", color = Color.Red)
+                        }
+
+                        if (shizukuStatus == "Shizuku não instalado!") {
+                            Button(
+                                onClick = {
+                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://shizuku.rikka.app/download/"))
+                                    this@MainActivity.startActivity(intent)
+                                },
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color.Blue)
+                            ) {
+                                Text("BAIXAR SHIZUKU", color = Color.White)
+                            }
+                        }
+
+                        Spacer(Modifier.height(16.dp))
+                    }
+
+                    when (selectedTab) {
+                        0 -> { // ABA UNIVERSAL
+                            items(SmartCoreEngineV205.getUniversalCommands().size) { i ->
+                                val cmd = SmartCoreEngineV205.getUniversalCommands()[i]
+                                PerformanceButton(cmd.first, cmd.second) {
+                                    lifecycleScope.launch {
+                                        terminalLog = AppManager.runCommand(this@MainActivity, SmartCoreEngineV205.wrapCommand(cmd.second))
+                                    }
+                                }
+                            }
+                        }
+                        1 -> { // ABA ESPECÍFICA (SAMSUNG/XIAOMI)
+                            items(SmartCoreEngineV205.getSpecificCommands().size) { i ->
+                                val cmd = SmartCoreEngineV205.getSpecificCommands()[i]
+                                PerformanceButton(cmd.first, cmd.second, brandColor) {
+                                    lifecycleScope.launch {
+                                        terminalLog = AppManager.runCommand(this@MainActivity, SmartCoreEngineV205.wrapCommand(cmd.second))
+                                    }
+                                }
+                            }
+                        }
+                        2 -> { // STATUS E LOGS
+                            item {
+                                Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A))) {
+                                    Column(Modifier.padding(16.dp)) {
+                                        Text("LOG DE SISTEMA", color = Color.Cyan)
+                                        Spacer(Modifier.height(8.dp))
+                                        Text(terminalLog, color = Color.Green, style = MaterialTheme.typography.bodySmall)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }
 
-    private fun isShizukuInstalled(context: Context): Boolean {
-        return try {
-            context.packageManager.getPackageInfo("rikka.app.shizuku", 0)
-            true
-        } catch (e: PackageManager.NameNotFoundException) {
-            false
+    @Composable
+    fun PerformanceButton(title: String, command: String, color: Color = Color.Cyan, onClick: () -> Unit) {
+        Button(
+            onClick = onClick,
+            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = color, contentColor = Color.Black)
+        ) {
+            Text(title)
+        }
+    }
+
+    private fun checkAndRequestShizukuPermission() {
+        if (!AppManager.isShizukuInstalled(this)) {
+            shizukuStatus = "Shizuku não instalado!"
+            return
+        }
+        try {
+            if (Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED) {
+                shizukuStatus = "Conectado"
+            } else {
+                Shizuku.requestPermission(REQUEST_CODE)
+                shizukuStatus = "Autorize no App Shizuku..."
+            }
+        } catch (e: Exception) {
+            launchShizukuApp(this)
+        }
+    }
+
+    private fun launchShizukuApp(context: Context) {
+        try {
+            val intent = context.packageManager.getLaunchIntentForPackage("rikka.app.shizuku")
+                ?: context.packageManager.getLaunchIntentForPackage("moe.shizuku.privileged.api")
+
+            if (intent != null) {
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                context.startActivity(intent)
+            } else {
+                // Se o intent falhar por segurança do Android 15, tenta via URI
+                val githubIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/RikkaApps/Shizuku/releases"))
+                context.startActivity(githubIntent)
+            }
+        } catch (e: Exception) {
+            shizukuStatus = "Erro de I/O: Reinstale o Shizuku"
         }
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        try {
-            Shizuku.removeRequestPermissionResultListener(permissionListener)
-        } catch (e: Exception) {
-            // Ignore
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun MainScreen(
-    isShizukuInstalled: Boolean,
-    isShizukuPermissionGranted: Boolean
-) {
-    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
-    val scope = rememberCoroutineScope()
-    var currentScreen by remember { mutableStateOf("Início") }
-    val snackbarHostState = remember { SnackbarHostState() }
-
-    ModalNavigationDrawer(
-        drawerState = drawerState,
-        drawerContent = {
-            ModalDrawerSheet {
-                Spacer(Modifier.height(12.dp))
-                NavigationDrawerItem(
-                    label = { Text("Início") },
-                    selected = currentScreen == "Início",
-                    onClick = {
-                        currentScreen = "Início"
-                        scope.launch { drawerState.close() }
-                    },
-                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
-                )
-                NavigationDrawerItem(
-                    label = { Text("Economia") },
-                    selected = currentScreen == "Economia",
-                    onClick = {
-                        currentScreen = "Economia"
-                        scope.launch { drawerState.close() }
-                    },
-                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
-                )
-                NavigationDrawerItem(
-                    label = { Text("Desempenho") },
-                    selected = currentScreen == "Desempenho",
-                    onClick = {
-                        currentScreen = "Desempenho"
-                        scope.launch { drawerState.close() }
-                    },
-                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
-                )
-                NavigationDrawerItem(
-                    label = { Text("Competitivo") },
-                    selected = currentScreen == "Competitivo",
-                    onClick = {
-                        currentScreen = "Competitivo"
-                        scope.launch { drawerState.close() }
-                    },
-                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
-                )
-                NavigationDrawerItem(
-                    label = { Text("Terminal") },
-                    selected = currentScreen == "Terminal",
-                    onClick = {
-                        currentScreen = "Terminal"
-                        scope.launch { drawerState.close() }
-                    },
-                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
-                )
-            }
-        }
-    ) {
-        Scaffold(
-            snackbarHost = { SnackbarHost(snackbarHostState) },
-            topBar = {
-                CenterAlignedTopAppBar(
-                    title = { Text("Turbo Core") },
-                    navigationIcon = {
-                        IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                            Icon(
-                                painter = painterResource(id = android.R.drawable.ic_menu_sort_by_size),
-                                contentDescription = "Menu"
-                            )
-                        }
-                    },
-                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                        containerColor = Color(0xFF0A0A0A),
-                        titleContentColor = Color.White,
-                        navigationIconContentColor = Color.White
-                    )
-                )
-            }
-        ) { paddingValues ->
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color(0xFF0A0A0A))
-                    .padding(paddingValues)
-            ) {
-                // Background Image
-                Image(
-                    painter = painterResource(id = R.drawable.fundo_chip),
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
-                )
-
-                // Screen Content
-                when (currentScreen) {
-                    "Início" -> InicioScreen(isShizukuInstalled, isShizukuPermissionGranted, snackbarHostState)
-                    "Economia" -> EconomiaScreen(snackbarHostState)
-                    "Desempenho" -> DesempenhoScreen(snackbarHostState)
-                    "Competitivo" -> CompetitivoScreen(snackbarHostState)
-                    "Terminal" -> TerminalScreen(snackbarHostState)
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun ResetButton(snackbarHostState: SnackbarHostState) {
-    val scope = rememberCoroutineScope()
-    Button(
-        onClick = {
-            scope.launch {
-                val success = AppManager.resetEverything()
-                if (success) snackbarHostState.showSnackbar("Sistema Resetado!")
-                else snackbarHostState.showSnackbar("Erro ao resetar.")
-            }
-        },
-        colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
-        modifier = Modifier.fillMaxWidth().padding(8.dp)
-    ) {
-        Text("Resetar Tudo")
-    }
-}
-
-@Composable
-fun ActionButton(
-    text: String,
-    snackbarHostState: SnackbarHostState,
-    onClick: suspend () -> Boolean
-) {
-    val scope = rememberCoroutineScope()
-    var buttonColor by remember { mutableStateOf(Color(0xFFFF9800)) } // Default Orange
-    var buttonText by remember { mutableStateOf(text) }
-    var isLoading by remember { mutableStateOf(false) }
-
-    Button(
-        onClick = {
-            if (!isLoading) {
-                scope.launch {
-                    isLoading = true
-                    val success = onClick()
-                    isLoading = false
-                    if (success) {
-                        buttonColor = Color.Green
-                        buttonText = "Aplicado"
-                        snackbarHostState.showSnackbar("$text Aplicado!")
-                        delay(2000)
-                        buttonColor = Color(0xFFFF9800)
-                        buttonText = text
-                    } else {
-                        snackbarHostState.showSnackbar("Erro: Falha ou Sem Permissão.")
-                    }
-                }
-            }
-        },
-        colors = ButtonDefaults.buttonColors(containerColor = buttonColor),
-        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp, horizontal = 8.dp)
-    ) {
-        if (isLoading) {
-            CircularProgressIndicator(
-                modifier = Modifier.size(24.dp),
-                color = Color.White,
-                strokeWidth = 2.dp
-            )
-        } else {
-            Text(buttonText)
-        }
-    }
-}
-
-@Composable
-fun CyberCard(
-    title: String,
-    content: @Composable () -> Unit
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(8.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(title, style = MaterialTheme.typography.titleMedium, color = Color.Cyan)
-            Spacer(modifier = Modifier.height(8.dp))
-            content()
-        }
-    }
-}
-
-
-@Composable
-fun InicioScreen(
-    isShizukuInstalled: Boolean,
-    isShizukuPermissionGranted: Boolean,
-    snackbarHostState: SnackbarHostState
-) {
-    val context = LocalContext.current
-    var ramUsage by remember { mutableStateOf(0f) }
-
-    LaunchedEffect(Unit) {
-        while (true) {
-            ramUsage = AppManager.getRamUsage(context)
-            delay(1000)
-        }
-    }
-
-    Column(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Spacer(modifier = Modifier.height(32.dp))
-
-        // Shizuku Status
-        Text("Status Shizuku", color = Color.White, style = MaterialTheme.typography.titleMedium)
-        Spacer(modifier = Modifier.height(4.dp))
-
-        if (!isShizukuInstalled) {
-            Text("Não Instalado", color = Color.Red)
-            Spacer(modifier = Modifier.height(8.dp))
-            Button(
-                onClick = {
-                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://shizuku.rikka.app"))
-                    context.startActivity(intent)
-                },
-                colors = ButtonDefaults.buttonColors(containerColor = Color.Gray)
-            ) {
-                Text("Baixar Shizuku")
-            }
-        } else if (isShizukuPermissionGranted) {
-            Text("Funcionando (Permissão Concedida)", color = Color.Green)
-        } else {
-            Text("Permissão Pendente / Serviço Parado", color = Color.Yellow)
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // RAM Usage
-        Text("Uso de RAM", color = Color.White)
-        Spacer(modifier = Modifier.height(8.dp))
-        LinearProgressIndicator(
-            progress = ramUsage,
-            modifier = Modifier.fillMaxWidth().height(20.dp),
-            color = Color.Green,
-            trackColor = Color.DarkGray
-        )
-        Text("${(ramUsage * 100).toInt()}%", color = Color.White)
-
-        Spacer(modifier = Modifier.weight(1f))
-        ResetButton(snackbarHostState)
-    }
-}
-
-@Composable
-fun EconomiaScreen(snackbarHostState: SnackbarHostState) {
-    Column(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Spacer(modifier = Modifier.height(32.dp))
-        Text("Modo Economia", color = Color.White, style = MaterialTheme.typography.headlineSmall)
-        Spacer(modifier = Modifier.height(16.dp))
-
-        CyberCard("Opções de Economia") {
-            ActionButton("Super Economia", snackbarHostState) { AppManager.enableSuperEconomy() }
-            ActionButton("Ultra Economia", snackbarHostState) { AppManager.enableUltraEconomy() }
-        }
-
-        Spacer(modifier = Modifier.weight(1f))
-        ResetButton(snackbarHostState)
-    }
-}
-
-@Composable
-fun DesempenhoScreen(snackbarHostState: SnackbarHostState) {
-    val context = LocalContext.current
-
-    Column(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Spacer(modifier = Modifier.height(32.dp))
-        Text("Modo Desempenho", color = Color.White, style = MaterialTheme.typography.headlineSmall)
-        Spacer(modifier = Modifier.height(16.dp))
-
-        CyberCard("Resolução") {
-            ActionButton("Modo Bruto (720p)", snackbarHostState) {
-                AppManager.applyGoldenRatioResolution(context, 720)
-            }
-        }
-
-        Spacer(modifier = Modifier.weight(1f))
-        ResetButton(snackbarHostState)
-    }
-}
-
-@Composable
-fun CompetitivoScreen(snackbarHostState: SnackbarHostState) {
-    Column(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Spacer(modifier = Modifier.height(32.dp))
-        Text("Modo Competitivo", color = Color.White, style = MaterialTheme.typography.headlineSmall)
-        Spacer(modifier = Modifier.height(16.dp))
-
-        CyberCard("Gaming") {
-            ActionButton("Gamer Ultimate", snackbarHostState) { AppManager.enableGamerUltimate() }
-            ActionButton("Sensi Free Fire", snackbarHostState) { AppManager.enableSensiFreeFire() }
-        }
-
-        Spacer(modifier = Modifier.weight(1f))
-        ResetButton(snackbarHostState)
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun TerminalScreen(snackbarHostState: SnackbarHostState) {
-    var command by remember { mutableStateOf("") }
-    var outputLog by remember { mutableStateOf("") }
-    val scope = rememberCoroutineScope()
-
-    Column(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text("Terminal", color = Color.White, style = MaterialTheme.typography.headlineSmall)
-        Spacer(modifier = Modifier.height(16.dp))
-
-        OutlinedTextField(
-            value = command,
-            onValueChange = { command = it },
-            label = { Text("Comando", color = Color.Gray) },
-            modifier = Modifier.fillMaxWidth(),
-            colors = TextFieldDefaults.outlinedTextFieldColors(
-                focusedTextColor = Color.Green,
-                unfocusedTextColor = Color.Green,
-                containerColor = Color(0xFF1E1E1E),
-                cursorColor = Color.Green
-            )
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Button(
-            onClick = {
-                scope.launch {
-                    outputLog = "Executando...\n" + outputLog
-                    val result = ShellEngine.runCommandWithOutput(command)
-                    outputLog = "> $command\n$result\n" + outputLog
-                    command = ""
-                }
-            },
-            modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray)
-        ) {
-            Text("Executar", color = Color.Green)
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
-                .background(Color(0xFF0A0A0A))
-                .padding(8.dp)
-        ) {
-            LazyColumn {
-                item {
-                    Text(outputLog, color = Color.Green, style = MaterialTheme.typography.bodySmall)
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-        ResetButton(snackbarHostState)
+        runCatching { Shizuku.removeRequestPermissionResultListener(permissionListener) }
+        runCatching { Shizuku.removeBinderReceivedListener(binderListener) }
     }
 }
