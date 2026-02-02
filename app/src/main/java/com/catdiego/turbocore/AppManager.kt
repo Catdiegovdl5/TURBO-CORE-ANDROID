@@ -2,8 +2,11 @@ package com.catdiego.turbocore
 
 import android.app.ActivityManager
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
+import android.os.BatteryManager
 import android.os.Build
 import rikka.shizuku.Shizuku
 import java.io.BufferedReader
@@ -74,11 +77,18 @@ object AppManager {
         return memInfo.totalMem / (1024 * 1024 * 1024)
     }
 
+    fun getBatteryLevel(context: Context): Int {
+        val batteryStatus: Intent? = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+        return batteryStatus?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
+    }
+
     fun getOptimizationLevelSuggestion(context: Context): String {
         val ram = getTotalRamGb(context)
         val manufacturer = Build.MANUFACTURER.uppercase()
+        val model = Build.MODEL.uppercase()
 
         return when {
+            model.contains("SM-A075M") -> "Otimização OneUI Pro Detectada. Sugerimos o Modo Bruto (720p) para estabilizar o frame rate sem perder visibilidade."
             ram < 4 -> "Perfil Econômico (Dispositivo de Entrada)"
             ram > 8 -> "Perfil Ultra Performance"
             manufacturer.contains("SAMSUNG") -> "Otimização OneUI Pro"
@@ -90,7 +100,17 @@ object AppManager {
     fun getAutoOptimizationCommands(context: Context): List<String> {
         val commands = mutableListOf<String>()
         val manufacturer = Build.MANUFACTURER.uppercase()
+        val model = Build.MODEL.uppercase()
         val ram = getTotalRamGb(context)
+        val battery = getBatteryLevel(context)
+
+        // V156: Se SM-A075M e bateria < 30%, aplica preset de economia extrema
+        if (model.contains("SM-A075M") && battery < 30 && battery != -1) {
+            commands.add("wm size 540x1200")
+            commands.add("wm density 210")
+            commands.add("pm suspend com.google.android.gms")
+            return commands // Retorna cedo para priorizar economia se bateria estiver crítica
+        }
 
         // Universal optimizations
         commands.add("settings put global window_animation_scale 0.5")
