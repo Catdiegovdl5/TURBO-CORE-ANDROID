@@ -87,7 +87,7 @@ object SmartCoreEngineV206 {
             modes.add(OptimizationMode(50 + (dpi/20), "DPI $dpi", "Ajuste granular de densidade $dpi.", "wm density $dpi", ModeCategory.GPU, 2))
         }
         listOf("0.0", "0.1", "0.25", "0.5").forEachIndexed { i, s ->
-            modes.add(OptimizationMode(75 + i, "Anim ${s}x", "Velocidade UI ${s}x.", "settings put global window_animation_scale $s && settings put global transition_animation_scale $s && settings put global animator_duration_scale $s", ModeCategory.GPU, 1))
+            modes.add(OptimizationMode(76 + i, "Anim ${s}x", "Velocidade UI ${s}x.", "settings put global window_animation_scale $s && settings put global transition_animation_scale $s && settings put global animator_duration_scale $s", ModeCategory.GPU, 1))
         }
         modes.add(OptimizationMode(80, "SkiaVK Backend", "HWUI via Vulkan.", "settings put global debug.hwui.renderer skiavk", ModeCategory.GPU, 1))
         modes.add(OptimizationMode(81, "HW Overlays Off", "GPU Only Composition.", "service call SurfaceFlinger 1008 i32 1", ModeCategory.GPU, 2))
@@ -106,10 +106,10 @@ object SmartCoreEngineV206 {
         modes.add(OptimizationMode(133, "Wifi Scan OFF", "Reduz picos de ping.", "settings put global wifi_scan_always_enabled 0", ModeCategory.REDE, 1))
 
         // --- ABA 5: CHIMERA ---
-        modes.add(OptimizationMode(101, "Sniper Elite", "Zero Lag + 400 DPI + P7.", "settings put global touch_latency_mode 1 && wm density 400 && settings put system pointer_speed 7", ModeCategory.CHIMERA, 2))
-        modes.add(OptimizationMode(103, "Samurai Blade", "Fix Perf + Sens + No GOS.", "settings put system touch_sensitivity 1 && cmd power set-fixed-performance-mode-enabled true && pm disable-user com.samsung.android.game.gos", ModeCategory.CHIMERA, 3, "SAMSUNG"))
-        modes.add(OptimizationMode(104, "Ronin Step", "No Joyose + Thermal Hack.", "pm suspend com.xiaomi.joyose && echo '1' > /sys/class/thermal/thermal_message/sconfig", ModeCategory.CHIMERA, 3, "XIAOMI"))
-        modes.add(OptimizationMode(115, "Adrenaline UI", "Speed-Profile on Current Focus.", "ADRENALINE_UI", ModeCategory.CHIMERA, 2))
+        modes.add(OptimizationMode(121, "Sniper Elite", "Zero Lag + 400 DPI + P7.", "settings put global touch_latency_mode 1 && wm density 400 && settings put system pointer_speed 7", ModeCategory.CHIMERA, 2))
+        modes.add(OptimizationMode(122, "Samurai Blade", "Fix Perf + Sens + No GOS.", "settings put system touch_sensitivity 1 && cmd power set-fixed-performance-mode-enabled true && pm disable-user com.samsung.android.game.gos", ModeCategory.CHIMERA, 3, "SAMSUNG"))
+        modes.add(OptimizationMode(123, "Ronin Step", "No Joyose + Thermal Hack.", "pm suspend com.xiaomi.joyose && echo '1' > /sys/class/thermal/thermal_message/sconfig", ModeCategory.CHIMERA, 3, "XIAOMI"))
+        modes.add(OptimizationMode(124, "Adrenaline UI", "Speed-Profile on Current Focus.", "ADRENALINE_UI", ModeCategory.CHIMERA, 2))
 
         // --- ABA 6: DEBLOAT ---
         val bloatlist = mapOf(
@@ -156,8 +156,7 @@ object AppManager {
                 method.isAccessible = true
                 val process = method.invoke(null, arrayOf("sh", "-c", finalCommand), null, null) as Process
 
-                val errorReader = BufferedReader(InputStreamReader(process.errorStream))
-                val error = errorReader.readText()
+                val error = process.errorStream.bufferedReader().use { it.readText() }
                 process.waitFor()
 
                 if (error.isNotEmpty()) "Falha: $error" else "Sucesso"
@@ -187,8 +186,7 @@ object AppManager {
             method.isAccessible = true
             val process = method.invoke(null, arrayOf("sh", "-c", "dumpsys window windows | grep -E 'mCurrentFocus'"), null, null) as Process
 
-            val reader = BufferedReader(InputStreamReader(process.inputStream))
-            val output = reader.readText()
+            val output = process.inputStream.bufferedReader().use { it.readText() }
             process.waitFor()
             val match = Regex("u0 ([^/]+)").find(output)
             match?.groupValues?.get(1) ?: "com.dts.freefireth"
@@ -204,8 +202,9 @@ object AppManager {
             )
             method.isAccessible = true
             val process = method.invoke(null, arrayOf("sh", "-c", command), null, null) as Process
+            val error = process.errorStream.bufferedReader().use { it.readText() }
             process.waitFor()
-            "Sucesso"
+            if (error.isNotEmpty()) "Erro: $error" else "Sucesso"
         } catch (e: Exception) { "Erro: ${e.message}" }
     }
 

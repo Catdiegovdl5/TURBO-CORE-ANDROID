@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import rikka.shizuku.Shizuku
@@ -51,14 +52,18 @@ class MainActivity : ComponentActivity() {
     @Composable
     fun TurboCoreUI() {
         var selectedTab by remember { mutableStateOf(0) }
-        val categories = ModeCategory.values()
-        val tabs = categories.map { it.name } + "APPS"
+        val categories = remember { ModeCategory.values() }
+        val tabs = remember { categories.map { it.name } + "APPS" }
         var terminalLog by remember { mutableStateOf("Aguardando comando...") }
 
         var currentTemp by remember { mutableStateOf(0f) }
         val isShizukuLimited = remember { mutableStateOf(false) }
+        var appsList by remember { mutableStateOf(emptyList<AppInfo>()) }
 
         LaunchedEffect(Unit) {
+            launch(Dispatchers.IO) {
+                appsList = AppManager.getInstalledApps(this@MainActivity, false)
+            }
             while(true) {
                 currentTemp = ThermalWatchdog.getTemperature(this@MainActivity)
                 if (currentTemp > 39) {
@@ -76,8 +81,6 @@ class MainActivity : ComponentActivity() {
                 } catch (e: Exception) { false }
             }
         }
-
-        val appsList = remember { AppManager.getInstalledApps(this@MainActivity, false) }
 
         Scaffold(
             floatingActionButton = {
