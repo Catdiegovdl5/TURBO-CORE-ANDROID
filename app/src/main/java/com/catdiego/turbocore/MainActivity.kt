@@ -10,6 +10,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -140,8 +141,7 @@ class MainActivity : ComponentActivity() {
                         val currentCategory = categories[selectedTab]
                         val modes = SmartCoreEngineV206.getModesByCategory(currentCategory)
 
-                        items(modes.size) { i ->
-                            val mode = modes[i]
+                        items(modes) { mode ->
                             ModeCard(mode) {
                                 lifecycleScope.launch {
                                     terminalLog = AppManager.runMode(this@MainActivity, mode)
@@ -149,8 +149,8 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                     } else {
-                        items(appsList.size) { i ->
-                            AppCard(appsList[i])
+                        items(appsList) { app ->
+                            AppCard(app)
                         }
                     }
                 }

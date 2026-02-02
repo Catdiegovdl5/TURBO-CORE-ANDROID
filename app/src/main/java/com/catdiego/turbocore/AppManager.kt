@@ -60,8 +60,6 @@ object SmartCoreEngineV206 {
         }
     }
 
-    fun getModeById(id: Int): OptimizationMode? = modes.find { it.id == id }
-
     fun getBrandColor(): Long = when {
         brand.contains("SAMSUNG") -> 0xFF2196F3
         brand.contains("XIAOMI") || brand.contains("POCO") -> 0xFFFF5722
@@ -71,9 +69,9 @@ object SmartCoreEngineV206 {
     private fun generateModes() {
         // --- ABA 1: CPU ---
         for (i in 1..20) {
-            modes.add(OptimizationMode(i, "CPU Prio L$i", "Nice CFS -$i. Prioridade de agendamento Kernel.", "renice -n -$i -p \$(pidof com.dts.freefireth)", ModeCategory.CPU, 1))
+            modes.add(OptimizationMode(i, "CPU Prio L$i", "Nice CFS -$i.", "renice -n -$i -p \$(pidof com.dts.freefireth)", ModeCategory.CPU, 1))
         }
-        modes.add(OptimizationMode(21, "AOT Speed-Profile", "Compila dex2oat segura.", "cmd package compile -m speed-profile -f com.dts.freefireth", ModeCategory.CPU, 1))
+        modes.add(OptimizationMode(21, "AOT Speed-Profile", "Compila dex2oat.", "cmd package compile -m speed-profile -f com.dts.freefireth", ModeCategory.CPU, 1))
         modes.add(OptimizationMode(22, "RAM Plus OFF", "Kill zRAM swap Samsung.", "settings put global ram_expand_size_list 0", ModeCategory.CPU, 2, "SAMSUNG"))
         modes.add(OptimizationMode(23, "Looper Disable", "Reduz interrupções looper.", "cmd looper_stats disable", ModeCategory.CPU, 1))
         modes.add(OptimizationMode(24, "Gamer Ultimate", "Fixed Performance Mode (Sustentado).", "cmd power set-fixed-performance-mode-enabled true", ModeCategory.CPU, 2))
@@ -84,11 +82,12 @@ object SmartCoreEngineV206 {
         // --- ABA 2: GPU ---
         modes.add(OptimizationMode(41, "720p Balanced", "720x1600 / 280dpi.", "wm size 720x1600 && wm density 280", ModeCategory.GPU, 2))
         modes.add(OptimizationMode(42, "540p Performance", "540x1200 / 210dpi.", "wm size 540x1200 && wm density 210", ModeCategory.GPU, 3))
+        modes.add(OptimizationMode(43, "Modo Bruto", "Res 540x1200 + Density 210.", "wm size 540x1200 && wm density 210", ModeCategory.GPU, 3))
         for (dpi in 320..500 step 20) {
             modes.add(OptimizationMode(50 + (dpi/20), "DPI $dpi", "Ajuste granular de densidade $dpi.", "wm density $dpi", ModeCategory.GPU, 2))
         }
         listOf("0.0", "0.1", "0.25", "0.5").forEachIndexed { i, s ->
-            modes.add(OptimizationMode(43 + i, "Anim ${s}x", "Velocidade UI ${s}x.", "settings put global window_animation_scale $s && settings put global transition_animation_scale $s && settings put global animator_duration_scale $s", ModeCategory.GPU, 1))
+            modes.add(OptimizationMode(75 + i, "Anim ${s}x", "Velocidade UI ${s}x.", "settings put global window_animation_scale $s && settings put global transition_animation_scale $s && settings put global animator_duration_scale $s", ModeCategory.GPU, 1))
         }
         modes.add(OptimizationMode(80, "SkiaVK Backend", "HWUI via Vulkan.", "settings put global debug.hwui.renderer skiavk", ModeCategory.GPU, 1))
         modes.add(OptimizationMode(81, "HW Overlays Off", "GPU Only Composition.", "service call SurfaceFlinger 1008 i32 1", ModeCategory.GPU, 2))
@@ -135,13 +134,15 @@ object AppManager {
         if (!Shizuku.pingBinder()) return@withContext "Erro: Shizuku OFF"
 
         val temp = ThermalWatchdog.getTemperature(context)
-        if (mode.riskLevel >= 3 && temp > 38.0f) {
-            return@withContext "BLOQUEIO: Temp (${temp}°C) > 38°C!"
-        }
+        if (mode.riskLevel >= 3 && temp > 38.0f) return@withContext "BLOQUEIO TÉRMICO!"
 
         if (ThermalWatchdog.isOverheating(context)) {
             runDirectCommand("cmd package compile --reset -a")
-            return@withContext "EMERGÊNCIA: Temp (${temp}°C) > 39°C! Resetando..."
+            return@withContext "EMERGÊNCIA TÉRMICA!"
+        }
+
+        if (mode.command.startsWith("wm size") && SmartCoreEngineV206.brand.contains("XIAOMI")) {
+            return@withContext "BLOQUEIO: wm size instável em Xiaomi/HyperOS"
         }
 
         val finalCommand = buildFinalCommand(mode)
@@ -155,13 +156,11 @@ object AppManager {
                 method.isAccessible = true
                 val process = method.invoke(null, arrayOf("sh", "-c", finalCommand), null, null) as Process
 
-                val reader = BufferedReader(InputStreamReader(process.inputStream))
                 val errorReader = BufferedReader(InputStreamReader(process.errorStream))
-                val output = reader.readText()
                 val error = errorReader.readText()
                 process.waitFor()
 
-                if (error.isNotEmpty()) "Falha parcial: $error" else if (output.isEmpty()) "Sucesso" else output
+                if (error.isNotEmpty()) "Falha: $error" else "Sucesso"
             }
         } catch (e: TimeoutCancellationException) {
             "Erro: Timeout!"
@@ -171,15 +170,12 @@ object AppManager {
     }
 
     private suspend fun buildFinalCommand(mode: OptimizationMode): String {
-        val sb = StringBuilder()
-
-        if (mode.command == "ADRENALINE_UI") {
+        return if (mode.command == "ADRENALINE_UI") {
             val pkg = getForegroundApp()
-            sb.append("cmd package compile -m speed-profile -f $pkg")
+            "cmd package compile -m speed-profile -f $pkg"
         } else {
-            sb.append(mode.command)
+            mode.command
         }
-        return sb.toString()
     }
 
     private suspend fun getForegroundApp(): String = withContext(Dispatchers.IO) {
@@ -227,10 +223,6 @@ object AppManager {
             } catch (e: Exception) { continue }
         }
         return false
-    }
-
-    fun getDeviceDisplayName(): String {
-        return "${Build.MANUFACTURER} ${Build.MODEL}"
     }
 
     fun getInstalledApps(context: Context, showSystem: Boolean): List<AppInfo> {
