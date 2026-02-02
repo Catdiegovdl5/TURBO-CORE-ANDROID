@@ -1,5 +1,6 @@
 package com.catdiego.turbocore
 
+import android.app.ActivityManager
 import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
@@ -60,5 +61,70 @@ object AppManager {
         } catch (e: Exception) {
             listOf("Erro ao carregar apps")
         }
+    }
+
+    fun getDeviceDisplayName(): String {
+        return "${Build.MANUFACTURER} ${Build.MODEL}"
+    }
+
+    fun getTotalRamGb(context: Context): Long {
+        val actManager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+        val memInfo = ActivityManager.MemoryInfo()
+        actManager.getMemoryInfo(memInfo)
+        return memInfo.totalMem / (1024 * 1024 * 1024)
+    }
+
+    fun getOptimizationLevelSuggestion(context: Context): String {
+        val ram = getTotalRamGb(context)
+        val manufacturer = Build.MANUFACTURER.uppercase()
+
+        return when {
+            ram < 4 -> "Perfil Econômico (Dispositivo de Entrada)"
+            ram > 8 -> "Perfil Ultra Performance"
+            manufacturer.contains("SAMSUNG") -> "Otimização OneUI Pro"
+            manufacturer.contains("XIAOMI") || manufacturer.contains("POCO") -> "Game Turbo Boost"
+            else -> "Otimização de Sistema Padrão"
+        }
+    }
+
+    fun getAutoOptimizationCommands(context: Context): List<String> {
+        val commands = mutableListOf<String>()
+        val manufacturer = Build.MANUFACTURER.uppercase()
+        val ram = getTotalRamGb(context)
+
+        // Universal optimizations
+        commands.add("settings put global window_animation_scale 0.5")
+        commands.add("settings put global transition_animation_scale 0.5")
+        commands.add("settings put global animator_duration_scale 0.5")
+
+        // Brand specific
+        if (manufacturer.contains("SAMSUNG")) {
+            commands.add("cmd power set-fixed-performance-mode-enabled true")
+            commands.add("settings put global adaptive_battery_management 0")
+            // Proportional size (simulated 0.75x)
+            commands.add("wm size 720x1600")
+            commands.add("wm density 280")
+        } else if (manufacturer.contains("XIAOMI") || manufacturer.contains("POCO")) {
+            commands.add("cmd thermalservice override 1")
+            commands.add("settings put system power_mode 1")
+            commands.add("pm trim-caches 128M")
+        } else if (manufacturer.contains("MOTOROLA")) {
+            commands.add("settings put global window_animation_scale 0.25")
+            commands.add("setprop dalvik.vm.dex2oat-flags --compiler-filter=speed")
+        }
+
+        // RAM specific
+        if (ram < 4) {
+            commands.add("pm trim-caches 256M")
+            commands.add("settings put global low_power 1")
+            commands.add("wm size 540x1200")
+            commands.add("wm density 210")
+        } else if (ram > 8) {
+            commands.add("cmd power set-fixed-performance-mode-enabled true")
+            commands.add("wm size reset")
+            commands.add("wm density reset")
+        }
+
+        return commands
     }
 }
