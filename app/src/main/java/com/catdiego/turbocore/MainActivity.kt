@@ -45,8 +45,8 @@ class MainActivity : ComponentActivity() {
             LaunchedEffect(Unit) {
                 delay(1000)
                 if (Shizuku.pingBinder()) {
-                    // Se o serviço está vivo, exige a tela de permissão na hora!
-                    Shizuku.requestPermission(REQUEST_CODE)
+                    // Protocolo V153: Sempre verifique antes de pedir
+                    checkAndRequestShizukuPermission()
                 } else {
                     shizukuStatus = "Shizuku desligado no sistema!"
                 }
