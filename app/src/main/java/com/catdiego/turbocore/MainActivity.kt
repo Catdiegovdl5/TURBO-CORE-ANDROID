@@ -150,13 +150,13 @@ class MainActivity : ComponentActivity() {
                         Spacer(Modifier.height(8.dp))
 
                         Button(onClick = {
-                            terminalLog = AppManager.runCommand("wm density 180 && settings put system pointer_speed 7")
+                            terminalLog = AppManager.runCommand("wm size reset && wm density 180 && settings put system pointer_speed 7")
                         }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3))) { Text("Extreme Sensi") }
 
                         Spacer(Modifier.height(24.dp))
 
                         Button(onClick = {
-                            terminalLog = AppManager.runCommand("wm size reset && wm density reset && settings put global low_power 0 && cmd power set-fixed-performance-mode-enabled false && pm unsafe-reset com.google.android.gms")
+                            terminalLog = AppManager.runCommand("wm size reset && wm density reset && settings put global low_power 0 && cmd power set-fixed-performance-mode-enabled false && pm unsuspend com.google.android.gms")
                         }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Color.Red)) { Text("RESETAR TUDO") }
 
                         Spacer(Modifier.height(20.dp))
