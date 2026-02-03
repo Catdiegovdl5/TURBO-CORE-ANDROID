@@ -57,12 +57,21 @@ class MainActivity : ComponentActivity() {
         var terminalLog by remember { mutableStateOf("Aguardando comando...") }
 
         var currentTemp by remember { mutableStateOf(0f) }
+        var currentRam by remember { mutableStateOf("Calculando...") }
+        var activeModeName by remember { mutableStateOf("Nenhum") }
+
         val isShizukuLimited = remember { mutableStateOf(false) }
         var appsList by remember { mutableStateOf(emptyList<AppInfo>()) }
 
         LaunchedEffect(Unit) {
             launch(Dispatchers.IO) {
                 appsList = AppManager.getInstalledApps(this@MainActivity, false)
+            }
+            launch(Dispatchers.IO) {
+                while(true) {
+                    currentRam = AppManager.getRamUsage(this@MainActivity)
+                    delay(5000)
+                }
             }
             while(true) {
                 currentTemp = ThermalWatchdog.getTemperature(this@MainActivity)
@@ -112,12 +121,10 @@ class MainActivity : ComponentActivity() {
 
                 LazyColumn(Modifier.padding(16.dp)) {
                     item {
-                        Text("Status: $shizukuStatus | Temp: ${currentTemp}°C",
-                            color = if(currentTemp > 38) Color.Red else Color.Green,
-                            style = MaterialTheme.typography.bodySmall)
+                        GamerDashboard(shizukuStatus, currentTemp, currentRam, activeModeName)
 
                         if (isShizukuLimited.value) {
-                            Text("ERRO: ATIVE 'DESATIVAR MONITORAMENTO DE PERMISSÕES'", color = Color.Red, style = MaterialTheme.typography.labelSmall)
+                            Text("⚠️ ERRO: ATIVE 'DESATIVAR MONITORAMENTO DE PERMISSÕES'", color = Color.Red, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(vertical = 4.dp))
                         }
 
                         if (shizukuStatus == "Shizuku não instalado!") {
@@ -151,11 +158,24 @@ class MainActivity : ComponentActivity() {
                         val modes = SmartCoreEngineV206.getModesByCategory(currentCategory)
 
                         items(modes) { mode ->
-                            ModeCard(mode) {
-                                lifecycleScope.launch {
-                                    terminalLog = AppManager.runMode(this@MainActivity, mode)
+                            ModeCard(
+                                mode = mode,
+                                onActivate = {
+                                    lifecycleScope.launch {
+                                        terminalLog = AppManager.runMode(this@MainActivity, mode)
+                                        if (!terminalLog.startsWith("Erro") && !terminalLog.startsWith("BLOQUEIO")) {
+                                            activeModeName = mode.title
+                                            android.widget.Toast.makeText(this@MainActivity, "Modo ${mode.title} Ativado", android.widget.Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                                },
+                                onDeactivate = {
+                                    lifecycleScope.launch {
+                                        terminalLog = AppManager.runRawCommand("wm size reset && wm density reset && settings put global low_power 0 && pm unsuspend com.google.android.gms && cmd power set-fixed-performance-mode-enabled false && settings put global window_animation_scale 1 && settings put global transition_animation_scale 1 && settings put global animator_duration_scale 1")
+                                        activeModeName = "Nenhum"
+                                    }
                                 }
-                            }
+                            )
                         }
                     } else {
                         items(appsList) { app ->
@@ -190,7 +210,40 @@ class MainActivity : ComponentActivity() {
     }
 
     @Composable
-    fun ModeCard(mode: OptimizationMode, onClick: () -> Unit) {
+    fun GamerDashboard(status: String, temp: Float, ram: String, activeMode: String) {
+        Card(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A)),
+            border = androidx.compose.foundation.BorderStroke(1.dp, Color.Cyan.copy(alpha = 0.5f))
+        ) {
+            Column(Modifier.padding(16.dp)) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Column {
+                        Text("SISTEMA", style = MaterialTheme.typography.labelSmall, color = Color.Cyan)
+                        Text(status, style = MaterialTheme.typography.titleSmall, color = Color.White)
+                    }
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text("BATERIA", style = MaterialTheme.typography.labelSmall, color = Color.Cyan)
+                        Text("${temp}°C", style = MaterialTheme.typography.titleSmall, color = if(temp > 38) Color.Red else Color.Green)
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Column {
+                        Text("MEMÓRIA RAM", style = MaterialTheme.typography.labelSmall, color = Color.Cyan)
+                        Text(ram, style = MaterialTheme.typography.titleSmall, color = Color.White)
+                    }
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text("MODO ATIVO", style = MaterialTheme.typography.labelSmall, color = Color.Yellow)
+                        Text(activeMode, style = MaterialTheme.typography.titleSmall, color = Color.White)
+                    }
+                }
+            }
+        }
+    }
+
+    @Composable
+    fun ModeCard(mode: OptimizationMode, onActivate: () -> Unit, onDeactivate: () -> Unit) {
         val riskColor = when(mode.riskLevel) {
             1 -> Color.Green
             2 -> Color.Yellow
@@ -198,8 +251,9 @@ class MainActivity : ComponentActivity() {
         }
 
         Card(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF151515))
+            modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF151515)),
+            border = androidx.compose.foundation.BorderStroke(1.dp, riskColor.copy(alpha = 0.3f))
         ) {
             Column(Modifier.padding(12.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -208,14 +262,23 @@ class MainActivity : ComponentActivity() {
                         Text("RISK ${mode.riskLevel}", color = riskColor, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp))
                     }
                 }
-                Text(mode.description, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                Text(mode.description, style = MaterialTheme.typography.bodySmall, color = Color.Gray, modifier = Modifier.padding(vertical = 4.dp))
                 Spacer(Modifier.height(8.dp))
-                Button(
-                    onClick = onClick,
-                    modifier = Modifier.align(Alignment.End),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.Cyan, contentColor = Color.Black)
-                ) {
-                    Text("ATIVAR", style = MaterialTheme.typography.labelMedium)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    OutlinedButton(
+                        onClick = onDeactivate,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color.Red),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Red),
+                        modifier = Modifier.padding(end = 8.dp)
+                    ) {
+                        Text("DESATIVAR", style = MaterialTheme.typography.labelMedium)
+                    }
+                    Button(
+                        onClick = onActivate,
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.Cyan, contentColor = Color.Black)
+                    ) {
+                        Text("ATIVAR", style = MaterialTheme.typography.labelMedium)
+                    }
                 }
             }
         }

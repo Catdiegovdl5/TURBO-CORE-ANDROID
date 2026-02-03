@@ -81,10 +81,13 @@ object SmartCoreEngineV206 {
         // --- ABA 3: JOGOS (SPECIFIC) ---
         modes.add(OptimizationMode(20, "FREE FIRE MAX", "DPI 180 + Compile + renice.", "wm density 180 && cmd package compile -m speed -f com.dts.freefiremax && renice -n -20 -p \$(pidof com.dts.freefiremax || echo 0)", ModeCategory.JOGOS, 2))
         modes.add(OptimizationMode(21, "ROBLOX TURBO", "SkiaVK + Compile + 540p.", "cmd package compile -m speed -f com.roblox.client && settings put global debug.hwui.renderer skiavk && wm size 540x1200 && wm density 210", ModeCategory.JOGOS, 2))
+        modes.add(OptimizationMode(22, "GENSHIN IMPACT", "Fixed Perf + GPU Opt + Compile.", "cmd power set-fixed-performance-mode-enabled true && settings put global debug.hwui.renderer skiavk && cmd package compile -m speed -f com.miHoYo.GenshinImpact", ModeCategory.JOGOS, 2))
+        modes.add(OptimizationMode(23, "CODM TURBO", "Latency Zero + DNS + Compile.", "settings put global touch_latency_mode 1 && settings put global private_dns_specifier 1dot1dot1dot1.cloudflare-dns.com && cmd package compile -m speed -f com.activision.callofduty.shooter", ModeCategory.JOGOS, 2))
+        modes.add(OptimizationMode(24, "WHERE WINDS MEET", "Extreme Performance Profile.", "cmd power set-fixed-performance-mode-enabled true && wm size 540x1200 && wm density 210 && cmd package compile -m speed -a", ModeCategory.JOGOS, 3))
 
         // --- ABA 4: DISPLAY ---
-        modes.add(OptimizationMode(41, "720p Balanced", "720x1600 / 280dpi.", "wm size 720x1600 && wm density 280", ModeCategory.DISPLAY, 2))
-        modes.add(OptimizationMode(42, "540p Performance", "540x1200 / 210dpi.", "wm size 540x1200 && wm density 210", ModeCategory.DISPLAY, 3))
+        modes.add(OptimizationMode(41, "HD Balanced", "720x1600 / 280dpi.", "wm size 720x1600 && wm density 280", ModeCategory.DISPLAY, 1))
+        modes.add(OptimizationMode(42, "qHD Usability", "540x1200 / 240dpi.", "wm size 540x1200 && wm density 240", ModeCategory.DISPLAY, 2))
         for (dpi in 320..500 step 40) {
             modes.add(OptimizationMode(50 + (dpi/10), "DPI $dpi", "Densidade granular.", "wm density $dpi", ModeCategory.DISPLAY, 2))
         }
@@ -203,11 +206,22 @@ object AppManager {
         return false
     }
 
+    fun getRamUsage(context: Context): String {
+        val am = context.getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+        val mi = android.app.ActivityManager.MemoryInfo()
+        am.getMemoryInfo(mi)
+        val total = mi.totalMem / (1024 * 1024)
+        val avail = mi.availMem / (1024 * 1024)
+        val used = total - avail
+        return "${used}MB / ${total}MB"
+    }
+
     fun getInstalledApps(context: Context, showSystem: Boolean): List<AppInfo> {
         val pm = context.packageManager
         val apps = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             pm.getInstalledApplications(PackageManager.ApplicationInfoFlags.of(0L))
         } else {
+            @Suppress("DEPRECATION")
             pm.getInstalledApplications(PackageManager.GET_META_DATA)
         }
 
