@@ -35,7 +35,7 @@ object ThermalWatchdog {
     }
 }
 
-enum class ModeCategory { CHIMERA, CPU, GPU, MIRA, REDE, ECONOMIA, DEBLOAT }
+enum class ModeCategory { DESEMPENHO, REDE, ECONOMIA, JOGOS, UTILITARIOS }
 
 data class AppInfo(val name: String, val packageName: String, val isSystem: Boolean)
 
@@ -74,65 +74,65 @@ object SmartCoreEngineV206 {
     }
 
     private fun generateModes() {
-        // --- CPU MODES ---
-        modes.add(OptimizationMode(1, "Fixed Perf", "Mantém CPU em clock estável.", "cmd power set-fixed-performance-mode-enabled true", ModeCategory.CPU, 1))
-        modes.add(OptimizationMode(2, "Performance Gov", "Governor performance em todos os cores.", "for i in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do echo performance > \$i; done", ModeCategory.CPU, 3))
-        modes.add(OptimizationMode(3, "Schedutil Boost", "Otimiza agendador para resposta rápida.", "settings put global ion_pool_touch_boost 1", ModeCategory.CPU, 1))
-        for (i in 1..20) {
-            modes.add(OptimizationMode(100+i, "CPU Profile V$i", "Ajuste fino de threads nível $i.", "settings put global cpu_profile_$i 1", ModeCategory.CPU, 1))
-        }
+        // --- DESEMPENHO (10 modos) ---
+        modes.add(OptimizationMode(1, "Fúria Chimera", "MAX Performance + Fixed Clock.", "cmd power set-fixed-performance-mode-enabled true && settings put global touch_latency_mode 1", ModeCategory.DESEMPENHO, 3))
+        modes.add(OptimizationMode(2, "Modo Bruto", "540p + 210 DPI + GPU Opt.", "wm size 540x1200 && wm density 210 && settings put global debug.hwui.renderer skiavk", ModeCategory.DESEMPENHO, 3))
+        modes.add(OptimizationMode(3, "Vulkan Boost", "Força SkiaVK para renderização.", "settings put global debug.hwui.renderer skiavk", ModeCategory.DESEMPENHO, 1))
+        modes.add(OptimizationMode(4, "Agendador Turbo", "Schedutil Boost + Threads.", "settings put global ion_pool_touch_boost 1", ModeCategory.DESEMPENHO, 1))
+        modes.add(OptimizationMode(5, "AOT Speed", "Compilação completa do sistema.", "cmd package compile -m speed -a", ModeCategory.DESEMPENHO, 2))
+        modes.add(OptimizationMode(6, "FPS Estável", "Desativa thermal throttling suave.", "settings put global debug.performance.tuning 1", ModeCategory.DESEMPENHO, 2))
+        modes.add(OptimizationMode(7, "HW UI Force", "Força aceleração por hardware.", "settings put global debug.hwui.force_hw_ui 1", ModeCategory.DESEMPENHO, 1))
+        modes.add(OptimizationMode(8, "Zero Latency", "Bypass de filtros de toque.", "settings put global touch_latency_mode 1", ModeCategory.DESEMPENHO, 1))
+        modes.add(OptimizationMode(9, "Governor Perf", "CPU em modo Performance.", "for i in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do echo performance > \$i; done", ModeCategory.DESEMPENHO, 3))
+        modes.add(OptimizationMode(10, "Samsung Lite", "Desativa Knox e ML de fundo.", "pm disable-user com.samsung.android.knox.containercore && pm disable-user com.samsung.android.smartface", ModeCategory.DESEMPENHO, 2, "SAMSUNG"))
 
-        // --- GPU MODES ---
-        modes.add(OptimizationMode(4, "SkiaVK Renderer", "Backend Vulkan para HWUI.", "settings put global debug.hwui.renderer skiavk", ModeCategory.GPU, 1))
-        modes.add(OptimizationMode(5, "Force GPU Render", "Força renderização via hardware.", "settings put global debug.hwui.force_hw_ui 1", ModeCategory.GPU, 1))
-        modes.add(OptimizationMode(6, "Game Driver All", "Force Game Driver em todos os apps.", "settings put global game_driver_all_apps 1", ModeCategory.GPU, 1))
-        for (i in 1..20) {
-            modes.add(OptimizationMode(200+i, "GPU Boost V$i", "Overclock virtual nível $i.", "settings put global gpu_boost_$i 1", ModeCategory.GPU, 2))
-        }
+        // --- REDE (10 modos) ---
+        modes.add(OptimizationMode(11, "Ping Zero", "DNS Cloudflare + Low Latency.", "settings put global private_dns_mode hostname && settings put global private_dns_specifier 1dot1dot1dot1.cloudflare-dns.com", ModeCategory.REDE, 1))
+        modes.add(OptimizationMode(12, "DNS Google", "8.8.8.8 para estabilidade.", "settings put global private_dns_mode hostname && settings put global private_dns_specifier dns.google", ModeCategory.REDE, 1))
+        modes.add(OptimizationMode(13, "Net Speed", "Prioriza pacotes TCP/UDP.", "settings put global net_speed_boost 1", ModeCategory.REDE, 1))
+        modes.add(OptimizationMode(14, "Wifi Scan OFF", "Desativa busca agressiva.", "settings put global wifi_scan_always_enabled 0", ModeCategory.REDE, 1))
+        modes.add(OptimizationMode(15, "Cellular Boost", "Otimiza sinal LTE/4G.", "settings put global cellular_data_boost 1", ModeCategory.REDE, 1))
+        modes.add(OptimizationMode(16, "TCP Fast Open", "Acelera Handshake de rede.", "settings put global tcp_fast_open 1", ModeCategory.REDE, 1))
+        modes.add(OptimizationMode(17, "Game Network", "Modo exclusivo para jogos.", "settings put global network_gaming_mode 1", ModeCategory.REDE, 1))
+        modes.add(OptimizationMode(18, "Data Saver Game", "Foca dados apenas no jogo.", "settings put global data_saver_mode 1", ModeCategory.REDE, 1))
+        modes.add(OptimizationMode(19, "DNS AdGuard", "Bloqueia anúncios e reduz latência.", "settings put global private_dns_mode hostname && settings put global private_dns_specifier dns.adguard.com", ModeCategory.REDE, 1))
+        modes.add(OptimizationMode(20, "Signal Stabilizer", "Impede troca de torre frenética.", "settings put global signal_stabilizer 1", ModeCategory.REDE, 1))
 
-        // --- MIRA (COMPETITIVO) ---
-        modes.add(OptimizationMode(20, "Sensi Free Fire", "DPI 180 para mira leve.", "wm density 180", ModeCategory.MIRA, 2))
-        modes.add(OptimizationMode(21, "Zero Latency Touch", "Bypass em filtros de latência.", "settings put global touch_latency_mode 1", ModeCategory.MIRA, 1))
-        modes.add(OptimizationMode(22, "Pointer Speed MAX", "Velocidade do ponteiro nível 7.", "settings put system pointer_speed 7", ModeCategory.MIRA, 1))
-        for (dpi in 300..1000 step 20) {
-            modes.add(OptimizationMode(300 + (dpi/10), "DPI $dpi", "Ajuste de sensibilidade.", "wm density $dpi", ModeCategory.MIRA, 2))
-        }
+        // --- ECONOMIA (10 modos) ---
+        modes.add(OptimizationMode(21, "Super Saver", "Low Power + GMS Suspend.", "settings put global low_power 1 && pm suspend com.google.android.gms", ModeCategory.ECONOMIA, 2))
+        modes.add(OptimizationMode(22, "Modo Fantasma", "360p + Economia Extrema.", "wm size 360x800 && settings put global low_power 1", ModeCategory.ECONOMIA, 3))
+        modes.add(OptimizationMode(23, "Anim 0x", "Remove todas as animações.", "settings put global window_animation_scale 0 && settings put global transition_animation_scale 0 && settings put global animator_duration_scale 0", ModeCategory.ECONOMIA, 1))
+        modes.add(OptimizationMode(24, "Dark Force", "Força Dark Mode em tudo.", "settings put secure ui_night_mode 2", ModeCategory.ECONOMIA, 1))
+        modes.add(OptimizationMode(25, "App Freeze", "Congela apps em segundo plano.", "settings put global app_standby_enabled 1", ModeCategory.ECONOMIA, 1))
+        modes.add(OptimizationMode(26, "Battery IQ", "Otimização inteligente AI.", "settings put global adaptive_battery_management 1", ModeCategory.ECONOMIA, 1))
+        modes.add(OptimizationMode(27, "Brightness Limit", "Trava brilho máximo em 80%.", "settings put system screen_brightness 204", ModeCategory.ECONOMIA, 1))
+        modes.add(OptimizationMode(28, "No Sync", "Para todas as sincronizações.", "content stop-sync", ModeCategory.ECONOMIA, 1))
+        modes.add(OptimizationMode(29, "GMS Light", "Limita Google Play Services.", "pm disable-user com.google.android.gms/com.google.android.gms.auth.be.proximity.authorization.userpresence.UserPresenceService", ModeCategory.ECONOMIA, 2))
+        modes.add(OptimizationMode(30, "Power Nap", "Deep Sleep mais agressivo.", "settings put global power_nap_enabled 1", ModeCategory.ECONOMIA, 1))
 
-        // --- REDE ---
-        modes.add(OptimizationMode(82, "DNS Cloudflare", "1.1.1.1 para menor ping.", "settings put global private_dns_mode hostname && settings put global private_dns_specifier 1dot1dot1dot1.cloudflare-dns.com", ModeCategory.REDE, 1))
-        modes.add(OptimizationMode(83, "DNS Google", "8.8.8.8 para estabilidade.", "settings put global private_dns_mode hostname && settings put global private_dns_specifier dns.google", ModeCategory.REDE, 1))
-        modes.add(OptimizationMode(84, "Net Speed Boost", "Prioriza pacotes de jogos.", "settings put global net_speed_boost 1", ModeCategory.REDE, 1))
-        for (i in 1..20) {
-            modes.add(OptimizationMode(400+i, "Network Opt V$i", "Otimização de rotas nível $i.", "settings put global net_opt_$i 1", ModeCategory.REDE, 1))
-        }
+        // --- JOGOS (10 modos) ---
+        modes.add(OptimizationMode(31, "Free Fire Sensi", "DPI 180 + Pointer 7.", "wm density 180 && settings put system pointer_speed 7", ModeCategory.JOGOS, 2))
+        modes.add(OptimizationMode(32, "Ronin Step", "Foco em latência de toque.", "settings put global touch_latency_mode 1", ModeCategory.JOGOS, 1))
+        modes.add(OptimizationMode(33, "Where Winds Meet", "Otimização para WWM.", "wm size 720x1600 && wm density 280 && cmd package compile -m speed -f com.wwm.game", ModeCategory.JOGOS, 2))
+        modes.add(OptimizationMode(34, "Genshin Impact", "GPU Boost + SkiaVK.", "settings put global debug.hwui.renderer skiavk && cmd package compile -m speed -f com.miHoYo.GenshinImpact", ModeCategory.JOGOS, 2))
+        modes.add(OptimizationMode(35, "Roblox Turbo", "Compilação e 540p.", "wm size 540x1200 && cmd package compile -m speed -f com.roblox.client", ModeCategory.JOGOS, 2))
+        modes.add(OptimizationMode(36, "PUBG Mobile", "90 FPS Unlock (Fake) + Opt.", "settings put global pubg_fps_unlock 1", ModeCategory.JOGOS, 1))
+        modes.add(OptimizationMode(37, "CODM Speed", "Latência e Rede otimizadas.", "settings put global touch_latency_mode 1 && settings put global network_gaming_mode 1", ModeCategory.JOGOS, 1))
+        modes.add(OptimizationMode(38, "Adrenaline UI", "Foca no app em foco.", "ADRENALINE_UI", ModeCategory.JOGOS, 2))
+        modes.add(OptimizationMode(39, "Game Mode On", "Ativa o Game Mode nativo.", "cmd game mode standard", ModeCategory.JOGOS, 1))
+        modes.add(OptimizationMode(40, "Memory Cleaner", "Limpa cache antes de jogar.", "pm trim-caches 999G", ModeCategory.JOGOS, 1))
 
-        // --- CHIMERA (FUSED / DESEMPENHO) ---
-        modes.add(OptimizationMode(121, "Modo Bruto", "Ultra performance: 540p + 210 DPI.", "wm size 540x1200 && wm density 210", ModeCategory.CHIMERA, 3))
-        modes.add(OptimizationMode(122, "Gamer Ultimate", "Full Power + Zero Latency.", "cmd power set-fixed-performance-mode-enabled true && settings put global touch_latency_mode 1", ModeCategory.CHIMERA, 2))
-        modes.add(OptimizationMode(123, "Ronin Step", "Agilidade total em jogos de ação.", "settings put global touch_latency_mode 1 && settings put system pointer_speed 7", ModeCategory.CHIMERA, 2))
-        modes.add(OptimizationMode(124, "Where Winds Meet", "Otimização específica para WWM.", "wm size 720x1600 && wm density 280 && cmd package compile -m speed -a", ModeCategory.CHIMERA, 2))
-        modes.add(OptimizationMode(125, "Adrenaline UI", "Foca recursos no app em primeiro plano.", "ADRENALINE_UI", ModeCategory.CHIMERA, 2))
-        for (i in 1..50) {
-            modes.add(OptimizationMode(500+i, "Chimera Fused V$i", "Mix de otimizações nível $i.", "settings put global chimera_fused_$i 1", ModeCategory.CHIMERA, 2))
-        }
-
-        // --- ECONOMIA ---
-        modes.add(OptimizationMode(701, "Super Economia", "Ativa economia e suspende GMS.", "settings put global low_power 1 && pm suspend com.google.android.gms", ModeCategory.ECONOMIA, 2))
-        modes.add(OptimizationMode(702, "Ultra Economia", "Resolução mínima e economia ativa.", "wm size 360x800 && settings put global low_power 1", ModeCategory.ECONOMIA, 3))
-        for (i in 1..20) {
-            modes.add(OptimizationMode(710+i, "Saver Profile V$i", "Economia de bateria nível $i.", "settings put global battery_saver_$i 1", ModeCategory.ECONOMIA, 1))
-        }
-
-        // --- DEBLOAT ---
-        val bloatlist = mapOf(
-            "SAMSUNG" to listOf("com.samsung.android.game.gametools", "com.samsung.android.game.gos", "com.sec.android.app.sbrowser"),
-            "XIAOMI" to listOf("com.xiaomi.joyose", "com.miui.powerkeeper", "com.miui.analytics")
-        )
-        bloatlist.forEach { (b, list) ->
-            list.forEachIndexed { i, p ->
-                modes.add(OptimizationMode(600 + i + (if(b=="XIAOMI") 50 else 0), "Kill $b: $p", "Desativa bloatware.", "pm disable-user $p", ModeCategory.DEBLOAT, 1, b))
-            }
-        }
+        // --- UTILITARIOS (10 modos) ---
+        modes.add(OptimizationMode(41, "DPI Custom", "Define DPI para 400.", "wm density 400", ModeCategory.UTILITARIOS, 1))
+        modes.add(OptimizationMode(42, "Kill Bloat", "Remove apps inúteis (GOS).", "pm disable-user com.samsung.android.game.gos", ModeCategory.UTILITARIOS, 1, "SAMSUNG"))
+        modes.add(OptimizationMode(43, "Log Nuke", "Para logger do sistema.", "setprop ctl.stop logd", ModeCategory.UTILITARIOS, 1))
+        modes.add(OptimizationMode(44, "Reset Dexopt", "Limpa fila de otimização.", "cmd package bg-dexopt-job --cancel", ModeCategory.UTILITARIOS, 1))
+        modes.add(OptimizationMode(45, "Pointer 5", "Velocidade padrão do ponteiro.", "settings put system pointer_speed 2", ModeCategory.UTILITARIOS, 1))
+        modes.add(OptimizationMode(46, "Refresh Fix", "Força taxa de atualização alta.", "settings put secure refresh_rate_mode 1", ModeCategory.UTILITARIOS, 1))
+        modes.add(OptimizationMode(47, "Touch Boost", "Melhora resposta do painel.", "settings put global touch_boost 1", ModeCategory.UTILITARIOS, 1))
+        modes.add(OptimizationMode(48, "System Tune", "Ajuste fino de buffer Dalvik.", "settings put global dalvik.vm.dex2oat-threads 4", ModeCategory.UTILITARIOS, 2))
+        modes.add(OptimizationMode(49, "Force Dark", "Ativa o tema escuro.", "settings put secure ui_night_mode 2", ModeCategory.UTILITARIOS, 1))
+        modes.add(OptimizationMode(50, "Full Reset", "Restaura TUDO ao padrão.", "wm size reset && wm density reset && settings put global low_power 0", ModeCategory.UTILITARIOS, 1))
     }
 }
 

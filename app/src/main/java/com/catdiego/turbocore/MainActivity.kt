@@ -16,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -53,25 +54,26 @@ class MainActivity : ComponentActivity() {
 
     @Composable
     fun TurboCoreUI() {
-        var selectedTab by remember { mutableStateOf(0) }
+        var selectedTab by rememberSaveable { mutableStateOf(0) }
         val categories = remember { ModeCategory.values() }
 
         val themeColor = remember(selectedTab) {
             when (categories.getOrNull(selectedTab)) {
-                ModeCategory.CHIMERA, ModeCategory.CPU, ModeCategory.GPU -> Color(0xFFFF4500) // Fire
-                ModeCategory.ECONOMIA, ModeCategory.MIRA -> Color(0xFF00FFFF) // Ice
-                else -> Color(0xFF1E90FF) // Water
+                ModeCategory.DESEMPENHO, ModeCategory.JOGOS -> Color(0xFFFF4500) // Fire
+                ModeCategory.ECONOMIA -> Color(0xFF00FFFF) // Ice
+                ModeCategory.REDE -> Color(0xFF1E90FF) // Water
+                else -> Color(0xFF9C27B0) // Purple for Utilities
             }
         }
 
         val tabs = remember { categories.map { it.name } + "APPS" }
-        var terminalLog by remember { mutableStateOf("Aguardando comando...") }
+        var terminalLog by rememberSaveable { mutableStateOf("Aguardando comando...") }
 
         var currentTemp by remember { mutableStateOf(0f) }
         var currentRam by remember { mutableStateOf("Calculando...") }
         var currentCpu by remember { mutableStateOf("Carregando...") }
-        var activeModeName by remember { mutableStateOf("Nenhum") }
-        var activeModeId by remember { mutableStateOf<Int?>(null) }
+        var activeModeName by rememberSaveable { mutableStateOf("Nenhum") }
+        var activeModeId by rememberSaveable { mutableStateOf<Int?>(null) }
 
         val isShizukuLimited = remember { mutableStateOf(false) }
         var appsList by remember { mutableStateOf(emptyList<AppInfo>()) }
@@ -110,9 +112,21 @@ class MainActivity : ComponentActivity() {
                     method.invoke(null) as Boolean
                 } catch (e: Exception) { false }
 
-                // Emergency fix: Cancel background dexopt jobs to mitigate CPU stress/drain
+                // Ice Breaker Protocol: Emergency cooling and CPU stress mitigation
                 launch(Dispatchers.IO) {
-                    AppManager.runRawCommand("cmd package bg-dexopt-job --cancel")
+                    val iceBreakerCmd = """
+                        cmd package compile --reset -a
+                        content stop-sync
+                        settings put global activity_manager_constants background_settle_time=0
+                        setprop ctl.stop logd
+                        am force-stop com.samsung.android.game.gos
+                        am force-stop com.samsung.android.bixby.agent
+                        am force-stop com.samsung.android.bbc.bbcagent
+                        am force-stop com.sec.android.app.samsungapps
+                        am force-stop com.google.android.gms
+                        cmd package bg-dexopt-job --cancel
+                    """.trimIndent()
+                    AppManager.runRawCommand(iceBreakerCmd)
                 }
             }
         }
