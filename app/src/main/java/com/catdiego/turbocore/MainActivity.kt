@@ -84,7 +84,10 @@ class MainActivity : ComponentActivity() {
                 while(true) {
                     currentRam = AppManager.getRamUsage(this@MainActivity)
                     currentCpu = AppManager.getCpuStatus()
-                    delay(5000)
+
+                    // Dynamic polling: if temp >= 40°C, throttle polling to save CPU/battery
+                    val pollingDelay = if (currentTemp >= 40f) 15000L else 5000L
+                    delay(pollingDelay)
                 }
             }
             while(true) {
@@ -106,6 +109,11 @@ class MainActivity : ComponentActivity() {
                     val method = Shizuku::class.java.getDeclaredMethod("isLimited")
                     method.invoke(null) as Boolean
                 } catch (e: Exception) { false }
+
+                // Emergency fix: Cancel background dexopt jobs to mitigate CPU stress/drain
+                launch(Dispatchers.IO) {
+                    AppManager.runRawCommand("cmd package bg-dexopt-job --cancel")
+                }
             }
         }
 
