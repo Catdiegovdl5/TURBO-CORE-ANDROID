@@ -26,7 +26,11 @@ object ThermalWatchdog {
     }
 
     fun isOverheating(context: Context): Boolean {
-        return getTemperature(context) > 39.0f
+        return getTemperature(context) >= 39.0f
+    }
+
+    fun isCritical(context: Context): Boolean {
+        return getTemperature(context) >= 40.0f
     }
 }
 
@@ -235,6 +239,11 @@ object AppManager {
                 isSystem = (it.flags and ApplicationInfo.FLAG_SYSTEM) != 0
             )
         }.sortedBy { it.name }
+    }
+
+    suspend fun triggerCriticalReset(): String = withContext(Dispatchers.IO) {
+        val emergencyCmd = "am kill-all && cmd package compile --reset -a && wm size reset && wm density reset && settings put global low_power 1 && pm unsuspend com.google.android.gms"
+        runRawCommand(emergencyCmd)
     }
 
     private fun runDirectCommand(command: String) {

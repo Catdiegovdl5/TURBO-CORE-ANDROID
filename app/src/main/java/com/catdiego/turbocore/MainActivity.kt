@@ -75,8 +75,12 @@ class MainActivity : ComponentActivity() {
             }
             while(true) {
                 currentTemp = ThermalWatchdog.getTemperature(this@MainActivity)
-                if (currentTemp > 39) {
+                if (currentTemp >= 40) {
+                    terminalLog = AppManager.triggerCriticalReset()
+                    android.widget.Toast.makeText(this@MainActivity, "⚠️ EMERGÊNCIA TÉRMICA: 40°C!", android.widget.Toast.LENGTH_LONG).show()
+                } else if (currentTemp >= 39) {
                     terminalLog = AppManager.runRawCommand("cmd package compile --reset -a")
+                    android.widget.Toast.makeText(this@MainActivity, "Superaquecimento: 39°C. Resetando...", android.widget.Toast.LENGTH_SHORT).show()
                 }
                 delay(60000)
             }
@@ -223,8 +227,13 @@ class MainActivity : ComponentActivity() {
                         Text(status, style = MaterialTheme.typography.titleSmall, color = Color.White)
                     }
                     Column(horizontalAlignment = Alignment.End) {
-                        Text("BATERIA", style = MaterialTheme.typography.labelSmall, color = Color.Cyan)
-                        Text("${temp}°C", style = MaterialTheme.typography.titleSmall, color = if(temp > 38) Color.Red else Color.Green)
+                        val tempColor = when {
+                            temp >= 40 -> Color.Red
+                            temp >= 39 -> Color.Yellow
+                            else -> Color.Green
+                        }
+                        Text(if(temp >= 40) "CRÍTICO" else "BATERIA", style = MaterialTheme.typography.labelSmall, color = if(temp >= 40) Color.Red else Color.Cyan)
+                        Text("${temp}°C", style = MaterialTheme.typography.titleSmall, color = tempColor)
                     }
                 }
                 Spacer(Modifier.height(12.dp))
