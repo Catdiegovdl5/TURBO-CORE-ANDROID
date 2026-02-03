@@ -12,7 +12,7 @@ android {
         minSdk 26
         targetSdk 35
         versionCode 2
-        versionName "2.0.6-Chimera"
+        versionName "2.0.6-Zueira"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -49,6 +49,7 @@ android {
 dependencies {
     implementation 'androidx.core:core-ktx:1.12.0'
     implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.7.0'
+    implementation 'androidx.profileinstaller:profileinstaller:1.3.1'
     implementation 'androidx.activity:activity-compose:1.8.2'
 
     implementation platform('androidx.compose:compose-bom:2024.02.00')

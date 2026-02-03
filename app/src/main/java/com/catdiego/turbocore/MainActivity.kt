@@ -59,10 +59,10 @@ class MainActivity : ComponentActivity() {
 
         val themeColor = remember(selectedTab) {
             when (categories.getOrNull(selectedTab)) {
-                ModeCategory.DESEMPENHO, ModeCategory.JOGOS -> Color(0xFFFF4500) // Fire
-                ModeCategory.ECONOMIA -> Color(0xFF00FFFF) // Ice
+                ModeCategory.CHIMERA, ModeCategory.CPU, ModeCategory.GPU -> Color(0xFFFF4500) // Fire
+                ModeCategory.POWER, ModeCategory.MIRA -> Color(0xFF00FFFF) // Ice
                 ModeCategory.REDE -> Color(0xFF1E90FF) // Water
-                else -> Color(0xFF9C27B0) // Purple for Utilities
+                else -> Color(0xFF9C27B0) // Purple
             }
         }
 
