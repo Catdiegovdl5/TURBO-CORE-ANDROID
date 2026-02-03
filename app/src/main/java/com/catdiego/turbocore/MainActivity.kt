@@ -58,19 +58,12 @@ class MainActivity : ComponentActivity() {
 
         val themeColor = remember(selectedTab) {
             when (categories.getOrNull(selectedTab)) {
-                ModeCategory.GAMER, ModeCategory.JOGOS -> Color(0xFFFF4500) // Fire OrangeRed
+                ModeCategory.DESEMPENHO, ModeCategory.COMPETITIVO -> Color(0xFFFF4500) // Fire OrangeRed
                 ModeCategory.ECONOMIA -> Color(0xFF00FFFF) // Ice Cyan
                 else -> Color(0xFF1E90FF) // Water DodgerBlue
             }
         }
 
-        val themeGradient = remember(selectedTab) {
-            when (categories.getOrNull(selectedTab)) {
-                ModeCategory.GAMER, ModeCategory.JOGOS -> androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color(0xFFb91c1c), Color(0xFFFF8C00)))
-                ModeCategory.ECONOMIA -> androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color(0xFF00CED1), Color(0xFFE0FFFF)))
-                else -> androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color(0xFF00008B), Color(0xFF1E90FF)))
-            }
-        }
         val tabs = remember { categories.map { it.name } + "APPS" }
         var terminalLog by remember { mutableStateOf("Aguardando comando...") }
 
@@ -113,22 +106,7 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        Scaffold(
-            floatingActionButton = {
-                FloatingActionButton(
-                    onClick = {
-                        lifecycleScope.launch {
-                            val modeFF = SmartCoreEngineV206.getModeById(20) ?: OptimizationMode(999, "Mode Free Fire", "", "cmd package compile -m speed -f com.dts.freefireth", ModeCategory.JOGOS, 3)
-                            terminalLog = AppManager.runMode(this@MainActivity, modeFF)
-                        }
-                    },
-                    containerColor = Color.Red,
-                    contentColor = Color.White
-                ) {
-                    Text("FF", style = MaterialTheme.typography.labelLarge)
-                }
-            }
-        ) { paddingValues ->
+        Scaffold { paddingValues ->
             Column(Modifier.fillMaxSize().background(Color(0xFF0A0A0A)).padding(paddingValues)) {
                 ScrollableTabRow(
                     selectedTabIndex = selectedTab,
@@ -151,16 +129,22 @@ class MainActivity : ComponentActivity() {
                             Text("⚠️ ERRO: ATIVE 'DESATIVAR MONITORAMENTO DE PERMISSÕES'", color = Color.Red, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(vertical = 4.dp))
                         }
 
-                        if (shizukuStatus == "Shizuku não instalado!") {
-                            Button(
-                                onClick = {
-                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://shizuku.rikka.app/download/"))
-                                    this@MainActivity.startActivity(intent)
-                                },
+                        if (shizukuStatus != "Conectado") {
+                            Card(
                                 modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = Color.Blue)
+                                colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A)),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, Color.Yellow.copy(alpha = 0.5f))
                             ) {
-                                Text("BAIXAR SHIZUKU", color = Color.White)
+                                Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Text("Status: $shizukuStatus", modifier = Modifier.weight(1f), color = Color.White, style = MaterialTheme.typography.bodyMedium)
+                                    Button(
+                                        onClick = { launchShizukuApp(this@MainActivity) },
+                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E90FF)),
+                                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
+                                    ) {
+                                        Text("REPARAR", style = MaterialTheme.typography.labelSmall)
+                                    }
+                                }
                             }
                         }
 

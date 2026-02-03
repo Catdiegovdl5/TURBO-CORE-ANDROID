@@ -35,7 +35,7 @@ object ThermalWatchdog {
     }
 }
 
-enum class ModeCategory { GAMER, ECONOMIA, JOGOS, DISPLAY, SISTEMA, DEBLOAT }
+enum class ModeCategory { DESEMPENHO, ECONOMIA, COMPETITIVO, DISPLAY, SISTEMA, DEBLOAT }
 
 data class AppInfo(val name: String, val packageName: String, val isSystem: Boolean)
 
@@ -74,21 +74,17 @@ object SmartCoreEngineV206 {
     }
 
     private fun generateModes() {
-        // --- ABA 1: GAMER (FUSED) ---
-        modes.add(OptimizationMode(1, "MODO DEUS", "MAX: Fixed Perf + 540p + Zero Latency + GPU Opt.", "cmd power set-fixed-performance-mode-enabled true && wm size 540x1200 && wm density 210 && settings put global touch_latency_mode 1 && settings put system pointer_speed 7 && settings put global window_animation_scale 0 && settings put global transition_animation_scale 0 && settings put global animator_duration_scale 0", ModeCategory.GAMER, 3))
-        modes.add(OptimizationMode(2, "ULTIMATE TURBO", "SPEED: Compilation + renice + DNS Game.", "cmd package compile -m speed -a && settings put global private_dns_mode hostname && settings put global private_dns_specifier 1dot1dot1dot1.cloudflare-dns.com", ModeCategory.GAMER, 2))
-        modes.add(OptimizationMode(3, "FPS BOOST", "VISUAL: 720p + SkiaVK + Anim 0x.", "wm size 720x1600 && wm density 280 && settings put global debug.hwui.renderer skiavk && settings put global window_animation_scale 0 && settings put global transition_animation_scale 0 && settings put global animator_duration_scale 0", ModeCategory.GAMER, 2))
+        // TELA DE DESEMPENHO
+        modes.add(OptimizationMode(1, "Modo Bruto", "Ultra performance: 540p + 210 DPI.", "wm size 540x1200 && wm density 210", ModeCategory.DESEMPENHO, 3))
+        modes.add(OptimizationMode(2, "Usual Turbo", "Restaura padrões do sistema.", "wm size reset && wm density reset", ModeCategory.DESEMPENHO, 1))
 
-        // --- ABA 2: ECONOMIA (FUSED) ---
-        modes.add(OptimizationMode(10, "MODO FANTASMA", "EXTREME: 360p + GMS Suspend + Low Power.", "settings put global low_power 1 && pm suspend com.google.android.gms && wm size 360x800 && settings put global window_animation_scale 0", ModeCategory.ECONOMIA, 3))
-        modes.add(OptimizationMode(11, "ULTRA SAVER", "LIGHT: Anim 0x + Wifi Scan Off + Low Power.", "settings put global low_power 1 && settings put global wifi_scan_always_enabled 0 && settings put global mobile_data_always_on 0 && settings put global window_animation_scale 0", ModeCategory.ECONOMIA, 2))
+        // TELA DE ECONOMIA
+        modes.add(OptimizationMode(10, "Super Economia", "Ativa economia e suspende GMS.", "settings put global low_power 1 && pm suspend com.google.android.gms", ModeCategory.ECONOMIA, 2))
+        modes.add(OptimizationMode(11, "Ultra Economia", "Resolução mínima e economia ativa.", "wm size 360x800 && settings put global low_power 1", ModeCategory.ECONOMIA, 3))
 
-        // --- ABA 3: JOGOS (SPECIFIC) ---
-        modes.add(OptimizationMode(20, "FREE FIRE MAX", "DPI 180 + Compile + renice.", "wm density 180 && cmd package compile -m speed -f com.dts.freefiremax && renice -n -20 -p \$(pidof com.dts.freefiremax || echo 0)", ModeCategory.JOGOS, 2))
-        modes.add(OptimizationMode(21, "ROBLOX TURBO", "SkiaVK + Compile + 540p.", "cmd package compile -m speed -f com.roblox.client && settings put global debug.hwui.renderer skiavk && wm size 540x1200 && wm density 210", ModeCategory.JOGOS, 2))
-        modes.add(OptimizationMode(22, "GENSHIN IMPACT", "Fixed Perf + GPU Opt + Compile.", "cmd power set-fixed-performance-mode-enabled true && settings put global debug.hwui.renderer skiavk && cmd package compile -m speed -f com.miHoYo.GenshinImpact", ModeCategory.JOGOS, 2))
-        modes.add(OptimizationMode(23, "CODM TURBO", "Latency Zero + DNS + Compile.", "settings put global touch_latency_mode 1 && settings put global private_dns_specifier 1dot1dot1dot1.cloudflare-dns.com && cmd package compile -m speed -f com.activision.callofduty.shooter", ModeCategory.JOGOS, 2))
-        modes.add(OptimizationMode(24, "WHERE WINDS MEET", "Ultra Performance + Fix Resolution.", "cmd power set-fixed-performance-mode-enabled true && wm size 720x1600 && wm density 280 && cmd package compile -m speed -a && settings put global touch_latency_mode 1", ModeCategory.JOGOS, 3))
+        // TELA COMPETITIVO
+        modes.add(OptimizationMode(20, "Gamer Ultimate", "Modo de performance fixa do Android.", "cmd power set-fixed-performance-mode-enabled true", ModeCategory.COMPETITIVO, 2))
+        modes.add(OptimizationMode(21, "Sensi Free Fire", "DPI otimizada para sensibilidade.", "wm density 180", ModeCategory.COMPETITIVO, 2))
 
         // --- ABA 4: DISPLAY ---
         modes.add(OptimizationMode(41, "HD Balanced", "720x1600 / 280dpi.", "wm size 720x1600 && wm density 280", ModeCategory.DISPLAY, 1))
