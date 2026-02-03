@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -53,6 +55,22 @@ class MainActivity : ComponentActivity() {
     fun TurboCoreUI() {
         var selectedTab by remember { mutableStateOf(0) }
         val categories = remember { ModeCategory.values() }
+
+        val themeColor = remember(selectedTab) {
+            when (categories.getOrNull(selectedTab)) {
+                ModeCategory.GAMER, ModeCategory.JOGOS -> Color(0xFFFF4500) // Fire OrangeRed
+                ModeCategory.ECONOMIA -> Color(0xFF00FFFF) // Ice Cyan
+                else -> Color(0xFF1E90FF) // Water DodgerBlue
+            }
+        }
+
+        val themeGradient = remember(selectedTab) {
+            when (categories.getOrNull(selectedTab)) {
+                ModeCategory.GAMER, ModeCategory.JOGOS -> androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color(0xFFb91c1c), Color(0xFFFF8C00)))
+                ModeCategory.ECONOMIA -> androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color(0xFF00CED1), Color(0xFFE0FFFF)))
+                else -> androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color(0xFF00008B), Color(0xFF1E90FF)))
+            }
+        }
         val tabs = remember { categories.map { it.name } + "APPS" }
         var terminalLog by remember { mutableStateOf("Aguardando comando...") }
 
@@ -115,17 +133,19 @@ class MainActivity : ComponentActivity() {
                 ScrollableTabRow(
                     selectedTabIndex = selectedTab,
                     containerColor = Color.Black,
-                    contentColor = Color.Cyan,
+                    contentColor = themeColor,
                     edgePadding = 16.dp
                 ) {
                     tabs.forEachIndexed { index, title ->
-                        Tab(selected = selectedTab == index, onClick = { selectedTab = index }, text = { Text(title) })
+                        Tab(selected = selectedTab == index, onClick = { selectedTab = index }, text = {
+                            Text(title, color = if(selectedTab == index) themeColor else Color.Gray)
+                        })
                     }
                 }
 
                 LazyColumn(Modifier.padding(16.dp)) {
                     item {
-                        GamerDashboard(shizukuStatus, currentTemp, currentRam, activeModeName)
+                        GamerDashboard(shizukuStatus, currentTemp, currentRam, activeModeName, themeColor)
 
                         if (isShizukuLimited.value) {
                             Text("⚠️ ERRO: ATIVE 'DESATIVAR MONITORAMENTO DE PERMISSÕES'", color = Color.Red, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(vertical = 4.dp))
@@ -164,6 +184,7 @@ class MainActivity : ComponentActivity() {
                         items(modes) { mode ->
                             ModeCard(
                                 mode = mode,
+                                themeColor = themeColor,
                                 onActivate = {
                                     lifecycleScope.launch {
                                         terminalLog = AppManager.runMode(this@MainActivity, mode)
@@ -195,7 +216,8 @@ class MainActivity : ComponentActivity() {
     fun ResetBar(onReset: () -> Unit) {
         Card(
             modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF2E1010))
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF1A0A0A)),
+            border = androidx.compose.foundation.BorderStroke(1.dp, Color.Red.copy(alpha = 0.5f))
         ) {
             Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
@@ -204,21 +226,21 @@ class MainActivity : ComponentActivity() {
                 }
                 Button(
                     onClick = onReset,
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFb91c1c)),
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
                 ) {
-                    Text("RESET", style = MaterialTheme.typography.labelSmall)
+                    Text("LIMPAR RAM E CPU", style = MaterialTheme.typography.labelSmall)
                 }
             }
         }
     }
 
     @Composable
-    fun GamerDashboard(status: String, temp: Float, ram: String, activeMode: String) {
+    fun GamerDashboard(status: String, temp: Float, ram: String, activeMode: String, themeColor: Color) {
         Card(
             modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
             colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A)),
-            border = androidx.compose.foundation.BorderStroke(1.dp, Color.Cyan.copy(alpha = 0.5f))
+            border = androidx.compose.foundation.BorderStroke(1.dp, themeColor.copy(alpha = 0.5f))
         ) {
             Column(Modifier.padding(16.dp)) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -252,7 +274,7 @@ class MainActivity : ComponentActivity() {
     }
 
     @Composable
-    fun ModeCard(mode: OptimizationMode, onActivate: () -> Unit, onDeactivate: () -> Unit) {
+    fun ModeCard(mode: OptimizationMode, themeColor: Color, onActivate: () -> Unit, onDeactivate: () -> Unit) {
         val riskColor = when(mode.riskLevel) {
             1 -> Color.Green
             2 -> Color.Yellow
@@ -262,7 +284,7 @@ class MainActivity : ComponentActivity() {
         Card(
             modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
             colors = CardDefaults.cardColors(containerColor = Color(0xFF151515)),
-            border = androidx.compose.foundation.BorderStroke(1.dp, riskColor.copy(alpha = 0.3f))
+            border = androidx.compose.foundation.BorderStroke(1.dp, themeColor.copy(alpha = 0.3f))
         ) {
             Column(Modifier.padding(12.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -280,7 +302,7 @@ class MainActivity : ComponentActivity() {
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Red),
                         modifier = Modifier.padding(end = 8.dp)
                     ) {
-                        Text("DESATIVAR", style = MaterialTheme.typography.labelMedium)
+                        Text("RESETAR TELEFONE", style = MaterialTheme.typography.labelMedium)
                     }
                     Button(
                         onClick = onActivate,

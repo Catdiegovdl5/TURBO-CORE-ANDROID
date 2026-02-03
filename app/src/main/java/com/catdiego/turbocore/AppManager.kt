@@ -3,6 +3,7 @@ package com.catdiego.turbocore
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.net.Uri
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.os.BatteryManager
@@ -87,7 +88,7 @@ object SmartCoreEngineV206 {
         modes.add(OptimizationMode(21, "ROBLOX TURBO", "SkiaVK + Compile + 540p.", "cmd package compile -m speed -f com.roblox.client && settings put global debug.hwui.renderer skiavk && wm size 540x1200 && wm density 210", ModeCategory.JOGOS, 2))
         modes.add(OptimizationMode(22, "GENSHIN IMPACT", "Fixed Perf + GPU Opt + Compile.", "cmd power set-fixed-performance-mode-enabled true && settings put global debug.hwui.renderer skiavk && cmd package compile -m speed -f com.miHoYo.GenshinImpact", ModeCategory.JOGOS, 2))
         modes.add(OptimizationMode(23, "CODM TURBO", "Latency Zero + DNS + Compile.", "settings put global touch_latency_mode 1 && settings put global private_dns_specifier 1dot1dot1dot1.cloudflare-dns.com && cmd package compile -m speed -f com.activision.callofduty.shooter", ModeCategory.JOGOS, 2))
-        modes.add(OptimizationMode(24, "WHERE WINDS MEET", "Extreme Performance Profile.", "cmd power set-fixed-performance-mode-enabled true && wm size 540x1200 && wm density 210 && cmd package compile -m speed -a", ModeCategory.JOGOS, 3))
+        modes.add(OptimizationMode(24, "WHERE WINDS MEET", "Ultra Performance + Fix Resolution.", "cmd power set-fixed-performance-mode-enabled true && wm size 720x1600 && wm density 280 && cmd package compile -m speed -a && settings put global touch_latency_mode 1", ModeCategory.JOGOS, 3))
 
         // --- ABA 4: DISPLAY ---
         modes.add(OptimizationMode(41, "HD Balanced", "720x1600 / 280dpi.", "wm size 720x1600 && wm density 280", ModeCategory.DISPLAY, 1))
@@ -101,6 +102,8 @@ object SmartCoreEngineV206 {
         modes.add(OptimizationMode(81, "Zero Latency", "Touch bypass.", "settings put global touch_latency_mode 1", ModeCategory.SISTEMA, 1))
         modes.add(OptimizationMode(82, "DNS Cloudflare", "DNS Game.", "settings put global private_dns_mode hostname && settings put global private_dns_specifier 1dot1dot1dot1.cloudflare-dns.com", ModeCategory.SISTEMA, 1))
         modes.add(OptimizationMode(83, "Fixed Performance", "Sustained Perf.", "cmd power set-fixed-performance-mode-enabled true", ModeCategory.SISTEMA, 2))
+        modes.add(OptimizationMode(84, "Game Driver All", "Force Game Driver.", "settings put global game_driver_all_apps 1 && settings put global updatable_driver_all_apps 1", ModeCategory.SISTEMA, 1))
+        modes.add(OptimizationMode(85, "No RAM Plus", "Disable Samsung Swap.", "settings put global ram_expand_size_list 0", ModeCategory.SISTEMA, 2, "SAMSUNG"))
 
         // --- ABA 6: DEBLOAT ---
         val bloatlist = mapOf(
@@ -202,12 +205,30 @@ object AppManager {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                     pm.getPackageInfo(pkg, PackageManager.PackageInfoFlags.of(0L))
                 } else {
+                    @Suppress("DEPRECATION")
                     pm.getPackageInfo(pkg, 0)
                 }
                 return true
             } catch (e: Exception) { continue }
         }
         return false
+    }
+
+    fun launchShizuku(context: Context) {
+        try {
+            val intent = context.packageManager.getLaunchIntentForPackage("rikka.app.shizuku")
+                ?: context.packageManager.getLaunchIntentForPackage("moe.shizuku.privileged.api")
+            if (intent != null) {
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                context.startActivity(intent)
+            } else {
+                val githubIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://shizuku.rikka.app/download/"))
+                githubIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                context.startActivity(githubIntent)
+            }
+        } catch (e: Exception) {
+            // Silently fail or log
+        }
     }
 
     fun getRamUsage(context: Context): String {
