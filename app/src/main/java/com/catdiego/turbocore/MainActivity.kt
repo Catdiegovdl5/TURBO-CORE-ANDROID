@@ -87,7 +87,7 @@ class MainActivity : ComponentActivity() {
                 FloatingActionButton(
                     onClick = {
                         lifecycleScope.launch {
-                            val modeFF = OptimizationMode(999, "Mode Free Fire", "", "cmd package compile -m speed-profile -f com.dts.freefireth", ModeCategory.CHIMERA, 3)
+                            val modeFF = SmartCoreEngineV206.getModeById(20) ?: OptimizationMode(999, "Mode Free Fire", "", "cmd package compile -m speed -f com.dts.freefireth", ModeCategory.JOGOS, 3)
                             terminalLog = AppManager.runMode(this@MainActivity, modeFF)
                         }
                     },
@@ -137,6 +137,12 @@ class MainActivity : ComponentActivity() {
                             Text(terminalLog, color = Color.Green, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(8.dp))
                         }
 
+                        ResetBar {
+                            lifecycleScope.launch {
+                                terminalLog = AppManager.runRawCommand("wm size reset && wm density reset && settings put global low_power 0 && pm unsuspend com.google.android.gms && cmd power set-fixed-performance-mode-enabled false && settings put global window_animation_scale 1 && settings put global transition_animation_scale 1 && settings put global animator_duration_scale 1 && settings put global touch_latency_mode 0 && settings put system pointer_speed 2 && settings put global wifi_scan_always_enabled 1")
+                            }
+                        }
+
                         Spacer(Modifier.height(8.dp))
                     }
 
@@ -156,6 +162,28 @@ class MainActivity : ComponentActivity() {
                             AppCard(app)
                         }
                     }
+                }
+            }
+        }
+    }
+
+    @Composable
+    fun ResetBar(onReset: () -> Unit) {
+        Card(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF2E1010))
+        ) {
+            Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("RESTAURAR PADRÃO", style = MaterialTheme.typography.titleSmall, color = Color.White)
+                    Text("Limpa wm, density e energia", style = MaterialTheme.typography.labelSmall, color = Color.LightGray)
+                }
+                Button(
+                    onClick = onReset,
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
+                ) {
+                    Text("RESET", style = MaterialTheme.typography.labelSmall)
                 }
             }
         }

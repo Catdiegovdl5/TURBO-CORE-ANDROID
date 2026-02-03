@@ -30,7 +30,7 @@ object ThermalWatchdog {
     }
 }
 
-enum class ModeCategory { CPU, GPU, MIRA, REDE, CHIMERA, DEBLOAT, POWER }
+enum class ModeCategory { GAMER, ECONOMIA, JOGOS, DISPLAY, SISTEMA, DEBLOAT }
 
 data class AppInfo(val name: String, val packageName: String, val isSystem: Boolean)
 
@@ -60,6 +60,8 @@ object SmartCoreEngineV206 {
         }
     }
 
+    fun getModeById(id: Int): OptimizationMode? = modes.find { it.id == id }
+
     fun getBrandColor(): Long = when {
         brand.contains("SAMSUNG") -> 0xFF2196F3
         brand.contains("XIAOMI") || brand.contains("POCO") -> 0xFFFF5722
@@ -67,65 +69,42 @@ object SmartCoreEngineV206 {
     }
 
     private fun generateModes() {
-        // --- ABA 1: CPU ---
-        for (i in 1..20) {
-            modes.add(OptimizationMode(i, "CPU Prio L$i", "Nice CFS -$i.", "renice -n -$i -p \$(pidof com.dts.freefireth)", ModeCategory.CPU, 1))
-        }
-        modes.add(OptimizationMode(21, "AOT Speed-Profile", "Compila dex2oat.", "cmd package compile -m speed-profile -f com.dts.freefireth", ModeCategory.CPU, 1))
-        modes.add(OptimizationMode(22, "RAM Plus OFF", "Kill zRAM swap Samsung.", "settings put global ram_expand_size_list 0", ModeCategory.CPU, 2, "SAMSUNG"))
-        modes.add(OptimizationMode(23, "Looper Disable", "Reduz interrupções looper.", "cmd looper_stats disable", ModeCategory.CPU, 1))
-        modes.add(OptimizationMode(24, "Gamer Ultimate", "Fixed Performance Mode (Sustentado).", "cmd power set-fixed-performance-mode-enabled true", ModeCategory.CPU, 2))
-        for (i in 25..40) {
-            modes.add(OptimizationMode(i, "Kernel Opt v$i", "Otimização de agendador genérica v$i.", "echo $i > /proc/sys/kernel/sched_latency_ns", ModeCategory.CPU, 1))
+        // --- ABA 1: GAMER (FUSED) ---
+        modes.add(OptimizationMode(1, "MODO DEUS", "MAX: Fixed Perf + 540p + Zero Latency + GPU Opt.", "cmd power set-fixed-performance-mode-enabled true && wm size 540x1200 && wm density 210 && settings put global touch_latency_mode 1 && settings put system pointer_speed 7 && settings put global window_animation_scale 0 && settings put global transition_animation_scale 0 && settings put global animator_duration_scale 0", ModeCategory.GAMER, 3))
+        modes.add(OptimizationMode(2, "ULTIMATE TURBO", "SPEED: Compilation + renice + DNS Game.", "cmd package compile -m speed -a && settings put global private_dns_mode hostname && settings put global private_dns_specifier 1dot1dot1dot1.cloudflare-dns.com", ModeCategory.GAMER, 2))
+        modes.add(OptimizationMode(3, "FPS BOOST", "VISUAL: 720p + SkiaVK + Anim 0x.", "wm size 720x1600 && wm density 280 && settings put global debug.hwui.renderer skiavk && settings put global window_animation_scale 0 && settings put global transition_animation_scale 0 && settings put global animator_duration_scale 0", ModeCategory.GAMER, 2))
+
+        // --- ABA 2: ECONOMIA (FUSED) ---
+        modes.add(OptimizationMode(10, "MODO FANTASMA", "EXTREME: 360p + GMS Suspend + Low Power.", "settings put global low_power 1 && pm suspend com.google.android.gms && wm size 360x800 && settings put global window_animation_scale 0", ModeCategory.ECONOMIA, 3))
+        modes.add(OptimizationMode(11, "ULTRA SAVER", "LIGHT: Anim 0x + Wifi Scan Off + Low Power.", "settings put global low_power 1 && settings put global wifi_scan_always_enabled 0 && settings put global mobile_data_always_on 0 && settings put global window_animation_scale 0", ModeCategory.ECONOMIA, 2))
+
+        // --- ABA 3: JOGOS (SPECIFIC) ---
+        modes.add(OptimizationMode(20, "FREE FIRE MAX", "DPI 180 + Compile + renice.", "wm density 180 && cmd package compile -m speed -f com.dts.freefiremax && renice -n -20 -p \$(pidof com.dts.freefiremax || echo 0)", ModeCategory.JOGOS, 2))
+        modes.add(OptimizationMode(21, "ROBLOX TURBO", "SkiaVK + Compile + 540p.", "cmd package compile -m speed -f com.roblox.client && settings put global debug.hwui.renderer skiavk && wm size 540x1200 && wm density 210", ModeCategory.JOGOS, 2))
+
+        // --- ABA 4: DISPLAY ---
+        modes.add(OptimizationMode(41, "720p Balanced", "720x1600 / 280dpi.", "wm size 720x1600 && wm density 280", ModeCategory.DISPLAY, 2))
+        modes.add(OptimizationMode(42, "540p Performance", "540x1200 / 210dpi.", "wm size 540x1200 && wm density 210", ModeCategory.DISPLAY, 3))
+        for (dpi in 320..500 step 40) {
+            modes.add(OptimizationMode(50 + (dpi/10), "DPI $dpi", "Densidade granular.", "wm density $dpi", ModeCategory.DISPLAY, 2))
         }
 
-        // --- ABA 2: GPU ---
-        modes.add(OptimizationMode(41, "720p Balanced", "720x1600 / 280dpi.", "wm size 720x1600 && wm density 280", ModeCategory.GPU, 2))
-        modes.add(OptimizationMode(42, "540p Performance", "540x1200 / 210dpi.", "wm size 540x1200 && wm density 210", ModeCategory.GPU, 3))
-        modes.add(OptimizationMode(43, "Modo Bruto", "Res 540x1200 + Density 210.", "wm size 540x1200 && wm density 210", ModeCategory.GPU, 3))
-        for (dpi in 320..500 step 20) {
-            modes.add(OptimizationMode(50 + (dpi/20), "DPI $dpi", "Ajuste granular de densidade $dpi.", "wm density $dpi", ModeCategory.GPU, 2))
-        }
-        listOf("0.0", "0.1", "0.25", "0.5").forEachIndexed { i, s ->
-            modes.add(OptimizationMode(76 + i, "Anim ${s}x", "Velocidade UI ${s}x.", "settings put global window_animation_scale $s && settings put global transition_animation_scale $s && settings put global animator_duration_scale $s", ModeCategory.GPU, 1))
-        }
-        modes.add(OptimizationMode(80, "SkiaVK Backend", "HWUI via Vulkan.", "settings put global debug.hwui.renderer skiavk", ModeCategory.GPU, 1))
-        modes.add(OptimizationMode(81, "HW Overlays Off", "GPU Only Composition.", "service call SurfaceFlinger 1008 i32 1", ModeCategory.GPU, 2))
-
-        // --- ABA 3: MIRA ---
-        modes.add(OptimizationMode(91, "Touch Sensitivity", "Samsung Gloved Mode.", "settings put system touch_sensitivity 1", ModeCategory.MIRA, 1, "SAMSUNG"))
-        modes.add(OptimizationMode(92, "Latency Zero", "Touch bypass logic.", "settings put global touch_latency_mode 1", ModeCategory.MIRA, 1))
-        modes.add(OptimizationMode(93, "Sensi Free Fire", "Density 180 (Extremo).", "wm density 180", ModeCategory.MIRA, 2))
-        for (i in 1..10) {
-            modes.add(OptimizationMode(100 + i, "Pointer $i", "Pointer speed scale $i.", "settings put system pointer_speed $i", ModeCategory.MIRA, 1))
-        }
-
-        // --- ABA 4: REDE ---
-        modes.add(OptimizationMode(131, "DNS Cloudflare", "1.1.1.1 DNS privado.", "settings put global private_dns_mode hostname && settings put global private_dns_specifier 1dot1dot1dot1.cloudflare-dns.com", ModeCategory.REDE, 1))
-        modes.add(OptimizationMode(132, "TCP Window 60", "RTT Optimization.", "setprop net.tcp.default_init_rwnd 60", ModeCategory.REDE, 1))
-        modes.add(OptimizationMode(133, "Wifi Scan OFF", "Reduz picos de ping.", "settings put global wifi_scan_always_enabled 0", ModeCategory.REDE, 1))
-
-        // --- ABA 5: CHIMERA ---
-        modes.add(OptimizationMode(121, "Sniper Elite", "Zero Lag + 400 DPI + P7.", "settings put global touch_latency_mode 1 && wm density 400 && settings put system pointer_speed 7", ModeCategory.CHIMERA, 2))
-        modes.add(OptimizationMode(122, "Samurai Blade", "Fix Perf + Sens + No GOS.", "settings put system touch_sensitivity 1 && cmd power set-fixed-performance-mode-enabled true && pm disable-user com.samsung.android.game.gos", ModeCategory.CHIMERA, 3, "SAMSUNG"))
-        modes.add(OptimizationMode(123, "Ronin Step", "No Joyose + Thermal Hack.", "pm suspend com.xiaomi.joyose && echo '1' > /sys/class/thermal/thermal_message/sconfig", ModeCategory.CHIMERA, 3, "XIAOMI"))
-        modes.add(OptimizationMode(124, "Adrenaline UI", "Speed-Profile on Current Focus.", "ADRENALINE_UI", ModeCategory.CHIMERA, 2))
+        // --- ABA 5: SISTEMA ---
+        modes.add(OptimizationMode(80, "SkiaVK (Vulkan)", "HWUI Backend.", "settings put global debug.hwui.renderer skiavk", ModeCategory.SISTEMA, 1))
+        modes.add(OptimizationMode(81, "Zero Latency", "Touch bypass.", "settings put global touch_latency_mode 1", ModeCategory.SISTEMA, 1))
+        modes.add(OptimizationMode(82, "DNS Cloudflare", "DNS Game.", "settings put global private_dns_mode hostname && settings put global private_dns_specifier 1dot1dot1dot1.cloudflare-dns.com", ModeCategory.SISTEMA, 1))
+        modes.add(OptimizationMode(83, "Fixed Performance", "Sustained Perf.", "cmd power set-fixed-performance-mode-enabled true", ModeCategory.SISTEMA, 2))
 
         // --- ABA 6: DEBLOAT ---
         val bloatlist = mapOf(
-            "SAMSUNG" to listOf("com.samsung.android.game.gametools", "com.samsung.android.game.gamehome", "com.samsung.android.game.gos", "com.samsung.android.bixby.agent"),
-            "XIAOMI" to listOf("com.xiaomi.joyose", "com.miui.powerkeeper", "com.miui.securitycenter")
+            "SAMSUNG" to listOf("com.samsung.android.game.gametools", "com.samsung.android.game.gos"),
+            "XIAOMI" to listOf("com.xiaomi.joyose", "com.miui.powerkeeper")
         )
         bloatlist.forEach { (b, list) ->
             list.forEachIndexed { i, p ->
-                modes.add(OptimizationMode(161 + i + (if(b=="XIAOMI") 10 else 0), "Kill $b $i", "Desativa $p.", "pm disable-user $p", ModeCategory.DEBLOAT, 1, b))
+                modes.add(OptimizationMode(160 + i + (if(b=="XIAOMI") 10 else 0), "Kill $b $i", "Desativa $p.", "pm disable-user $p", ModeCategory.DEBLOAT, 1, b))
             }
         }
-
-        // --- ABA 7: POWER ---
-        modes.add(OptimizationMode(201, "Super Economia", "Ativa low_power e suspende GMS.", "settings put global low_power 1 && pm suspend com.google.android.gms", ModeCategory.POWER, 2))
-        modes.add(OptimizationMode(202, "Ultra Economia", "Res 360x800 + low_power.", "wm size 360x800 && settings put global low_power 1", ModeCategory.POWER, 3))
-        modes.add(OptimizationMode(203, "Usual Turbo", "Reset total de wm e density.", "wm size reset && wm density reset", ModeCategory.POWER, 1))
     }
 }
 
