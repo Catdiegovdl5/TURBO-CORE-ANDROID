@@ -58,9 +58,9 @@ class MainActivity : ComponentActivity() {
 
         val themeColor = remember(selectedTab) {
             when (categories.getOrNull(selectedTab)) {
-                ModeCategory.DESEMPENHO, ModeCategory.COMPETITIVO -> Color(0xFFFF4500) // Fire OrangeRed
-                ModeCategory.ECONOMIA -> Color(0xFF00FFFF) // Ice Cyan
-                else -> Color(0xFF1E90FF) // Water DodgerBlue
+                ModeCategory.CHIMERA, ModeCategory.CPU, ModeCategory.GPU -> Color(0xFFFF4500) // Fire
+                ModeCategory.ECONOMIA, ModeCategory.MIRA -> Color(0xFF00FFFF) // Ice
+                else -> Color(0xFF1E90FF) // Water
             }
         }
 
@@ -69,7 +69,9 @@ class MainActivity : ComponentActivity() {
 
         var currentTemp by remember { mutableStateOf(0f) }
         var currentRam by remember { mutableStateOf("Calculando...") }
+        var currentCpu by remember { mutableStateOf("Carregando...") }
         var activeModeName by remember { mutableStateOf("Nenhum") }
+        var activeModeId by remember { mutableStateOf<Int?>(null) }
 
         val isShizukuLimited = remember { mutableStateOf(false) }
         var appsList by remember { mutableStateOf(emptyList<AppInfo>()) }
@@ -81,6 +83,7 @@ class MainActivity : ComponentActivity() {
             launch(Dispatchers.IO) {
                 while(true) {
                     currentRam = AppManager.getRamUsage(this@MainActivity)
+                    currentCpu = AppManager.getCpuStatus()
                     delay(5000)
                 }
             }
@@ -106,7 +109,17 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        Scaffold { paddingValues ->
+        val snackbarHostState = remember { SnackbarHostState() }
+
+        LaunchedEffect(currentTemp) {
+            if (currentTemp >= 38 && currentTemp < 39) {
+                snackbarHostState.showSnackbar("ALERTA TÉRMICO: ${currentTemp}°C - Reduza o uso!")
+            }
+        }
+
+        Scaffold(
+            snackbarHost = { SnackbarHost(snackbarHostState) }
+        ) { paddingValues ->
             Column(Modifier.fillMaxSize().background(Color(0xFF0A0A0A)).padding(paddingValues)) {
                 ScrollableTabRow(
                     selectedTabIndex = selectedTab,
@@ -123,7 +136,7 @@ class MainActivity : ComponentActivity() {
 
                 LazyColumn(Modifier.padding(16.dp)) {
                     item {
-                        GamerDashboard(shizukuStatus, currentTemp, currentRam, activeModeName, themeColor)
+                        GamerDashboard(shizukuStatus, currentTemp, currentRam, currentCpu, activeModeName, themeColor)
 
                         if (isShizukuLimited.value) {
                             Text("⚠️ ERRO: ATIVE 'DESATIVAR MONITORAMENTO DE PERMISSÕES'", color = Color.Red, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(vertical = 4.dp))
@@ -169,19 +182,23 @@ class MainActivity : ComponentActivity() {
                             ModeCard(
                                 mode = mode,
                                 themeColor = themeColor,
-                                onActivate = {
+                                isActive = activeModeId == mode.id,
+                                onToggle = {
                                     lifecycleScope.launch {
-                                        terminalLog = AppManager.runMode(this@MainActivity, mode)
-                                        if (!terminalLog.startsWith("Erro") && !terminalLog.startsWith("BLOQUEIO")) {
-                                            activeModeName = mode.title
-                                            android.widget.Toast.makeText(this@MainActivity, "Modo ${mode.title} Ativado", android.widget.Toast.LENGTH_SHORT).show()
+                                        if (activeModeId == mode.id) {
+                                            // Desativar
+                                            terminalLog = AppManager.runRawCommand("wm size reset && wm density reset && settings put global low_power 0 && pm unsuspend com.google.android.gms && cmd power set-fixed-performance-mode-enabled false && settings put global window_animation_scale 1 && settings put global transition_animation_scale 1 && settings put global animator_duration_scale 1")
+                                            activeModeName = "Nenhum"
+                                            activeModeId = null
+                                        } else {
+                                            // Ativar
+                                            terminalLog = AppManager.runMode(this@MainActivity, mode)
+                                            if (!terminalLog.startsWith("Erro") && !terminalLog.startsWith("BLOQUEIO")) {
+                                                activeModeName = mode.title
+                                                activeModeId = mode.id
+                                                android.widget.Toast.makeText(this@MainActivity, "Modo ${mode.title} Ativado", android.widget.Toast.LENGTH_SHORT).show()
+                                            }
                                         }
-                                    }
-                                },
-                                onDeactivate = {
-                                    lifecycleScope.launch {
-                                        terminalLog = AppManager.runRawCommand("wm size reset && wm density reset && settings put global low_power 0 && pm unsuspend com.google.android.gms && cmd power set-fixed-performance-mode-enabled false && settings put global window_animation_scale 1 && settings put global transition_animation_scale 1 && settings put global animator_duration_scale 1")
-                                        activeModeName = "Nenhum"
                                     }
                                 }
                             )
@@ -220,7 +237,7 @@ class MainActivity : ComponentActivity() {
     }
 
     @Composable
-    fun GamerDashboard(status: String, temp: Float, ram: String, activeMode: String, themeColor: Color) {
+    fun GamerDashboard(status: String, temp: Float, ram: String, cpu: String, activeMode: String, themeColor: Color) {
         Card(
             modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
             colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A)),
@@ -249,6 +266,13 @@ class MainActivity : ComponentActivity() {
                         Text(ram, style = MaterialTheme.typography.titleSmall, color = Color.White)
                     }
                     Column(horizontalAlignment = Alignment.End) {
+                        Text("STATUS CPU", style = MaterialTheme.typography.labelSmall, color = Color.Cyan)
+                        Text(cpu, style = MaterialTheme.typography.titleSmall, color = if(cpu == "FORÇA MÁXIMA") Color.Red else Color.White)
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Column {
                         Text("MODO ATIVO", style = MaterialTheme.typography.labelSmall, color = Color.Yellow)
                         Text(activeMode, style = MaterialTheme.typography.titleSmall, color = Color.White)
                     }
@@ -258,7 +282,7 @@ class MainActivity : ComponentActivity() {
     }
 
     @Composable
-    fun ModeCard(mode: OptimizationMode, themeColor: Color, onActivate: () -> Unit, onDeactivate: () -> Unit) {
+    fun ModeCard(mode: OptimizationMode, themeColor: Color, isActive: Boolean, onToggle: () -> Unit) {
         val riskColor = when(mode.riskLevel) {
             1 -> Color.Green
             2 -> Color.Yellow
@@ -280,19 +304,14 @@ class MainActivity : ComponentActivity() {
                 Text(mode.description, style = MaterialTheme.typography.bodySmall, color = Color.Gray, modifier = Modifier.padding(vertical = 4.dp))
                 Spacer(Modifier.height(8.dp))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    OutlinedButton(
-                        onClick = onDeactivate,
-                        border = androidx.compose.foundation.BorderStroke(1.dp, Color.Red),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Red),
-                        modifier = Modifier.padding(end = 8.dp)
-                    ) {
-                        Text("RESETAR TELEFONE", style = MaterialTheme.typography.labelMedium)
-                    }
                     Button(
-                        onClick = onActivate,
-                        colors = ButtonDefaults.buttonColors(containerColor = Color.Cyan, contentColor = Color.Black)
+                        onClick = onToggle,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (isActive) Color.Red else Color.Cyan,
+                            contentColor = if (isActive) Color.White else Color.Black
+                        )
                     ) {
-                        Text("ATIVAR", style = MaterialTheme.typography.labelMedium)
+                        Text(if (isActive) "RESETAR TELEFONE" else "ATIVAR", style = MaterialTheme.typography.labelMedium)
                     }
                 }
             }
