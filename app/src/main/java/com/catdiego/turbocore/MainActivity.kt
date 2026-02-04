@@ -62,7 +62,7 @@ class MainActivity : ComponentActivity() {
 
             if (Shizuku.pingBinder()) {
                 // Samsung Knox relaxation delay
-                if (SmartCoreEngineV206.brand.contains("SAMSUNG")) {
+                if (SmartCoreEngineV210.brand.contains("SAMSUNG")) {
                     delay(2000)
                 }
                 checkAndRequestShizukuPermission()
@@ -167,6 +167,20 @@ class MainActivity : ComponentActivity() {
             snackbarHost = { SnackbarHost(snackbarHostState) }
         ) { paddingValues ->
             Column(Modifier.fillMaxSize().background(Color(0xFF0A0A0A)).padding(paddingValues)) {
+                if (ThermalWatchdog.isCoolingDown()) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth().padding(8.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFb91c1c))
+                    ) {
+                        Text(
+                            "❄️ RESFRIAMENTO ATIVO: Comandos de performance bloqueados.",
+                            modifier = Modifier.padding(12.dp),
+                            color = Color.White,
+                            style = MaterialTheme.typography.labelMedium
+                        )
+                    }
+                }
+
                 ScrollableTabRow(
                     selectedTabIndex = selectedTab,
                     containerColor = Color.Black,
@@ -222,7 +236,7 @@ class MainActivity : ComponentActivity() {
 
                     if (selectedTab < categories.size) {
                         val currentCategory = categories[selectedTab]
-                        val modes = SmartCoreEngineV206.getModesByCategory(currentCategory)
+                        val modes = SmartCoreEngineV210.getModesByCategory(currentCategory)
 
                         items(modes) { mode ->
                             ModeCard(
@@ -399,13 +413,18 @@ class MainActivity : ComponentActivity() {
                 return@launch
             }
             try {
-                if (Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED) {
-                    shizukuStatus = "Conectado"
-                } else {
-                    withContext(Dispatchers.Main) {
-                        Shizuku.requestPermission(REQUEST_CODE)
+                if (Shizuku.pingBinder()) {
+                    if (Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED) {
+                        shizukuStatus = "Conectado"
+                    } else {
+                        // Pulo do Gato: Força o popup de autorização
+                        withContext(Dispatchers.Main) {
+                            Shizuku.requestPermission(REQUEST_CODE)
+                        }
+                        shizukuStatus = "Autorize no App Shizuku..."
                     }
-                    shizukuStatus = "Autorize no App Shizuku..."
+                } else {
+                    shizukuStatus = "Binder Shizuku OFF"
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {

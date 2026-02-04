@@ -21,10 +21,22 @@ import java.io.InputStreamReader
 // 1. MONITORAMENTO TÉRMICO (WATCHDOG)
 // =========================================================================
 object ThermalWatchdog {
+    var coolingUntil: Long = 0
+
     fun getTemperature(context: Context): Float {
         val intent = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
         val temp = intent?.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0) ?: 0
-        return temp / 10f
+        val celsius = temp / 10f
+
+        if (celsius >= 40f) {
+            coolingUntil = System.currentTimeMillis() + (3 * 60 * 1000)
+        }
+
+        return celsius
+    }
+
+    fun isCoolingDown(): Boolean {
+        return System.currentTimeMillis() < coolingUntil
     }
 }
 
@@ -106,7 +118,7 @@ data class AppInfo(val name: String, val packageName: String, val isSystem: Bool
 // =========================================================================
 // 3. ENGINE ZUEIRA V206 (DATABASE DE 25 MODOS)
 // =========================================================================
-object SmartCoreEngineV206 {
+object SmartCoreEngineV210 {
     val brand: String = Build.MANUFACTURER.uppercase()
     private val modes = mutableListOf<OptimizationMode>()
 
@@ -115,29 +127,29 @@ object SmartCoreEngineV206 {
     }
 
     private fun generateModes() {
-        // --- SAMSUNG (A LINHA "A" SOFRIDA) ---
+        // --- SAMSUNG (BALANCED POWER V210) ---
         modes.add(OptimizationMode(1, "Bixby no Vasco", "Manda a assistente inútil pra Série B.",
             "pm disable-user com.samsung.android.bixby.agent && am force-stop com.samsung.android.bixby.agent", ModeCategory.DEBLOAT, 1, "SAMSUNG"))
-        modes.add(OptimizationMode(2, "Churrasqueira A01", "Libera CPU máxima (Cuidado pra não derreter a mão).",
-            "cmd power set-fixed-performance-mode-enabled true", ModeCategory.CPU, 3, "SAMSUNG"))
+        modes.add(OptimizationMode(2, "Balanced FF Priority", "Prioridade total ao Free Fire sem overclock.",
+            "cmd appops set com.dts.freefireth TOP_APP_OPS allow && cmd activity set-debug-app -w com.dts.freefireth", ModeCategory.CPU, 1, "SAMSUNG"))
         modes.add(OptimizationMode(3, "Modo Ex-Namorada", "Fria e Calculista: Mata processos pra esfriar.",
             "am kill-all && cmd package compile --reset -a", ModeCategory.POWER, 1, "SAMSUNG"))
         modes.add(OptimizationMode(4, "J7 Guerreiro", "Resolução 360p pra rodar liso igual sabão.",
             "wm size 360x740 && wm density 160", ModeCategory.GPU, 2, "SAMSUNG"))
-        modes.add(OptimizationMode(5, "Tira o Lag da OneUI", "Desativa o GOS (Game Optimizing Service).",
-            "pm disable-user com.samsung.android.game.gos && pm disable-user com.samsung.android.game.gametools", ModeCategory.CHIMERA, 2, "SAMSUNG"))
+        modes.add(OptimizationMode(5, "Tira o Lag da OneUI", "Desativa o GOS e Sombras da UI.",
+            "pm disable-user com.samsung.android.game.gos && setprop persist.sys.use_dali_system 0", ModeCategory.CHIMERA, 2, "SAMSUNG"))
         modes.add(OptimizationMode(6, "Tela Verde Fix", "Tenta salvar a tela AMOLED com filtro fake.",
             "settings put secure accessibility_display_daltonizer_enabled 1", ModeCategory.GPU, 1, "SAMSUNG"))
         modes.add(OptimizationMode(7, "Ram Plus é o KCT", "Desativa a RAM virtual que gasta memória.",
             "settings put global ram_expand_size_list 0", ModeCategory.CPU, 1, "SAMSUNG"))
 
-        // --- XIAOMI (A LINHA "BUGUI") ---
-        modes.add(OptimizationMode(8, "Poco Bomba 💣", "Desativa proteção térmica. Use luvas de amianto.",
-            "cmd thermalservice override 1 && settings put global thermal_limit_strategy 0", ModeCategory.CPU, 3, "XIAOMI"))
+        // --- XIAOMI (BALANCED V210) ---
+        modes.add(OptimizationMode(8, "Poco Seguro", "Otimização térmica equilibrada.",
+            "cmd thermalservice override 0 && settings put global thermal_limit_strategy 1", ModeCategory.CPU, 1, "XIAOMI"))
         modes.add(OptimizationMode(9, "Xing Ling Spyware", "Remove espionagem da MIUI (Joyose).",
             "pm disable-user com.xiaomi.joyose && pm disable-user com.miui.analytics", ModeCategory.DEBLOAT, 1, "XIAOMI"))
         modes.add(OptimizationMode(10, "iPhone da Shopee", "Animações 'fluidas' (Mentira).",
-            "settings put global window_animation_scale 1.2 && settings put system power_mode 1", ModeCategory.GPU, 1, "XIAOMI"))
+            "settings put global window_animation_scale 1.0 && settings put system power_mode 1", ModeCategory.GPU, 1, "XIAOMI"))
         modes.add(OptimizationMode(11, "BugUI Fix", "Reinicia a UI pra parar de piscar.",
             "am force-stop com.android.systemui", ModeCategory.CHIMERA, 2, "XIAOMI"))
         modes.add(OptimizationMode(12, "Mi Cloud Off", "Ninguém usa isso. Tchau.",
@@ -147,7 +159,7 @@ object SmartCoreEngineV206 {
         modes.add(OptimizationMode(14, "Modo Tijolo", "Economia extrema. Vira peso de papel.",
             "cmd power set-mode 1 && settings put global low_power 1", ModeCategory.POWER, 2, "XIAOMI"))
 
-        // --- UNIVERSAL (BATATA GAMER) ---
+        // --- UNIVERSAL (BALANCED V210) ---
         modes.add(OptimizationMode(15, "Batata Gamer", "Resolução 480p. Gráfico de Minecraft.",
             "wm size 480x960 && wm density 160", ModeCategory.GPU, 2))
         modes.add(OptimizationMode(16, "Sensi do Capa 👿", "DPI Alta + Ponteiro Rápido.",
@@ -156,8 +168,8 @@ object SmartCoreEngineV206 {
             "dumpsys deviceidle force-idle", ModeCategory.POWER, 1))
         modes.add(OptimizationMode(18, "Vasco da Gama", "Cai o FPS, cai a resolução, cai tudo.",
             "cmd power set-fixed-performance-mode-enabled false", ModeCategory.POWER, 1))
-        modes.add(OptimizationMode(19, "Download de RAM", "Limpa cache pra fingir que baixou RAM.",
-            "pm trim-caches 999G", ModeCategory.CPU, 1))
+        modes.add(OptimizationMode(19, "Otimizar FF Profile", "Otimiza apenas o perfil do Free Fire.",
+            "cmd package compile -m speed-profile -f com.dts.freefireth", ModeCategory.CPU, 1))
         modes.add(OptimizationMode(20, "Ping de Padaria", "Tenta melhorar a net discada.",
             "settings put global tcp_default_init_rwnd 60", ModeCategory.REDE, 1))
         modes.add(OptimizationMode(21, "Gato Net", "DNS da Cloudflare pra furar bloqueio.",
@@ -169,7 +181,7 @@ object SmartCoreEngineV206 {
         modes.add(OptimizationMode(24, "Hack de Pobre", "Remove texturas (Overlay).",
             "service call SurfaceFlinger 1008 i32 1", ModeCategory.GPU, 2))
         modes.add(OptimizationMode(25, "ULTIMATE GAMBIARRA", "Botão do Pânico. Reseta tudo.",
-            "wm size reset && wm density reset && cmd package compile --reset -a", ModeCategory.CHIMERA, 1))
+            "wm size reset && wm density reset && cmd package compile --reset -a && cmd power set-fixed-performance-mode-enabled false", ModeCategory.CHIMERA, 1))
     }
 
     fun getModesByCategory(category: ModeCategory): List<OptimizationMode> {
@@ -207,14 +219,19 @@ object AppManager {
 
         if (!Shizuku.pingBinder()) return@withContext "Erro: Shizuku OFF"
 
+        // V210 Balanced Power: Throttling Lockout
+        if (ThermalWatchdog.isCoolingDown() && (command.contains("speed") || command.contains("allow") || command.contains("set-debug-app"))) {
+            return@withContext "BLOQUEIO TÉRMICO: Aguarde resfriamento (3 min)."
+        }
+
         try {
             withTimeout(3000L) {
                 // Protocolo Samsung Safe Mode: Knox relax delay
-                if (SmartCoreEngineV206.brand.contains("SAMSUNG")) {
+                if (SmartCoreEngineV210.brand.contains("SAMSUNG")) {
                     delay(2000)
                 }
 
-                val finalCommand = if (SmartCoreEngineV206.brand.contains("SAMSUNG")) {
+                val finalCommand = if (SmartCoreEngineV210.brand.contains("SAMSUNG")) {
                     "settings put global adb_wifi_enabled 1 && am force-stop com.samsung.android.lool && $command"
                 } else {
                     command
