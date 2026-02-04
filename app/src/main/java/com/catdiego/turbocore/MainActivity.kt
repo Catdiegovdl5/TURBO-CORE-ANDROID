@@ -43,6 +43,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        createNotificationChannel()
 
         NativeThermalManager(this).registerThermalListener {
             lifecycleScope.launch(Dispatchers.IO) {
@@ -235,6 +236,7 @@ class MainActivity : ComponentActivity() {
                                             terminalLog = AppManager.runRawCommand("wm size reset && wm density reset && settings put global low_power 0 && pm unsuspend com.google.android.gms && cmd power set-fixed-performance-mode-enabled false && settings put global window_animation_scale 1 && settings put global transition_animation_scale 1 && settings put global animator_duration_scale 1")
                                             activeModeName = "Nenhum"
                                             activeModeId = null
+                                            stopService(Intent(this@MainActivity, ShizukuKeeperService::class.java))
                                         } else {
                                             // Ativar
                                             terminalLog = AppManager.runMode(this@MainActivity, mode)
@@ -242,6 +244,15 @@ class MainActivity : ComponentActivity() {
                                                 activeModeName = mode.title
                                                 activeModeId = mode.id
                                                 android.widget.Toast.makeText(this@MainActivity, "Modo ${mode.title} Ativado", android.widget.Toast.LENGTH_SHORT).show()
+
+                                                if (mode.category == ModeCategory.CPU || mode.category == ModeCategory.GPU || mode.category == ModeCategory.CHIMERA || mode.category == ModeCategory.MIRA) {
+                                                    val serviceIntent = Intent(this@MainActivity, ShizukuKeeperService::class.java)
+                                                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                                                        startForegroundService(serviceIntent)
+                                                    } else {
+                                                        startService(serviceIntent)
+                                                    }
+                                                }
                                             }
                                         }
                                     }
@@ -401,6 +412,20 @@ class MainActivity : ComponentActivity() {
                     launchShizukuApp(this@MainActivity)
                 }
             }
+        }
+    }
+
+    private fun createNotificationChannel() {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            val name = "Shizuku Keeper"
+            val descriptionText = "Mantém a conexão Shizuku ativa durante otimizações."
+            val importance = android.app.NotificationManager.IMPORTANCE_LOW
+            val channel = android.app.NotificationChannel("shizuku_keeper", name, importance).apply {
+                description = descriptionText
+            }
+            val notificationManager: android.app.NotificationManager =
+                getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
+            notificationManager.createNotificationChannel(channel)
         }
     }
 

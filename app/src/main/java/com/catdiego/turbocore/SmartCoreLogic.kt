@@ -1,7 +1,6 @@
 package com.catdiego.turbocore
 
-import android.app.ActivityManager
-import android.app.AppOpsManager
+import android.app.*
 import android.app.usage.UsageStatsManager
 import android.content.Context
 import android.content.Intent
@@ -37,6 +36,40 @@ class ThermalMonitorWorker(context: Context, params: WorkerParameters) : Corouti
         }
         Result.success()
     }
+}
+
+class ShizukuKeeperService : Service() {
+    private val CHANNEL_ID = "shizuku_keeper"
+    private val NOTIFICATION_ID = 99
+    private var job: kotlinx.coroutines.Job? = null
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        val notification = androidx.core.app.NotificationCompat.Builder(this, CHANNEL_ID)
+            .setContentTitle("Turbo Core: Always-On")
+            .setContentText("Conexão Shizuku mantida para otimização.")
+            .setSmallIcon(android.R.drawable.ic_lock_idle_low_battery)
+            .setPriority(androidx.core.app.NotificationCompat.PRIORITY_LOW)
+            .build()
+
+        startForeground(NOTIFICATION_ID, notification)
+
+        job?.cancel()
+        job = kotlinx.coroutines.MainScope().launch {
+            while(isActive) {
+                Shizuku.pingBinder()
+                delay(60000)
+            }
+        }
+
+        return START_STICKY
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        job?.cancel()
+    }
+
+    override fun onBind(intent: Intent?): android.os.IBinder? = null
 }
 
 class NativeThermalManager(private val context: Context) {
