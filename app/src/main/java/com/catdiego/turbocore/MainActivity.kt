@@ -1,5 +1,6 @@
 package com.catdiego.turbocore
 
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -19,11 +20,15 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
+import androidx.core.view.WindowCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.work.*
+import com.airbnb.lottie.compose.*
 import kotlinx.coroutines.*
 import rikka.shizuku.Shizuku
 import java.util.concurrent.TimeUnit
@@ -41,13 +46,13 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         createNotificationChannel()
 
-        AppManager.registerBinderListener {
+        AdbService.registerBinderListener {
             checkAndRequestShizukuPermission()
         }
 
         NativeThermalManager(this).registerThermalListener {
             lifecycleScope.launch(Dispatchers.IO) {
-                AppManager.triggerCriticalReset()
+                AdbService.triggerCriticalReset()
             }
         }
 
@@ -61,7 +66,7 @@ class MainActivity : ComponentActivity() {
 
             if (Shizuku.pingBinder()) {
                 // Samsung Knox relaxation delay
-                if (SmartCoreEngineV215.brand.contains("SAMSUNG")) {
+                if (SmartCoreEngineV220.brand.contains("SAMSUNG")) {
                     delay(2000)
                 }
                 checkAndRequestShizukuPermission()
@@ -74,21 +79,55 @@ class MainActivity : ComponentActivity() {
     }
 
     @Composable
-    fun TurboCoreUI() {
-        val lifecycleOwner = androidx.compose.ui.platform.LocalLifecycleOwner.current
-        var selectedTab by rememberSaveable { mutableStateOf(0) }
-        val categories = remember { ModeCategory.values() }
+    fun TurboCoreTheme(content: @Composable () -> Unit) {
+        val brand = SmartCoreEngineV220.brand
+        val colorScheme = when {
+            brand.contains("SAMSUNG") -> darkColorScheme(
+                primary = Color(0xFF0A84FF), // Samsung Blue
+                surface = Color(0xFF1C1C1E), // Space Gray
+                background = Color(0xFF000000),
+                onSurface = Color.White
+            )
+            brand.contains("XIAOMI") -> darkColorScheme(
+                primary = Color(0xFFFF6700), // Xiaomi Orange
+                surface = Color(0xFF111111),
+                background = Color(0xFF000000),
+                onSurface = Color.White
+            )
+            else -> darkColorScheme(
+                primary = Color(0xFF00E5FF), // Cyan
+                surface = Color(0xFF171717),
+                background = Color(0xFF0A0A0A),
+                onSurface = Color.White
+            )
+        }
 
-        val themeColor = remember(selectedTab) {
-            when (categories.getOrNull(selectedTab)) {
-                ModeCategory.CHIMERA, ModeCategory.CPU, ModeCategory.GPU -> Color(0xFFFF4500) // Fire
-                ModeCategory.POWER, ModeCategory.MIRA -> Color(0xFF00FFFF) // Ice
-                ModeCategory.REDE -> Color(0xFF1E90FF) // Water
-                else -> Color(0xFF9C27B0) // Purple
+        val view = LocalView.current
+        if (!view.isInEditMode) {
+            SideEffect {
+                val window = (view.context as Activity).window
+                window.statusBarColor = colorScheme.background.toArgb()
+                WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = false
             }
         }
 
-        val tabs = remember { categories.map { it.name } + "APPS" }
+        MaterialTheme(colorScheme = colorScheme, content = content)
+    }
+
+    @Composable
+    fun TurboCoreUI() {
+        val lifecycleOwner = androidx.compose.ui.platform.LocalLifecycleOwner.current
+        var selectedTab by rememberSaveable { mutableStateOf(0) }
+        val tabsV220 = listOf("UNIVERSAL", "GAMER", "SYSTEM")
+
+        val themeColor = remember(selectedTab) {
+            when (selectedTab) {
+                0 -> Color(0xFF00FFFF) // Ice for Universal (Power/Rede)
+                1 -> Color(0xFFFF4500) // Fire for Gamer (CPU/GPU)
+                else -> Color(0xFF9C27B0) // Purple for System (Debloat)
+            }
+        }
+
         var terminalLog by rememberSaveable { mutableStateOf("Aguardando comando...") }
 
         var currentTemp by remember { mutableStateOf(0f) }
@@ -96,20 +135,22 @@ class MainActivity : ComponentActivity() {
         var currentCpu by remember { mutableStateOf("Carregando...") }
         var activeModeName by rememberSaveable { mutableStateOf("Nenhum") }
         var activeModeId by rememberSaveable { mutableStateOf<Int?>(null) }
+        var bloatwareCount by remember { mutableStateOf(0) }
 
         val isShizukuLimited = remember { mutableStateOf(false) }
         var appsList by remember { mutableStateOf(emptyList<AppInfo>()) }
 
         LaunchedEffect(lifecycleOwner) {
             launch(Dispatchers.IO) {
-                appsList = AppManager.getInstalledApps(this@MainActivity, false)
+                appsList = AdbService.getInstalledApps(this@MainActivity, false)
+                bloatwareCount = AdbService.detectBloatware(this@MainActivity).size
             }
 
             lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch(Dispatchers.IO) {
                     while(true) {
-                        currentRam = AppManager.getRamUsage(this@MainActivity)
-                        currentCpu = AppManager.getCpuStatus()
+                        currentRam = AdbService.getRamUsage(this@MainActivity)
+                        currentCpu = AdbService.getCpuStatus()
                         val pollingDelay = if (currentTemp >= 40f) 15000L else 5000L
                         delay(pollingDelay)
                     }
@@ -118,9 +159,9 @@ class MainActivity : ComponentActivity() {
                     while(true) {
                         currentTemp = ThermalWatchdog.getTemperature(this@MainActivity)
                         if (currentTemp >= 40) {
-                            terminalLog = AppManager.triggerCriticalReset()
+                            terminalLog = AdbService.triggerCriticalReset()
                         } else if (currentTemp >= 39) {
-                            terminalLog = AppManager.runRawCommand("cmd package compile --reset -a")
+                            terminalLog = AdbService.runRawCommand("cmd package compile --reset -a")
                         }
                         delay(60000)
                     }
@@ -149,7 +190,7 @@ class MainActivity : ComponentActivity() {
                         am force-stop com.google.android.gms
                         cmd package bg-dexopt-job --cancel
                     """.trimIndent()
-                    AppManager.runRawCommand(iceBreakerCmd)
+                    AdbService.runRawCommand(iceBreakerCmd)
                 }
             }
         }
@@ -165,14 +206,30 @@ class MainActivity : ComponentActivity() {
         Scaffold(
             snackbarHost = { SnackbarHost(snackbarHostState) }
         ) { paddingValues ->
-            Column(Modifier.fillMaxSize().background(Color(0xFF0A0A0A)).padding(paddingValues)) {
+            Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).padding(paddingValues)) {
+                HealthCheckDashboard(shizukuStatus, currentTemp, bloatwareCount)
+
+                if (shizukuStatus != "Conectado") {
+                    Card(
+                        modifier = Modifier.fillMaxWidth().padding(8.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
+                    ) {
+                        Column(Modifier.padding(12.dp)) {
+                            Text("🚨 CONEXÃO RESTRITA (ANDROID 15+)", style = MaterialTheme.typography.titleSmall)
+                            Text("1. Vá em Configurações > Apps > Turbo Core", style = MaterialTheme.typography.labelSmall)
+                            Text("2. Clique nos 3 pontinhos (canto superior)", style = MaterialTheme.typography.labelSmall)
+                            Text("3. Selecione 'Permitir configurações restritas'", style = MaterialTheme.typography.labelSmall)
+                        }
+                    }
+                }
+
                 if (ThermalWatchdog.isCoolingDown()) {
                     Card(
                         modifier = Modifier.fillMaxWidth().padding(8.dp),
                         colors = CardDefaults.cardColors(containerColor = Color(0xFFb91c1c))
                     ) {
                         Text(
-                            "❄️ RESFRIAMENTO ATIVO: Comandos de performance bloqueados.",
+                            "❄️ RESFRIAMENTO ATIVO: Throttling de 3 min.",
                             modifier = Modifier.padding(12.dp),
                             color = Color.White,
                             style = MaterialTheme.typography.labelMedium
@@ -180,22 +237,21 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
-                ScrollableTabRow(
+                TabRow(
                     selectedTabIndex = selectedTab,
                     containerColor = Color.Black,
-                    contentColor = themeColor,
-                    edgePadding = 16.dp
+                    contentColor = MaterialTheme.colorScheme.primary
                 ) {
-                    tabs.forEachIndexed { index, title ->
+                    tabsV220.forEachIndexed { index, title ->
                         Tab(selected = selectedTab == index, onClick = { selectedTab = index }, text = {
-                            Text(title, color = if(selectedTab == index) themeColor else Color.Gray)
+                            Text(title, style = MaterialTheme.typography.labelSmall)
                         })
                     }
                 }
 
                 LazyColumn(Modifier.padding(16.dp)) {
                     item {
-                        GamerDashboard(shizukuStatus, currentTemp, currentRam, currentCpu, activeModeName, themeColor)
+                        GamerDashboard(shizukuStatus, currentTemp, currentRam, currentCpu, activeModeName, MaterialTheme.colorScheme.primary)
 
                         if (isShizukuLimited.value) {
                             Text("⚠️ ERRO: ATIVE 'DESATIVAR MONITORAMENTO DE PERMISSÕES'", color = Color.Red, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(vertical = 4.dp))
@@ -226,17 +282,26 @@ class MainActivity : ComponentActivity() {
 
                         ResetBar {
                             lifecycleScope.launch {
-                                terminalLog = AppManager.runRawCommand("wm size reset && wm density reset && settings put global low_power 0 && pm unsuspend com.google.android.gms && cmd power set-fixed-performance-mode-enabled false && settings put global window_animation_scale 1 && settings put global transition_animation_scale 1 && settings put global animator_duration_scale 1 && settings put global touch_latency_mode 0 && settings put system pointer_speed 2 && settings put global wifi_scan_always_enabled 1")
+                                terminalLog = AdbService.runRawCommand("wm size reset && wm density reset && settings put global low_power 0 && pm unsuspend com.google.android.gms && cmd power set-fixed-performance-mode-enabled false && settings put global window_animation_scale 1 && settings put global transition_animation_scale 1 && settings put global animator_duration_scale 1 && settings put global touch_latency_mode 0 && settings put system pointer_speed 2 && settings put global wifi_scan_always_enabled 1")
                             }
                         }
 
                         Spacer(Modifier.height(8.dp))
                     }
 
-                    if (selectedTab < categories.size) {
-                        val currentCategory = categories[selectedTab]
-                        val modes = SmartCoreEngineV215.getModesByCategory(currentCategory)
+                    val modes = SmartCoreEngineV220.getModesByCategory(when(selectedTab) {
+                        0 -> ModeCategory.POWER
+                        1 -> ModeCategory.CPU
+                        else -> ModeCategory.DEBLOAT
+                    }).filter {
+                        when(selectedTab) {
+                            0 -> it.category == ModeCategory.POWER || it.category == ModeCategory.REDE
+                            1 -> it.category == ModeCategory.CPU || it.category == ModeCategory.GPU || it.category == ModeCategory.CHIMERA || it.category == ModeCategory.MIRA
+                            else -> it.category == ModeCategory.DEBLOAT
+                        }
+                    }
 
+                    if (selectedTab < 3) {
                         items(modes) { mode ->
                             ModeCard(
                                 mode = mode,
@@ -246,13 +311,13 @@ class MainActivity : ComponentActivity() {
                                     lifecycleScope.launch {
                                         if (activeModeId == mode.id) {
                                             // Desativar
-                                            terminalLog = AppManager.runRawCommand("wm size reset && wm density reset && settings put global low_power 0 && pm unsuspend com.google.android.gms && cmd power set-fixed-performance-mode-enabled false && settings put global window_animation_scale 1 && settings put global transition_animation_scale 1 && settings put global animator_duration_scale 1")
+                                            terminalLog = AdbService.runRawCommand("wm size reset && wm density reset && settings put global low_power 0 && pm unsuspend com.google.android.gms && cmd power set-fixed-performance-mode-enabled false && settings put global window_animation_scale 1 && settings put global transition_animation_scale 1 && settings put global animator_duration_scale 1")
                                             activeModeName = "Nenhum"
                                             activeModeId = null
                                             stopService(Intent(this@MainActivity, ShizukuKeeperService::class.java))
                                         } else {
                                             // Ativar
-                                            terminalLog = AppManager.runMode(this@MainActivity, mode)
+                                            terminalLog = AdbService.runMode(this@MainActivity, mode)
                                             if (!terminalLog.startsWith("Erro") && !terminalLog.startsWith("BLOQUEIO")) {
                                                 activeModeName = mode.title
                                                 activeModeId = mode.id
@@ -279,6 +344,48 @@ class MainActivity : ComponentActivity() {
                     }
                 }
             }
+        }
+    }
+
+    @Composable
+    fun HealthCheckDashboard(status: String, temp: Float, bloat: Int) {
+        val compositionResult = rememberLottieComposition(LottieCompositionSpec.RawRes(0)) // Placeholder
+        val composition by compositionResult
+
+        Card(
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))
+        ) {
+            Column(Modifier.padding(16.dp)) {
+                Text("HEALTH CHECK V220", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.typography.labelSmall.color.copy(alpha = 0.6f))
+                Spacer(Modifier.height(8.dp))
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Box(modifier = Modifier.size(50.dp).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f), CircleShape), contentAlignment = Alignment.Center) {
+                        if (composition != null) {
+                            LottieAnimation(
+                                composition = composition,
+                                iterations = LottieConstants.IterateForever,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        } else {
+                            Text("⚡", style = MaterialTheme.typography.titleLarge)
+                        }
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    HealthItem("Shizuku", if(status == "Conectado") "ONLINE" else "OFFLINE", if(status == "Conectado") Color.Green else Color.Red)
+                    HealthItem("Temp", "${temp}°C", if(temp < 38) Color.Green else Color.Yellow)
+                    HealthItem("Bloatware", "$bloat detectados", if(bloat == 0) Color.Green else Color.Cyan)
+                }
+            }
+        }
+    }
+
+    @Composable
+    fun HealthItem(label: String, value: String, color: Color) {
+        Column {
+            Text(label, style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+            Text(value, style = MaterialTheme.typography.bodyMedium, color = color)
         }
     }
 
@@ -408,7 +515,7 @@ class MainActivity : ComponentActivity() {
 
     private fun checkAndRequestShizukuPermission() {
         lifecycleScope.launch(Dispatchers.IO) {
-            if (!AppManager.isShizukuInstalled(this@MainActivity)) {
+            if (!AdbService.isShizukuInstalled(this@MainActivity)) {
                 shizukuStatus = "Shizuku não instalado!"
                 return@launch
             }
@@ -484,6 +591,6 @@ class MainActivity : ComponentActivity() {
     override fun onDestroy() {
         super.onDestroy()
         runCatching { Shizuku.removeRequestPermissionResultListener(permissionListener) }
-        AppManager.unregisterBinderListener()
+        AdbService.unregisterBinderListener()
     }
 }

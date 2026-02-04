@@ -25,7 +25,7 @@ object ThermalWatchdog {
     var useNativeThermal: Boolean = false
 
     fun getTemperature(context: Context): Float {
-        // Tenta ler do sistema de arquivos (Thermal Zone) - V215
+        // Tenta ler do sistema de arquivos (Thermal Zone) - V220
         val sysTemp = readSysThermal()
         if (sysTemp > 0) {
             useNativeThermal = true
@@ -74,7 +74,7 @@ class ThermalMonitorWorker(context: Context, params: WorkerParameters) : Corouti
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         val temp = ThermalWatchdog.getTemperature(applicationContext)
         if (temp >= 40) {
-            AppManager.triggerCriticalReset()
+            AdbService.triggerCriticalReset()
         }
         Result.success()
     }
@@ -148,7 +148,7 @@ data class AppInfo(val name: String, val packageName: String, val isSystem: Bool
 // =========================================================================
 // 3. ENGINE ZUEIRA V206 (DATABASE DE 25 MODOS)
 // =========================================================================
-object SmartCoreEngineV215 {
+object SmartCoreEngineV220 {
     val brand: String = Build.MANUFACTURER.uppercase()
     private val modes = mutableListOf<OptimizationMode>()
 
@@ -157,7 +157,7 @@ object SmartCoreEngineV215 {
     }
 
     private fun generateModes() {
-        // --- SAMSUNG (DEEP BINDER V215) ---
+        // --- SAMSUNG (PRODUCT V220) ---
         modes.add(OptimizationMode(1, "Bixby no Vasco", "Manda a assistente inútil pra Série B.",
             "pm disable-user com.samsung.android.bixby.agent && am force-stop com.samsung.android.bixby.agent", ModeCategory.DEBLOAT, 1, "SAMSUNG"))
         modes.add(OptimizationMode(2, "Balanced FF Priority", "Prioridade total ao Free Fire via AppOps.",
@@ -173,7 +173,7 @@ object SmartCoreEngineV215 {
         modes.add(OptimizationMode(7, "Ram Plus é o KCT", "Desativa a RAM virtual que gasta memória.",
             "settings put global ram_expand_size_list 0", ModeCategory.CPU, 1, "SAMSUNG"))
 
-        // --- XIAOMI (BALANCED V215) ---
+        // --- XIAOMI (BALANCED V220) ---
         modes.add(OptimizationMode(8, "Poco Seguro", "Otimização térmica equilibrada.",
             "cmd thermalservice override 0 && settings put global thermal_limit_strategy 1", ModeCategory.CPU, 1, "XIAOMI"))
         modes.add(OptimizationMode(9, "Xing Ling Spyware", "Remove espionagem da MIUI (Joyose).",
@@ -189,7 +189,7 @@ object SmartCoreEngineV215 {
         modes.add(OptimizationMode(14, "Modo Tijolo", "Economia extrema. Vira peso de papel.",
             "cmd power set-mode 1 && settings put global low_power 1", ModeCategory.POWER, 2, "XIAOMI"))
 
-        // --- UNIVERSAL (BALANCED V215) ---
+        // --- UNIVERSAL (BALANCED V220) ---
         modes.add(OptimizationMode(15, "Batata Gamer", "Resolução 480p. Gráfico de Minecraft.",
             "wm size 480x960 && wm density 160", ModeCategory.GPU, 2))
         modes.add(OptimizationMode(16, "Sensi do Capa 👿", "DPI Alta + Ponteiro Rápido.",
@@ -212,6 +212,18 @@ object SmartCoreEngineV215 {
             "service call SurfaceFlinger 1008 i32 1", ModeCategory.GPU, 2))
         modes.add(OptimizationMode(25, "ULTIMATE GAMBIARRA", "Botão do Pânico. Reseta tudo.",
             "wm size reset && wm density reset && cmd package compile --reset -a && cmd power set-fixed-performance-mode-enabled false", ModeCategory.CHIMERA, 1))
+
+        // --- PREMIUM V220 ---
+        modes.add(OptimizationMode(26, "Escudo de Ping", "Otimiza DNS e pacotes de rede.",
+            "cmd netpolicy set restrict-background false && settings put global private_dns_specifier 1.1.1.1", ModeCategory.REDE, 1))
+        modes.add(OptimizationMode(27, "Congelador de Apps", "Suspende apps que acordam sozinhos.",
+            "pm suspend com.facebook.katana && pm suspend com.instagram.android", ModeCategory.DEBLOAT, 2))
+        modes.add(OptimizationMode(28, "Perfil Adaptativo", "Ajusta CPU conforme a conexão.",
+            "cmd power set-mode 0", ModeCategory.POWER, 1))
+        modes.add(OptimizationMode(29, "Limpeza Inteligente", "Limpa cache de apps inativos.",
+            "pm trim-caches 4096M", ModeCategory.CPU, 1))
+        modes.add(OptimizationMode(30, "Modo Streamer", "Foco em GPU e bloqueio de avisos.",
+            "settings put global notification_bubble 0 && cmd device_config put runtime_native_boot priority_sp_rel_to_sched 1", ModeCategory.GPU, 1))
     }
 
     fun getModesByCategory(category: ModeCategory): List<OptimizationMode> {
@@ -220,9 +232,9 @@ object SmartCoreEngineV215 {
 }
 
 // =========================================================================
-// 4. GERENCIADOR DE PROCESSOS (ADB MANAGER) - CORRIGIDO
+// 4. MOTOR DE EXECUÇÃO (ADB SERVICE V220)
 // =========================================================================
-object AppManager {
+object AdbService {
     private var binderListener: Shizuku.OnBinderReceivedListener? = null
 
     fun registerBinderListener(onReceived: () -> Unit) {
@@ -251,7 +263,7 @@ object AppManager {
         // Simulação baseada em carga (Android bloqueia leitura real de /proc/stat)
         val runtime = Runtime.getRuntime()
         val used = runtime.totalMemory() - runtime.freeMemory()
-        return if (used > runtime.totalMemory() * 0.8) "SOBRECARREGADO" else "ESTÁVEL"
+        return if (used > runtime.totalMemory() * 0.8) "CRÍTICO" else "ESTÁVEL"
     }
 
     // --- Execução ADB via Shizuku (Protocolo Samsung Safe Mode) ---
@@ -261,7 +273,7 @@ object AppManager {
 
         if (!Shizuku.pingBinder()) return@withContext "Erro: Shizuku OFF"
 
-        // V215 Deep Binder: Throttling Lockout
+        // V220 Deep Binder: Throttling Lockout
         if (ThermalWatchdog.isCoolingDown() && (command.contains("speed") || command.contains("allow") || command.contains("set-debug-app") || command.contains("game_driver"))) {
             return@withContext "BLOQUEIO TÉRMICO: Aguarde resfriamento (3 min)."
         }
@@ -269,11 +281,11 @@ object AppManager {
         try {
             withTimeout(3000L) {
                 // Protocolo Samsung Safe Mode: Knox relax delay
-                if (SmartCoreEngineV215.brand.contains("SAMSUNG")) {
+                if (SmartCoreEngineV220.brand.contains("SAMSUNG")) {
                     delay(2000)
                 }
 
-                val finalCommand = if (SmartCoreEngineV215.brand.contains("SAMSUNG")) {
+                val finalCommand = if (SmartCoreEngineV220.brand.contains("SAMSUNG")) {
                     "settings put global adb_wifi_enabled 1 && am force-stop com.samsung.android.lool && $command"
                 } else {
                     command
@@ -303,7 +315,7 @@ object AppManager {
     }
 
     suspend fun triggerCriticalReset(): String {
-        val cmd = "cmd package compile --reset -a && content stop-sync && setprop ctl.stop logd"
+        val cmd = "cmd package compile --reset -a && content stop-sync && setprop ctl.stop logd && cmd power set-fixed-performance-mode-enabled false"
         return runRawCommand(cmd)
     }
 
@@ -353,6 +365,21 @@ object AppManager {
                 context.packageManager.getPackageInfo("rikka.app.shizuku", 0)
                 true
             } catch (x: Exception) { false }
+        }
+    }
+
+    fun detectBloatware(context: Context): List<String> {
+        val bloatPackages = listOf(
+            "com.samsung.android.bixby.agent",
+            "com.samsung.android.game.gos",
+            "com.facebook.katana",
+            "com.xiaomi.joyose",
+            "com.miui.analytics",
+            "com.google.android.apps.wellbeing"
+        )
+        val pm = context.packageManager
+        return bloatPackages.filter {
+            try { pm.getPackageInfo(it, 0); true } catch (e: Exception) { false }
         }
     }
 }
