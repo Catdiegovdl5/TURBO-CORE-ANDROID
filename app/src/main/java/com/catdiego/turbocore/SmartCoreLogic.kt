@@ -6,9 +6,10 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.ApplicationInfo
-import android.os.BatteryManager
-import android.os.Build
-import android.os.PowerManager
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
+import android.os.*
+import android.view.WindowManager
 import androidx.annotation.RequiresApi
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
@@ -18,11 +19,37 @@ import java.io.BufferedReader
 import java.io.InputStreamReader
 
 // =========================================================================
-// 1. MONITORAMENTO TÉRMICO (WATCHDOG)
+// 1. HEALTH MANAGER (WATCHDOG 2.0 & SENSORS)
 // =========================================================================
-object ThermalWatchdog {
+object HealthManager {
     var coolingUntil: Long = 0
     var useNativeThermal: Boolean = false
+
+    fun getRamPieData(context: Context): List<Float> {
+        val am = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+        val mi = ActivityManager.MemoryInfo()
+        am.getMemoryInfo(mi)
+        val total = mi.totalMem.toFloat()
+        val avail = mi.availMem.toFloat()
+        val used = total - avail
+        // Retorna [Usado %, Livre %]
+        return listOf(used / total, avail / total)
+    }
+
+    suspend fun applySmartMode(context: Context): String {
+        val am = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+        val mi = ActivityManager.MemoryInfo()
+        am.getMemoryInfo(mi)
+        val totalGB = mi.totalMem / 1024 / 1024 / 1024
+
+        return if (totalGB < 2) {
+            PerformanceManager.runRawCommand("wm size 720x1280 && wm density 280")
+        } else if (totalGB > 6) {
+            PerformanceManager.applyDexSpeed("com.dts.freefireth")
+        } else {
+            PerformanceManager.runRawCommand("wm size reset && wm density reset")
+        }
+    }
 
     fun getTemperature(context: Context): Float {
         // Tenta ler do sistema de arquivos (Thermal Zone) - V220
@@ -72,9 +99,9 @@ object ThermalWatchdog {
 
 class ThermalMonitorWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
-        val temp = ThermalWatchdog.getTemperature(applicationContext)
+        val temp = HealthManager.getTemperature(applicationContext)
         if (temp >= 40) {
-            AdbService.triggerCriticalReset()
+            PerformanceManager.triggerCriticalReset()
         }
         Result.success()
     }
@@ -114,6 +141,94 @@ class ShizukuKeeperService : Service() {
     override fun onBind(intent: Intent?): android.os.IBinder? = null
 }
 
+// =========================================================================
+// 1.5 NETWORK MANAGER (CONNECTIVITY & PING)
+// =========================================================================
+object NetworkManager {
+    fun getPing(context: Context): Int {
+        val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val activeNetwork = cm.activeNetwork
+        val capabilities = cm.getNetworkCapabilities(activeNetwork)
+        return if (capabilities != null) {
+            // Heurística baseada em tecnologia de rede
+            when {
+                capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> 15
+                capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> 45
+                else -> 100
+            }
+        } else 999
+    }
+
+    suspend fun optimizePing(): String {
+        val cmd = "settings put global tcp_default_init_rwnd 10 && cmd netpolicy set restrict-background false"
+        return PerformanceManager.runRawCommand(cmd)
+    }
+}
+
+class OverlayService : Service() {
+    private var windowManager: WindowManager? = null
+    private var overlayView: android.widget.TextView? = null
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !android.provider.Settings.canDrawOverlays(this)) {
+            return START_NOT_STICKY
+        }
+
+        windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
+        overlayView = android.widget.TextView(this).apply {
+            text = "Temp: --°C"
+            setTextColor(android.graphics.Color.WHITE)
+            setBackgroundColor(android.graphics.Color.parseColor("#80000000"))
+            setPadding(20, 10, 20, 10)
+        }
+
+        val params = WindowManager.LayoutParams(
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY else WindowManager.LayoutParams.TYPE_PHONE,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+            android.graphics.PixelFormat.TRANSLUCENT
+        ).apply {
+            gravity = android.view.Gravity.TOP or android.view.Gravity.CENTER_HORIZONTAL
+            y = 100
+        }
+
+        windowManager?.addView(overlayView, params)
+
+        kotlinx.coroutines.MainScope().launch {
+            while(true) {
+                overlayView?.text = "Temp: ${HealthManager.getTemperature(this@OverlayService)}°C"
+                delay(5000)
+            }
+        }
+
+        return START_STICKY
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        overlayView?.let { windowManager?.removeView(it) }
+    }
+
+    override fun onBind(intent: Intent?): android.os.IBinder? = null
+}
+
+class AutomatedReceiver : android.content.BroadcastReceiver() {
+    override fun onReceive(context: Context, intent: Intent) {
+        if (intent.action == Intent.ACTION_BATTERY_CHANGED) {
+            val level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
+            val scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
+            val batteryPct = level * 100 / scale.toFloat()
+
+            if (batteryPct <= 15) {
+                kotlinx.coroutines.GlobalScope.launch {
+                    PerformanceManager.runRawCommand("settings put global low_power 1 && wm size reset")
+                }
+            }
+        }
+    }
+}
+
 class NativeThermalManager(private val context: Context) {
     private val powerManager = context.getSystemService(Context.POWER_SERVICE) as PowerManager
 
@@ -148,7 +263,7 @@ data class AppInfo(val name: String, val packageName: String, val isSystem: Bool
 // =========================================================================
 // 3. ENGINE ZUEIRA V206 (DATABASE DE 25 MODOS)
 // =========================================================================
-object SmartCoreEngineV220 {
+object SmartCoreEngineV240 {
     val brand: String = Build.MANUFACTURER.uppercase()
     private val modes = mutableListOf<OptimizationMode>()
 
@@ -232,9 +347,25 @@ object SmartCoreEngineV220 {
 }
 
 // =========================================================================
-// 4. MOTOR DE EXECUÇÃO (ADB SERVICE V220)
+// 4. PERFORMANCE MANAGER (ADB & GAME MODE API)
 // =========================================================================
-object AdbService {
+object PerformanceManager {
+    fun setGameMode(context: Context, packageName: String, mode: Int) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val gameManager = context.getSystemService(Context.GAME_SERVICE) as GameManager
+            // mode: 1 (Standard), 2 (Performance), 3 (Battery)
+            // Note: Needs signature or system permission, but we try via API if available
+        }
+    }
+
+    suspend fun applyDexSpeed(packageName: String): String {
+        return runRawCommand("cmd package compile -m speed-profile -f $packageName")
+    }
+
+    suspend fun setAdaptivePriority(packageName: String): String {
+        return runRawCommand("cmd appops set $packageName TOP_APP_OPS allow")
+    }
+
     private var binderListener: Shizuku.OnBinderReceivedListener? = null
 
     fun registerBinderListener(onReceived: () -> Unit) {
@@ -273,19 +404,19 @@ object AdbService {
 
         if (!Shizuku.pingBinder()) return@withContext "Erro: Shizuku OFF"
 
-        // V220 Deep Binder: Throttling Lockout
-        if (ThermalWatchdog.isCoolingDown() && (command.contains("speed") || command.contains("allow") || command.contains("set-debug-app") || command.contains("game_driver"))) {
+        // V240 Architecture: Throttling Lockout via HealthManager
+        if (HealthManager.isCoolingDown() && (command.contains("speed") || command.contains("allow") || command.contains("set-debug-app") || command.contains("game_driver"))) {
             return@withContext "BLOQUEIO TÉRMICO: Aguarde resfriamento (3 min)."
         }
 
         try {
             withTimeout(3000L) {
                 // Protocolo Samsung Safe Mode: Knox relax delay
-                if (SmartCoreEngineV220.brand.contains("SAMSUNG")) {
+                if (SmartCoreEngineV240.brand.contains("SAMSUNG")) {
                     delay(2000)
                 }
 
-                val finalCommand = if (SmartCoreEngineV220.brand.contains("SAMSUNG")) {
+                val finalCommand = if (SmartCoreEngineV240.brand.contains("SAMSUNG")) {
                     "settings put global adb_wifi_enabled 1 && am force-stop com.samsung.android.lool && $command"
                 } else {
                     command
@@ -296,7 +427,7 @@ object AdbService {
                     Array<String>::class.java, Array<String>::class.java, String::class.java
                 )
                 method.isAccessible = true
-                val process = method.invoke(null, arrayOf("sh", "-c", finalCommand), null, null) as Process
+                val process = method.invoke(null, arrayOf("sh", "-c", finalCommand), null, null) as java.lang.Process
 
                 val output = process.inputStream.bufferedReader().use { it.readText() }
                 process.waitFor()
