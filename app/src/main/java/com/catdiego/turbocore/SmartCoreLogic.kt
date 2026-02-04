@@ -22,8 +22,19 @@ import java.io.InputStreamReader
 // =========================================================================
 object ThermalWatchdog {
     var coolingUntil: Long = 0
+    var useNativeThermal: Boolean = false
 
     fun getTemperature(context: Context): Float {
+        // Tenta ler do sistema de arquivos (Thermal Zone) - V215
+        val sysTemp = readSysThermal()
+        if (sysTemp > 0) {
+            useNativeThermal = true
+            if (sysTemp >= 40f) coolingUntil = System.currentTimeMillis() + (3 * 60 * 1000)
+            return sysTemp
+        }
+
+        // Fallback: Bateria
+        useNativeThermal = false
         val intent = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
         val temp = intent?.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0) ?: 0
         val celsius = temp / 10f
@@ -33,6 +44,25 @@ object ThermalWatchdog {
         }
 
         return celsius
+    }
+
+    private fun readSysThermal(): Float {
+        return try {
+            val paths = arrayOf(
+                "/sys/class/thermal/thermal_zone0/temp",
+                "/sys/class/thermal/thermal_zone1/temp"
+            )
+            for (path in paths) {
+                val file = java.io.File(path)
+                if (file.exists()) {
+                    val tempStr = file.readText().trim()
+                    val temp = tempStr.toFloatOrNull() ?: 0f
+                    if (temp > 1000) return temp / 1000f // millicelsius
+                    if (temp > 0) return temp
+                }
+            }
+            0f
+        } catch (e: Exception) { 0f }
     }
 
     fun isCoolingDown(): Boolean {
@@ -118,7 +148,7 @@ data class AppInfo(val name: String, val packageName: String, val isSystem: Bool
 // =========================================================================
 // 3. ENGINE ZUEIRA V206 (DATABASE DE 25 MODOS)
 // =========================================================================
-object SmartCoreEngineV210 {
+object SmartCoreEngineV215 {
     val brand: String = Build.MANUFACTURER.uppercase()
     private val modes = mutableListOf<OptimizationMode>()
 
@@ -127,23 +157,23 @@ object SmartCoreEngineV210 {
     }
 
     private fun generateModes() {
-        // --- SAMSUNG (BALANCED POWER V210) ---
+        // --- SAMSUNG (DEEP BINDER V215) ---
         modes.add(OptimizationMode(1, "Bixby no Vasco", "Manda a assistente inútil pra Série B.",
             "pm disable-user com.samsung.android.bixby.agent && am force-stop com.samsung.android.bixby.agent", ModeCategory.DEBLOAT, 1, "SAMSUNG"))
-        modes.add(OptimizationMode(2, "Balanced FF Priority", "Prioridade total ao Free Fire sem overclock.",
+        modes.add(OptimizationMode(2, "Balanced FF Priority", "Prioridade total ao Free Fire via AppOps.",
             "cmd appops set com.dts.freefireth TOP_APP_OPS allow && cmd activity set-debug-app -w com.dts.freefireth", ModeCategory.CPU, 1, "SAMSUNG"))
         modes.add(OptimizationMode(3, "Modo Ex-Namorada", "Fria e Calculista: Mata processos pra esfriar.",
             "am kill-all && cmd package compile --reset -a", ModeCategory.POWER, 1, "SAMSUNG"))
         modes.add(OptimizationMode(4, "J7 Guerreiro", "Resolução 360p pra rodar liso igual sabão.",
             "wm size 360x740 && wm density 160", ModeCategory.GPU, 2, "SAMSUNG"))
-        modes.add(OptimizationMode(5, "Tira o Lag da OneUI", "Desativa o GOS e Sombras da UI.",
-            "pm disable-user com.samsung.android.game.gos && setprop persist.sys.use_dali_system 0", ModeCategory.CHIMERA, 2, "SAMSUNG"))
+        modes.add(OptimizationMode(5, "Tira o Lag da OneUI", "GOS Bypass + Drivers de Alto Desempenho.",
+            "pm disable-user com.samsung.android.game.gos && settings put global game_driver_all_apps 1 && settings put global game_driver_opt_in 1 && setprop persist.sys.use_dali_system 0", ModeCategory.CHIMERA, 2, "SAMSUNG"))
         modes.add(OptimizationMode(6, "Tela Verde Fix", "Tenta salvar a tela AMOLED com filtro fake.",
             "settings put secure accessibility_display_daltonizer_enabled 1", ModeCategory.GPU, 1, "SAMSUNG"))
         modes.add(OptimizationMode(7, "Ram Plus é o KCT", "Desativa a RAM virtual que gasta memória.",
             "settings put global ram_expand_size_list 0", ModeCategory.CPU, 1, "SAMSUNG"))
 
-        // --- XIAOMI (BALANCED V210) ---
+        // --- XIAOMI (BALANCED V215) ---
         modes.add(OptimizationMode(8, "Poco Seguro", "Otimização térmica equilibrada.",
             "cmd thermalservice override 0 && settings put global thermal_limit_strategy 1", ModeCategory.CPU, 1, "XIAOMI"))
         modes.add(OptimizationMode(9, "Xing Ling Spyware", "Remove espionagem da MIUI (Joyose).",
@@ -159,7 +189,7 @@ object SmartCoreEngineV210 {
         modes.add(OptimizationMode(14, "Modo Tijolo", "Economia extrema. Vira peso de papel.",
             "cmd power set-mode 1 && settings put global low_power 1", ModeCategory.POWER, 2, "XIAOMI"))
 
-        // --- UNIVERSAL (BALANCED V210) ---
+        // --- UNIVERSAL (BALANCED V215) ---
         modes.add(OptimizationMode(15, "Batata Gamer", "Resolução 480p. Gráfico de Minecraft.",
             "wm size 480x960 && wm density 160", ModeCategory.GPU, 2))
         modes.add(OptimizationMode(16, "Sensi do Capa 👿", "DPI Alta + Ponteiro Rápido.",
@@ -193,6 +223,18 @@ object SmartCoreEngineV210 {
 // 4. GERENCIADOR DE PROCESSOS (ADB MANAGER) - CORRIGIDO
 // =========================================================================
 object AppManager {
+    private var binderListener: Shizuku.OnBinderReceivedListener? = null
+
+    fun registerBinderListener(onReceived: () -> Unit) {
+        binderListener = Shizuku.OnBinderReceivedListener {
+            onReceived()
+        }
+        Shizuku.addBinderReceivedListener(binderListener!!)
+    }
+
+    fun unregisterBinderListener() {
+        binderListener?.let { Shizuku.removeBinderReceivedListener(it) }
+    }
 
     // --- Monitoramento de Hardware ---
     fun getRamUsage(context: Context): String {
@@ -219,19 +261,19 @@ object AppManager {
 
         if (!Shizuku.pingBinder()) return@withContext "Erro: Shizuku OFF"
 
-        // V210 Balanced Power: Throttling Lockout
-        if (ThermalWatchdog.isCoolingDown() && (command.contains("speed") || command.contains("allow") || command.contains("set-debug-app"))) {
+        // V215 Deep Binder: Throttling Lockout
+        if (ThermalWatchdog.isCoolingDown() && (command.contains("speed") || command.contains("allow") || command.contains("set-debug-app") || command.contains("game_driver"))) {
             return@withContext "BLOQUEIO TÉRMICO: Aguarde resfriamento (3 min)."
         }
 
         try {
             withTimeout(3000L) {
                 // Protocolo Samsung Safe Mode: Knox relax delay
-                if (SmartCoreEngineV210.brand.contains("SAMSUNG")) {
+                if (SmartCoreEngineV215.brand.contains("SAMSUNG")) {
                     delay(2000)
                 }
 
-                val finalCommand = if (SmartCoreEngineV210.brand.contains("SAMSUNG")) {
+                val finalCommand = if (SmartCoreEngineV215.brand.contains("SAMSUNG")) {
                     "settings put global adb_wifi_enabled 1 && am force-stop com.samsung.android.lool && $command"
                 } else {
                     command

@@ -37,13 +37,13 @@ class MainActivity : ComponentActivity() {
         shizukuStatus = if (grantResult == PackageManager.PERMISSION_GRANTED) "Conectado" else "Permissão Negada"
     }
 
-    private val binderListener = Shizuku.OnBinderReceivedListener {
-        checkAndRequestShizukuPermission()
-    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         createNotificationChannel()
+
+        AppManager.registerBinderListener {
+            checkAndRequestShizukuPermission()
+        }
 
         NativeThermalManager(this).registerThermalListener {
             lifecycleScope.launch(Dispatchers.IO) {
@@ -58,11 +58,10 @@ class MainActivity : ComponentActivity() {
             android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND)
 
             runCatching { Shizuku.addRequestPermissionResultListener(permissionListener) }
-            runCatching { Shizuku.addBinderReceivedListener(binderListener) }
 
             if (Shizuku.pingBinder()) {
                 // Samsung Knox relaxation delay
-                if (SmartCoreEngineV210.brand.contains("SAMSUNG")) {
+                if (SmartCoreEngineV215.brand.contains("SAMSUNG")) {
                     delay(2000)
                 }
                 checkAndRequestShizukuPermission()
@@ -236,7 +235,7 @@ class MainActivity : ComponentActivity() {
 
                     if (selectedTab < categories.size) {
                         val currentCategory = categories[selectedTab]
-                        val modes = SmartCoreEngineV210.getModesByCategory(currentCategory)
+                        val modes = SmartCoreEngineV215.getModesByCategory(currentCategory)
 
                         items(modes) { mode ->
                             ModeCard(
@@ -308,6 +307,7 @@ class MainActivity : ComponentActivity() {
 
     @Composable
     fun GamerDashboard(status: String, temp: Float, ram: String, cpu: String, activeMode: String, themeColor: Color) {
+        val thermalType = if (ThermalWatchdog.useNativeThermal) "FS" else "BAT"
         Card(
             modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
             colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A)),
@@ -325,7 +325,7 @@ class MainActivity : ComponentActivity() {
                             temp >= 39 -> Color.Yellow
                             else -> Color.Green
                         }
-                        Text(if(temp >= 40) "CRÍTICO" else "BATERIA", style = MaterialTheme.typography.labelSmall, color = if(temp >= 40) Color.Red else Color.Cyan)
+                        Text(if(temp >= 40) "CRÍTICO ($thermalType)" else "SISTEMA ($thermalType)", style = MaterialTheme.typography.labelSmall, color = if(temp >= 40) Color.Red else Color.Cyan)
                         Text("${temp}°C", style = MaterialTheme.typography.titleSmall, color = tempColor)
                     }
                 }
@@ -484,6 +484,6 @@ class MainActivity : ComponentActivity() {
     override fun onDestroy() {
         super.onDestroy()
         runCatching { Shizuku.removeRequestPermissionResultListener(permissionListener) }
-        runCatching { Shizuku.removeBinderReceivedListener(binderListener) }
+        AppManager.unregisterBinderListener()
     }
 }
