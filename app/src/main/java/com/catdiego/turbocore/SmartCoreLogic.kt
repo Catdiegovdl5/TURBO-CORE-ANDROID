@@ -1,12 +1,18 @@
 package com.catdiego.turbocore
 
 import android.app.ActivityManager
+import android.app.AppOpsManager
+import android.app.usage.UsageStatsManager
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.ApplicationInfo
 import android.os.BatteryManager
 import android.os.Build
+import android.os.PowerManager
+import androidx.annotation.RequiresApi
+import androidx.work.CoroutineWorker
+import androidx.work.WorkerParameters
 import kotlinx.coroutines.*
 import rikka.shizuku.Shizuku
 import java.io.BufferedReader
@@ -20,6 +26,30 @@ object ThermalWatchdog {
         val intent = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
         val temp = intent?.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0) ?: 0
         return temp / 10f
+    }
+}
+
+class ThermalMonitorWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
+    override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
+        val temp = ThermalWatchdog.getTemperature(applicationContext)
+        if (temp >= 40) {
+            AppManager.triggerCriticalReset()
+        }
+        Result.success()
+    }
+}
+
+class NativeThermalManager(private val context: Context) {
+    private val powerManager = context.getSystemService(Context.POWER_SERVICE) as PowerManager
+
+    fun registerThermalListener(onSevereThermal: () -> Unit) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            powerManager.addThermalStatusListener(context.mainExecutor) { status ->
+                if (status >= PowerManager.THERMAL_STATUS_SEVERE) {
+                    onSevereThermal()
+                }
+            }
+        }
     }
 }
 
@@ -186,6 +216,32 @@ object AppManager {
     }
 
     // --- Gerenciamento de Apps ---
+    fun isUsageStatsPermissionGranted(context: Context): Boolean {
+        val appOps = context.getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
+        val mode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            appOps.unsafeCheckOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS, android.os.Process.myUid(), context.packageName)
+        } else {
+            @Suppress("DEPRECATION")
+            appOps.checkOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS, android.os.Process.myUid(), context.packageName)
+        }
+        return mode == AppOpsManager.MODE_ALLOWED
+    }
+
+    fun getForegroundAppNative(context: Context): String {
+        if (!isUsageStatsPermissionGranted(context)) return "Sem Permissão de Uso"
+
+        val usageStatsManager = context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
+        val time = System.currentTimeMillis()
+        val stats = usageStatsManager.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, time - 1000 * 10, time)
+
+        return if (stats != null && stats.isNotEmpty()) {
+            val sortedStats = stats.sortedByDescending { it.lastTimeUsed }
+            sortedStats[0].packageName
+        } else {
+            "Desconhecido"
+        }
+    }
+
     fun getInstalledApps(context: Context, showSystem: Boolean): List<AppInfo> {
         val pm = context.packageManager
         val apps = pm.getInstalledApplications(0)

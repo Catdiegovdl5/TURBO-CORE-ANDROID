@@ -20,9 +20,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import androidx.work.*
 import kotlinx.coroutines.*
 import rikka.shizuku.Shizuku
+import java.util.concurrent.TimeUnit
 
 class MainActivity : ComponentActivity() {
     private val REQUEST_CODE = 1001
@@ -39,6 +43,14 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        NativeThermalManager(this).registerThermalListener {
+            lifecycleScope.launch(Dispatchers.IO) {
+                AppManager.triggerCriticalReset()
+            }
+        }
+
+        scheduleBackgroundMonitoring()
 
         lifecycleScope.launch(Dispatchers.IO) {
             // Background priority for Shizuku initialization
@@ -63,6 +75,7 @@ class MainActivity : ComponentActivity() {
 
     @Composable
     fun TurboCoreUI() {
+        val lifecycleOwner = androidx.compose.ui.platform.LocalLifecycleOwner.current
         var selectedTab by rememberSaveable { mutableStateOf(0) }
         val categories = remember { ModeCategory.values() }
 
@@ -87,30 +100,31 @@ class MainActivity : ComponentActivity() {
         val isShizukuLimited = remember { mutableStateOf(false) }
         var appsList by remember { mutableStateOf(emptyList<AppInfo>()) }
 
-        LaunchedEffect(Unit) {
+        LaunchedEffect(lifecycleOwner) {
             launch(Dispatchers.IO) {
                 appsList = AppManager.getInstalledApps(this@MainActivity, false)
             }
-            launch(Dispatchers.IO) {
-                while(true) {
-                    currentRam = AppManager.getRamUsage(this@MainActivity)
-                    currentCpu = AppManager.getCpuStatus()
 
-                    // Dynamic polling: if temp >= 40°C, throttle polling to save CPU/battery
-                    val pollingDelay = if (currentTemp >= 40f) 15000L else 5000L
-                    delay(pollingDelay)
+            lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                launch(Dispatchers.IO) {
+                    while(true) {
+                        currentRam = AppManager.getRamUsage(this@MainActivity)
+                        currentCpu = AppManager.getCpuStatus()
+                        val pollingDelay = if (currentTemp >= 40f) 15000L else 5000L
+                        delay(pollingDelay)
+                    }
                 }
-            }
-            while(true) {
-                currentTemp = ThermalWatchdog.getTemperature(this@MainActivity)
-                if (currentTemp >= 40) {
-                    terminalLog = AppManager.triggerCriticalReset()
-                    android.widget.Toast.makeText(this@MainActivity, "⚠️ EMERGÊNCIA TÉRMICA: 40°C!", android.widget.Toast.LENGTH_LONG).show()
-                } else if (currentTemp >= 39) {
-                    terminalLog = AppManager.runRawCommand("cmd package compile --reset -a")
-                    android.widget.Toast.makeText(this@MainActivity, "Superaquecimento: 39°C. Resetando...", android.widget.Toast.LENGTH_SHORT).show()
+                launch(Dispatchers.IO) {
+                    while(true) {
+                        currentTemp = ThermalWatchdog.getTemperature(this@MainActivity)
+                        if (currentTemp >= 40) {
+                            terminalLog = AppManager.triggerCriticalReset()
+                        } else if (currentTemp >= 39) {
+                            terminalLog = AppManager.runRawCommand("cmd package compile --reset -a")
+                        }
+                        delay(60000)
+                    }
                 }
-                delay(60000)
             }
         }
 
@@ -377,7 +391,9 @@ class MainActivity : ComponentActivity() {
                 if (Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED) {
                     shizukuStatus = "Conectado"
                 } else {
-                    Shizuku.requestPermission(REQUEST_CODE)
+                    withContext(Dispatchers.Main) {
+                        Shizuku.requestPermission(REQUEST_CODE)
+                    }
                     shizukuStatus = "Autorize no App Shizuku..."
                 }
             } catch (e: Exception) {
@@ -386,6 +402,22 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    private fun scheduleBackgroundMonitoring() {
+        val constraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.NOT_REQUIRED)
+            .build()
+
+        val request = PeriodicWorkRequestBuilder<ThermalMonitorWorker>(15, TimeUnit.MINUTES)
+            .setConstraints(constraints)
+            .build()
+
+        WorkManager.getInstance(this).enqueueUniquePeriodicWork(
+            "ThermalMonitor",
+            ExistingPeriodicWorkPolicy.KEEP,
+            request
+        )
     }
 
     private fun launchShizukuApp(context: Context) {
