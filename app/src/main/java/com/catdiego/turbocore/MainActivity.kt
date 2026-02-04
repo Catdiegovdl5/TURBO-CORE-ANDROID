@@ -13,7 +13,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -22,9 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 import rikka.shizuku.Shizuku
 
 class MainActivity : ComponentActivity() {
@@ -43,9 +40,21 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        runCatching { Shizuku.addRequestPermissionResultListener(permissionListener) }
-        runCatching { Shizuku.addBinderReceivedListener(binderListener) }
-        if (Shizuku.pingBinder()) { checkAndRequestShizukuPermission() }
+        lifecycleScope.launch(Dispatchers.IO) {
+            // Background priority for Shizuku initialization
+            android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND)
+
+            runCatching { Shizuku.addRequestPermissionResultListener(permissionListener) }
+            runCatching { Shizuku.addBinderReceivedListener(binderListener) }
+
+            if (Shizuku.pingBinder()) {
+                // Samsung Knox relaxation delay
+                if (SmartCoreEngineV206.brand.contains("SAMSUNG")) {
+                    delay(2000)
+                }
+                checkAndRequestShizukuPermission()
+            }
+        }
 
         setContent {
             TurboCoreUI()
@@ -359,19 +368,23 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun checkAndRequestShizukuPermission() {
-        if (!AppManager.isShizukuInstalled(this)) {
-            shizukuStatus = "Shizuku não instalado!"
-            return
-        }
-        try {
-            if (Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED) {
-                shizukuStatus = "Conectado"
-            } else {
-                Shizuku.requestPermission(REQUEST_CODE)
-                shizukuStatus = "Autorize no App Shizuku..."
+        lifecycleScope.launch(Dispatchers.IO) {
+            if (!AppManager.isShizukuInstalled(this@MainActivity)) {
+                shizukuStatus = "Shizuku não instalado!"
+                return@launch
             }
-        } catch (e: Exception) {
-            launchShizukuApp(this)
+            try {
+                if (Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED) {
+                    shizukuStatus = "Conectado"
+                } else {
+                    Shizuku.requestPermission(REQUEST_CODE)
+                    shizukuStatus = "Autorize no App Shizuku..."
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    launchShizukuApp(this@MainActivity)
+                }
+            }
         }
     }
 

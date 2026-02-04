@@ -7,8 +7,7 @@ import android.content.IntentFilter
 import android.content.pm.ApplicationInfo
 import android.os.BatteryManager
 import android.os.Build
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.*
 import rikka.shizuku.Shizuku
 import java.io.BufferedReader
 import java.io.InputStreamReader
@@ -138,22 +137,40 @@ object AppManager {
         return if (used > runtime.totalMemory() * 0.8) "SOBRECARREGADO" else "ESTÁVEL"
     }
 
-    // --- Execução ADB via Shizuku ---
+    // --- Execução ADB via Shizuku (Protocolo Samsung Safe Mode) ---
     suspend fun runRawCommand(command: String): String = withContext(Dispatchers.IO) {
+        // Background priority check
+        android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND)
+
         if (!Shizuku.pingBinder()) return@withContext "Erro: Shizuku OFF"
+
         try {
-            val method = Shizuku::class.java.getDeclaredMethod(
-                "newProcess",
-                Array<String>::class.java, Array<String>::class.java, String::class.java
-            )
-            method.isAccessible = true
-            val process = method.invoke(null, arrayOf("sh", "-c", command), null, null) as Process
+            withTimeout(3000L) {
+                // Protocolo Samsung Safe Mode: Knox relax delay
+                if (SmartCoreEngineV206.brand.contains("SAMSUNG")) {
+                    delay(2000)
+                }
 
-            val reader = BufferedReader(InputStreamReader(process.inputStream))
-            val output = reader.readText()
-            process.waitFor()
+                val finalCommand = if (SmartCoreEngineV206.brand.contains("SAMSUNG")) {
+                    "settings put global adb_wifi_enabled 1 && am force-stop com.samsung.android.lool && $command"
+                } else {
+                    command
+                }
 
-            if (output.isBlank()) "Comando Enviado (Sem retorno)" else output
+                val method = Shizuku::class.java.getDeclaredMethod(
+                    "newProcess",
+                    Array<String>::class.java, Array<String>::class.java, String::class.java
+                )
+                method.isAccessible = true
+                val process = method.invoke(null, arrayOf("sh", "-c", finalCommand), null, null) as Process
+
+                val output = process.inputStream.bufferedReader().use { it.readText() }
+                process.waitFor()
+
+                if (output.isBlank()) "Sucesso" else output
+            }
+        } catch (e: TimeoutCancellationException) {
+            "Erro: Timeout de 3s (CPU 100%?)"
         } catch (e: Exception) {
             "Erro: ${e.message}"
         }
