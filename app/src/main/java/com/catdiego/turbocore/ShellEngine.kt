@@ -44,6 +44,22 @@ object ShellEngine {
         }
     }
 
+    fun applyGpuBoost() {
+        if (!isAvailable()) return
+        val paths = listOf(
+            "/sys/class/devfreq/18500000.mali/governor",
+            "/sys/class/devfreq/11840000.mali/governor",
+            "/sys/kernel/gpu/gpu_governor",
+            "/sys/devices/platform/18500000.mali/devfreq/18500000.mali/governor",
+            "/proc/gpufreq/gpufreq_opp_freq"
+        )
+
+        // Try all paths "best effort"
+        for (path in paths) {
+            runCommand("echo performance > $path")
+        }
+    }
+
     fun isAvailable(): Boolean {
         return try {
             Shizuku.pingBinder() && Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED

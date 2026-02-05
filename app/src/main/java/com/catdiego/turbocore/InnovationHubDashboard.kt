@@ -1,5 +1,6 @@
 package com.catdiego.turbocore
 
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -16,6 +17,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -157,7 +159,7 @@ fun InnovationHubDashboard(
                 Column {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            text = "TURBO CORE V400",
+                            text = "TURBO CORE V600",
                             color = Color.Cyan,
                             fontSize = 24.sp,
                             fontWeight = FontWeight.Bold
@@ -176,7 +178,7 @@ fun InnovationHubDashboard(
                         )
                     }
                     Text(
-                        text = "GOLD COMPLETE",
+                        text = "SSS ALPHA KERNEL",
                         color = Color.Gray,
                         fontSize = 14.sp,
                         letterSpacing = 2.sp
@@ -282,7 +284,49 @@ fun InnovationHubDashboard(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(Modifier.padding(16.dp)) {
-                        Text("COCKPIT", color = Color.White, fontWeight = FontWeight.Bold)
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("COCKPIT", color = Color.White, fontWeight = FontWeight.Bold)
+                            if (uiState.selectedProfile?.name == "Turbo") {
+                                Text(
+                                    "GPU BOOST: ACTIVE",
+                                    color = Color.Green,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        // CPU LOAD BAR
+                        val cpuColor by animateColorAsState(
+                            targetValue = when {
+                                uiState.cpuLoad > 85f -> Color.Red
+                                uiState.cpuLoad > 60f -> Color.Yellow
+                                else -> Color.Cyan
+                            }, label = "CpuColor"
+                        )
+
+                        LinearProgressIndicator(
+                            progress = uiState.cpuLoad / 100f,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(6.dp)
+                                .clip(RoundedCornerShape(4.dp)),
+                            color = cpuColor,
+                            trackColor = Color.DarkGray.copy(alpha = 0.5f)
+                        )
+                        Text(
+                            text = "CPU Load: ${uiState.cpuLoad.toInt()}%",
+                            color = Color.Gray,
+                            fontSize = 10.sp,
+                            modifier = Modifier.align(Alignment.End)
+                        )
+
                         Spacer(modifier = Modifier.height(16.dp))
 
                         Row(

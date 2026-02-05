@@ -38,11 +38,12 @@ data class DashboardUiState(
     val ramUsage: String = "-- / --",
     val ramPercent: Float = 0f,
     val zramUsage: String = "ZRAM: --",
+    val cpuLoad: Float = 0f,
     val ping: Long = 0L,
     val currentMa: Int = 0,
     val logText: String = "Sistema pronto. Aguardando comandos...",
     val isCritical: Boolean = false,
-    val pollingRate: Long = 5000L,
+    val pollingRate: Long = 2000L,
     val isShizukuReady: Boolean = false,
     val userMessage: String? = null,
     val showSafetyDialog: Boolean = false,
@@ -64,8 +65,12 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     private var gameModeExitTimer: Job? = null
     private val GAME_MODE_NOTIFICATION_ID = 2002
 
+    // CPU Load Calc State
+    private var prevTotal: Long = 0
+    private var prevIdle: Long = 0
+
     // Adaptive Polling Constants
-    private val INTERVAL_NORMAL = 5000L
+    private val INTERVAL_PULSE = 2000L
     private val INTERVAL_CRITICAL = 15000L
     private val TEMP_CRITICAL_THRESHOLD = 40.0f
     private val THERMAL_SHUTDOWN_THRESHOLD = 45.0f
@@ -205,16 +210,24 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
 
             if (profile.powerMode != null) sb.append(" && settings put global low_power ${profile.powerMode}")
             if (profile.trimRam) sb.append(" && cmd activity trim-caches 20")
-            if (profile.name == "Turbo") sb.append(" && cmd activity kill-all")
 
-            // Kernel Tweaks (Swappiness)
+            // Turbo Specifics (V600)
             if (profile.name == "Turbo") {
+                sb.append(" && cmd activity kill-all")
                 sb.append(" && echo 10 > /proc/sys/vm/swappiness")
+                sb.append(" && echo 2048 > /sys/block/mmcblk0/queue/read_ahead_kb")
+                sb.append(" && (stop logd || logcat -G 1M)")
             } else {
                 sb.append(" && echo 60 > /proc/sys/vm/swappiness")
             }
 
+            // Apply command string
             runOptimization(sb.toString(), "Perfil: ${profile.name}")
+
+            // GPU Boost Separate Call
+            if (profile.name == "Turbo") {
+                withContext(Dispatchers.IO) { ShellEngine.applyGpuBoost() }
+            }
         }
     }
 
@@ -224,7 +237,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         monitoringJob = viewModelScope.launch(Dispatchers.Default) {
             while (isActive) {
                 updateMetrics()
-                val currentDelay = if (_uiState.value.isCritical) INTERVAL_CRITICAL else INTERVAL_NORMAL
+                val currentDelay = if (_uiState.value.isCritical) INTERVAL_CRITICAL else INTERVAL_PULSE
                 _uiState.update { it.copy(pollingRate = currentDelay) }
                 delay(currentDelay)
             }
@@ -249,7 +262,6 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
                 val games = _uiState.value.myGames
 
                 if (topPackage != null && games.contains(topPackage)) {
-                    // Game Detected!
                     if (!_uiState.value.isGameActive) {
                         _uiState.update { it.copy(isGameActive = true) }
                         gameModeExitTimer?.cancel()
@@ -264,7 +276,6 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
                         gameModeExitTimer?.cancel()
                     }
                 } else if (_uiState.value.isGameActive) {
-                    // Left game, start hysteresis
                     if (gameModeExitTimer?.isActive != true) {
                         gameModeExitTimer = viewModelScope.launch {
                             delay(30000) // 30s Hysteresis
@@ -303,13 +314,16 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
 
             val pingMs = measurePing()
 
-            // ZRAM Telemetry
+            // ZRAM Telemetry & CPU Load (Active Mode Only)
             var zramStr = "ZRAM: --"
-            if (!isCritical) { // Only read shell if not critical to save CPU
+            var cpuLoadVal = 0f
+
+            if (!isCritical) {
                 val zramInfo = getZramInfo()
                 if (zramInfo != null) {
                     zramStr = "ZRAM: ${zramInfo.first}%"
                 }
+                cpuLoadVal = getCpuLoad()
             }
 
             _uiState.update {
@@ -318,13 +332,14 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
                     ramUsage = ramStr,
                     ramPercent = ramPercent,
                     zramUsage = zramStr,
+                    cpuLoad = cpuLoadVal,
                     ping = pingMs,
                     currentMa = currentMa,
                     isCritical = isCritical
                 )
             }
 
-            // Thermal Watchdog 2.0 with Hysteresis (5 minutes)
+            // Thermal Watchdog 2.0 with Hysteresis
             if (tempC >= THERMAL_SHUTDOWN_THRESHOLD) {
                 val currentTime = System.currentTimeMillis()
                 if (currentTime - lastThermalNotificationTime > 5 * 60 * 1000) {
@@ -342,6 +357,46 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
 
         } catch (e: Exception) {
             _uiState.update { it.copy(logText = "Erro ao ler sensores: ${e.message}") }
+        }
+    }
+
+    private suspend fun getCpuLoad(): Float {
+        return withContext(Dispatchers.IO) {
+            try {
+                val statFile = java.io.File("/proc/stat")
+                if (statFile.exists()) {
+                    val firstLine = statFile.bufferedReader().use { it.readLine() }
+                    if (firstLine != null && firstLine.startsWith("cpu ")) {
+                        // Parse: cpu  user nice system idle iowait irq softirq ...
+                        val parts = firstLine.split(Regex("\\s+"))
+                        if (parts.size >= 8) {
+                            val user = parts[1].toLong()
+                            val nice = parts[2].toLong()
+                            val system = parts[3].toLong()
+                            val idle = parts[4].toLong()
+                            val iowait = parts[5].toLong()
+                            val irq = parts[6].toLong()
+                            val softirq = parts[7].toLong()
+
+                            val total = user + nice + system + idle + iowait + irq + softirq
+                            val idleTotal = idle + iowait
+
+                            val totalDelta = total - prevTotal
+                            val idleDelta = idleTotal - prevIdle
+
+                            prevTotal = total
+                            prevIdle = idleTotal
+
+                            if (totalDelta > 0) {
+                                return@withContext 100f * (1f - (idleDelta.toFloat() / totalDelta.toFloat()))
+                            }
+                        }
+                    }
+                }
+                0f
+            } catch (e: Exception) {
+                0f
+            }
         }
     }
 
