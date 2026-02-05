@@ -20,9 +20,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -58,6 +60,48 @@ fun InnovationHubDashboard(
         }
     }
 
+    // Watchdog Dialog Logic
+    if (uiState.showSafetyDialog) {
+        var secondsRemaining by remember { mutableStateOf(10) }
+
+        LaunchedEffect(Unit) {
+            while (secondsRemaining > 0) {
+                delay(1000)
+                secondsRemaining--
+            }
+            // Timeout reached
+            viewModel.performWatchdogReset()
+        }
+
+        AlertDialog(
+            onDismissRequest = { /* Prevent dismiss */ },
+            containerColor = Color(0xFF111111),
+            title = { Text("Verificação de Segurança", color = Color.Yellow) },
+            text = {
+                Text(
+                    "Uma alteração de tela foi detectada. Se você pode ler isso, clique em MANTER.\n\nReset em $secondsRemaining segundos.",
+                    color = Color.White
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = { viewModel.confirmSafety() },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Green)
+                ) {
+                    Text("MANTER", color = Color.Black)
+                }
+            },
+            dismissButton = {
+                Button(
+                    onClick = { viewModel.performWatchdogReset() },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
+                ) {
+                    Text("RESETAR")
+                }
+            }
+        )
+    }
+
     Scaffold(
         containerColor = Color(0xFF000000),
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -83,12 +127,24 @@ fun InnovationHubDashboard(
             // HEADER
             item {
                 Column {
-                    Text(
-                        text = "TURBO CORE V300",
-                        color = Color.Cyan,
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = "TURBO CORE V300",
+                            color = Color.Cyan,
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        // Status LED
+                        Box(
+                            modifier = Modifier
+                                .size(12.dp)
+                                .background(
+                                    color = if (uiState.isShizukuReady) Color.Green else Color.Red,
+                                    shape = RoundedCornerShape(50)
+                                )
+                        )
+                    }
                     Text(
                         text = "INNOVATION HUB",
                         color = Color.Gray,
@@ -107,17 +163,11 @@ fun InnovationHubDashboard(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Canvas(modifier = Modifier.size(10.dp)) {
-                                drawCircle(color = if (uiState.isShizukuReady) Color.Green else Color.Red)
-                            }
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = if(uiState.isShizukuReady) "Motor Ativo" else "Motor Inativo",
-                                color = if (uiState.isShizukuReady) Color.Green else Color.Red,
-                                fontSize = 14.sp
-                            )
-                        }
+                        Text(
+                            text = if(uiState.isShizukuReady) "Motor Ativo" else "Motor Inativo",
+                            color = if (uiState.isShizukuReady) Color.Green else Color.Red,
+                            fontSize = 14.sp
+                        )
                         if (!uiState.isShizukuReady) {
                             Button(
                                 onClick = onConnectShizuku,

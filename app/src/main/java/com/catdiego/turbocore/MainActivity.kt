@@ -22,7 +22,6 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import kotlinx.coroutines.delay
 import rikka.shizuku.Shizuku
 
 class MainActivity : ComponentActivity() {
@@ -58,38 +57,7 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            // Watchdog Logic
-            var showWatchdogDialog by remember { mutableStateOf(false) }
-            var watchdogTimer by remember { mutableStateOf(10) }
-
-            LaunchedEffect(Unit) {
-                if (viewModel.isRecoveryNeeded()) {
-                    showWatchdogDialog = true
-                    while (watchdogTimer > 0 && showWatchdogDialog) {
-                        delay(1000)
-                        watchdogTimer--
-                    }
-                    if (showWatchdogDialog) {
-                         // Timeout - reset automatically
-                         viewModel.performWatchdogReset()
-                         showWatchdogDialog = false
-                    }
-                }
-            }
-
-            if (showWatchdogDialog) {
-                WatchdogDialog(
-                    secondsRemaining = watchdogTimer,
-                    onConfirmStable = {
-                        viewModel.confirmConfigurationStability()
-                        showWatchdogDialog = false
-                    },
-                    onReset = {
-                        viewModel.performWatchdogReset()
-                        showWatchdogDialog = false
-                    }
-                )
-            } else if (!uiState.isShizukuReady) {
+            if (!uiState.isShizukuReady) {
                 ShizukuPermissionDialog(
                     onConnect = {
                         try {
@@ -153,63 +121,6 @@ class MainActivity : ComponentActivity() {
         runCatching {
             Shizuku.removeBinderReceivedListener(binderReceivedListener)
             Shizuku.removeRequestPermissionResultListener(permissionListener)
-        }
-    }
-}
-
-@Composable
-fun WatchdogDialog(secondsRemaining: Int, onConfirmStable: () -> Unit, onReset: () -> Unit) {
-    Dialog(onDismissRequest = { /* Prevent dismiss, must choose */ }) {
-        Card(
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF111111)),
-            shape = RoundedCornerShape(16.dp),
-            modifier = Modifier
-                .fillMaxWidth()
-                .border(1.dp, Color.Yellow, RoundedCornerShape(16.dp))
-        ) {
-            Column(
-                modifier = Modifier.padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = "VERIFICAÇÃO DE SEGURANÇA",
-                    color = Color.Yellow,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = "Detectamos uma configuração ativa. A tela está normal?",
-                    color = Color.White,
-                    fontSize = 14.sp
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "Reset automático em $secondsRemaining segundos...",
-                    color = Color.Gray,
-                    fontSize = 12.sp
-                )
-                Spacer(modifier = Modifier.height(24.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Button(
-                        onClick = onReset,
-                        colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
-                        modifier = Modifier.weight(1f).padding(end = 8.dp)
-                    ) {
-                        Text("NÃO (RESET)", fontSize = 12.sp)
-                    }
-                    Button(
-                        onClick = onConfirmStable,
-                        colors = ButtonDefaults.buttonColors(containerColor = Color.Green),
-                        modifier = Modifier.weight(1f).padding(start = 8.dp)
-                    ) {
-                        Text("SIM (MANTER)", color = Color.Black, fontSize = 12.sp)
-                    }
-                }
-            }
         }
     }
 }

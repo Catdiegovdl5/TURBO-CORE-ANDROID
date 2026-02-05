@@ -32,7 +32,8 @@ data class DashboardUiState(
     val isCritical: Boolean = false,
     val pollingRate: Long = 5000L,
     val isShizukuReady: Boolean = false,
-    val userMessage: String? = null
+    val userMessage: String? = null,
+    val showSafetyDialog: Boolean = false
 )
 
 class DashboardViewModel(application: Application) : AndroidViewModel(application) {
@@ -60,6 +61,11 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
                  _uiState.update { it.copy(isShizukuReady = true) }
              }
         }
+
+        // Watchdog Init Check
+        if (prefs.getBoolean("is_dirty", false)) {
+            _uiState.update { it.copy(showSafetyDialog = true) }
+        }
     }
 
     override fun onCleared() {
@@ -73,12 +79,9 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         _uiState.update { it.copy(isShizukuReady = isReady) }
     }
 
-    fun isRecoveryNeeded(): Boolean {
-        return prefs.getBoolean("is_configuration_active", false)
-    }
-
-    fun confirmConfigurationStability() {
-        prefs.edit().putBoolean("is_configuration_active", false).apply()
+    fun confirmSafety() {
+        prefs.edit().putBoolean("is_dirty", false).apply()
+        _uiState.update { it.copy(showSafetyDialog = false) }
     }
 
     fun startMonitoring() {
@@ -156,9 +159,9 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun runOptimization(command: String, description: String) {
         viewModelScope.launch {
-            // Safety Flag: Set before execution
+            // Watchdog Flag: Set before execution of risky commands
             if (command.contains("wm size") || command.contains("wm density")) {
-                prefs.edit().putBoolean("is_configuration_active", true).apply()
+                prefs.edit().putBoolean("is_dirty", true).apply()
             }
 
             _uiState.update { it.copy(logText = "Executando: $description...") }
@@ -173,10 +176,8 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
                         logText = "[$description] FALHA: $output",
                         userMessage = "O motor Shizuku parou. Reinicie o serviço."
                     ) }
-                    // Revert flag on immediate failure if needed, but safer to keep it true until confirmed stable
                 } else {
                     _uiState.update { it.copy(logText = "[$description]: $output") }
-                    // Don't auto-clear flag here; wait for explicit confirmation or app restart/stability check
                 }
             } catch (e: Exception) {
                 _uiState.update { it.copy(
@@ -190,9 +191,14 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     // Explicit reset method for watchdog
     fun performWatchdogReset() {
         viewModelScope.launch {
-            ShellEngine.runCommand("wm size reset && wm density reset")
-            prefs.edit().putBoolean("is_configuration_active", false).apply()
-            _uiState.update { it.copy(logText = "Recuperação automática executada com sucesso.") }
+            withContext(Dispatchers.IO) {
+                ShellEngine.runCommand("wm size reset && wm density reset")
+            }
+            prefs.edit().putBoolean("is_dirty", false).apply()
+            _uiState.update { it.copy(
+                logText = "Recuperação automática executada com sucesso.",
+                showSafetyDialog = false
+            ) }
         }
     }
 }
