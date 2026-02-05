@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import rikka.shizuku.Shizuku
 import java.net.InetSocketAddress
 import java.net.Socket
 
@@ -28,7 +29,9 @@ data class DashboardUiState(
     val ping: Long = 0L,
     val logText: String = "Sistema pronto. Aguardando comandos...",
     val isCritical: Boolean = false,
-    val pollingRate: Long = 5000L
+    val pollingRate: Long = 5000L,
+    val isShizukuActive: Boolean = false,
+    val userMessage: String? = null
 )
 
 class DashboardViewModel(application: Application) : AndroidViewModel(application) {
@@ -42,6 +45,35 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     private val INTERVAL_NORMAL = 5000L
     private val INTERVAL_CRITICAL = 15000L
     private val TEMP_CRITICAL_THRESHOLD = 40.0f
+
+    // Shizuku Listeners
+    private val binderReceivedListener = Shizuku.OnBinderReceivedListener {
+        _uiState.update { it.copy(isShizukuActive = true) }
+    }
+
+    private val binderDeadListener = Shizuku.OnBinderDeadListener {
+        _uiState.update { it.copy(isShizukuActive = false, userMessage = "Shizuku desconectado!") }
+    }
+
+    init {
+        // Register Shizuku listeners
+        runCatching {
+            Shizuku.addBinderReceivedListener(binderReceivedListener)
+            Shizuku.addBinderDeadListener(binderDeadListener)
+            // Initial check
+            if (Shizuku.pingBinder()) {
+                _uiState.update { it.copy(isShizukuActive = true) }
+            }
+        }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        runCatching {
+            Shizuku.removeBinderReceivedListener(binderReceivedListener)
+            Shizuku.removeBinderDeadListener(binderDeadListener)
+        }
+    }
 
     /**
      * Starts the adaptive polling loop.
@@ -75,12 +107,16 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         monitoringJob = null
     }
 
+    fun clearUserMessage() {
+        _uiState.update { it.copy(userMessage = null) }
+    }
+
     private suspend fun updateMetrics() {
         val context = getApplication<Application>()
 
         try {
             // 1. Temperature (Native BatteryManager) - Very Low CPU overhead
-            // Using sticky intent is the most reliable way across devices
+            // Using sticky intent is the most reliable way across devices and API levels (including 15+)
             val batteryIntent = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
             val tempRaw = batteryIntent?.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0) ?: 0
             val tempC = tempRaw / 10.0f
@@ -138,11 +174,25 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         viewModelScope.launch {
             _uiState.update { it.copy(logText = "Executando: $description...") }
 
-            val output = withContext(Dispatchers.IO) {
-                ShellEngine.runCommand(command)
-            }
+            try {
+                 val output = withContext(Dispatchers.IO) {
+                    ShellEngine.runCommand(command)
+                }
 
-            _uiState.update { it.copy(logText = "[$description]: $output") }
+                if (output.startsWith("Erro")) {
+                    _uiState.update { it.copy(
+                        logText = "[$description] FALHA: $output",
+                        userMessage = "O motor Shizuku parou. Reinicie o serviço."
+                    ) }
+                } else {
+                    _uiState.update { it.copy(logText = "[$description]: $output") }
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(
+                    logText = "[$description] EXCEÇÃO: ${e.message}",
+                    userMessage = "O motor Shizuku parou. Reinicie o serviço."
+                ) }
+            }
         }
     }
 }

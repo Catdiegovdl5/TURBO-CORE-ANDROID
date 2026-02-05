@@ -33,6 +33,7 @@ fun InnovationHubDashboard(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val lifecycleOwner = LocalLifecycleOwner.current
+    val snackbarHostState = remember { SnackbarHostState() }
 
     // Lifecycle Observer for Adaptive Polling
     DisposableEffect(lifecycleOwner) {
@@ -49,8 +50,17 @@ fun InnovationHubDashboard(
         }
     }
 
+    // Snackbar effect
+    LaunchedEffect(uiState.userMessage) {
+        uiState.userMessage?.let { message ->
+            snackbarHostState.showSnackbar(message)
+            viewModel.clearUserMessage()
+        }
+    }
+
     Scaffold(
         containerColor = Color(0xFF000000),
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
             FloatingActionButton(
                 onClick = {
@@ -92,17 +102,17 @@ fun InnovationHubDashboard(
                         modifier = Modifier
                             .fillMaxWidth()
                             .background(Color(0xFF111111), RoundedCornerShape(8.dp))
-                            .border(1.dp, if (shizukuStatus == "Conectado") Color.Green else Color.Red, RoundedCornerShape(8.dp))
+                            .border(1.dp, if (uiState.isShizukuActive) Color.Green else Color.Red, RoundedCornerShape(8.dp))
                             .padding(12.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "Shizuku: $shizukuStatus",
-                            color = if (shizukuStatus == "Conectado") Color.Green else Color.Red,
+                            text = if(uiState.isShizukuActive) "Motor Ativo" else "Motor Inativo",
+                            color = if (uiState.isShizukuActive) Color.Green else Color.Red,
                             fontSize = 14.sp
                         )
-                        if (shizukuStatus != "Conectado") {
+                        if (!uiState.isShizukuActive) {
                             Button(
                                 onClick = onConnectShizuku,
                                 colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray),
