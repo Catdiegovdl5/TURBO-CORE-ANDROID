@@ -176,7 +176,7 @@ fun InnovationHubDashboard(
                         )
                     }
                     Text(
-                        text = "STABLE RELEASE",
+                        text = "GOLD COMPLETE",
                         color = Color.Gray,
                         fontSize = 14.sp,
                         letterSpacing = 2.sp
@@ -364,6 +364,12 @@ fun InnovationHubDashboard(
                         }
 
                         Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = uiState.zramUsage,
+                            color = Color.Cyan,
+                            fontSize = 12.sp,
+                            modifier = Modifier.align(Alignment.Start)
+                        )
                         Text(
                             text = "Delay: ${uiState.pollingRate}ms",
                             color = Color.DarkGray,

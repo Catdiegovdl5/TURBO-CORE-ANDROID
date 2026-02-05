@@ -31,11 +31,13 @@ import kotlinx.coroutines.withContext
 import rikka.shizuku.Shizuku
 import java.net.InetSocketAddress
 import java.net.Socket
+import java.util.regex.Pattern
 
 data class DashboardUiState(
     val temperature: Float = 0f,
     val ramUsage: String = "-- / --",
     val ramPercent: Float = 0f,
+    val zramUsage: String = "ZRAM: --",
     val ping: Long = 0L,
     val currentMa: Int = 0,
     val logText: String = "Sistema pronto. Aguardando comandos...",
@@ -60,6 +62,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     private val prefs: SharedPreferences = application.getSharedPreferences("turbo_core_prefs", Context.MODE_PRIVATE)
     private var lastThermalNotificationTime: Long = 0L
     private var gameModeExitTimer: Job? = null
+    private val GAME_MODE_NOTIFICATION_ID = 2002
 
     // Adaptive Polling Constants
     private val INTERVAL_NORMAL = 5000L
@@ -108,7 +111,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
             _uiState.update { it.copy(showSafetyDialog = true) }
         }
 
-        createNotificationChannel()
+        createNotificationChannels()
     }
 
     override fun onCleared() {
@@ -204,6 +207,13 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
             if (profile.trimRam) sb.append(" && cmd activity trim-caches 20")
             if (profile.name == "Turbo") sb.append(" && cmd activity kill-all")
 
+            // Kernel Tweaks (Swappiness)
+            if (profile.name == "Turbo") {
+                sb.append(" && echo 10 > /proc/sys/vm/swappiness")
+            } else {
+                sb.append(" && echo 60 > /proc/sys/vm/swappiness")
+            }
+
             runOptimization(sb.toString(), "Perfil: ${profile.name}")
         }
     }
@@ -245,10 +255,12 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
                         gameModeExitTimer?.cancel()
                         val turbo = profiles.find { it.name == "Turbo" }
                         if (turbo != null && _uiState.value.selectedProfile?.name != "Turbo") {
-                            withContext(Dispatchers.Main) { applyProfile(turbo) }
+                            withContext(Dispatchers.Main) {
+                                applyProfile(turbo)
+                                showGameModeNotification(context, topPackage)
+                            }
                         }
                     } else {
-                        // Still in game, ensure timer is cancelled
                         gameModeExitTimer?.cancel()
                     }
                 } else if (_uiState.value.isGameActive) {
@@ -257,6 +269,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
                         gameModeExitTimer = viewModelScope.launch {
                             delay(30000) // 30s Hysteresis
                             _uiState.update { it.copy(isGameActive = false) }
+                            withContext(Dispatchers.Main) { cancelGameModeNotification(context) }
                             val balanced = profiles.find { it.name == "Balanceado" }
                             if (balanced != null) {
                                 withContext(Dispatchers.Main) { applyProfile(balanced) }
@@ -290,11 +303,21 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
 
             val pingMs = measurePing()
 
+            // ZRAM Telemetry
+            var zramStr = "ZRAM: --"
+            if (!isCritical) { // Only read shell if not critical to save CPU
+                val zramInfo = getZramInfo()
+                if (zramInfo != null) {
+                    zramStr = "ZRAM: ${zramInfo.first}%"
+                }
+            }
+
             _uiState.update {
                 it.copy(
                     temperature = tempC,
                     ramUsage = ramStr,
                     ramPercent = ramPercent,
+                    zramUsage = zramStr,
                     ping = pingMs,
                     currentMa = currentMa,
                     isCritical = isCritical
@@ -319,6 +342,34 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
 
         } catch (e: Exception) {
             _uiState.update { it.copy(logText = "Erro ao ler sensores: ${e.message}") }
+        }
+    }
+
+    private suspend fun getZramInfo(): Pair<Int, Long>? {
+        return withContext(Dispatchers.IO) {
+            try {
+                val output = ShellEngine.runCommand("cat /proc/meminfo")
+                if (output.startsWith("Erro")) return@withContext null
+
+                var swapTotal = 0L
+                var swapFree = 0L
+
+                output.lineSequence().forEach { line ->
+                    if (line.startsWith("SwapTotal:")) {
+                        swapTotal = line.replace(Regex("[^0-9]"), "").toLongOrNull() ?: 0L
+                    } else if (line.startsWith("SwapFree:")) {
+                        swapFree = line.replace(Regex("[^0-9]"), "").toLongOrNull() ?: 0L
+                    }
+                }
+
+                if (swapTotal > 0) {
+                    val used = swapTotal - swapFree
+                    val percent = ((used.toFloat() / swapTotal.toFloat()) * 100).toInt()
+                    Pair(percent, used)
+                } else null
+            } catch (e: Exception) {
+                null
+            }
         }
     }
 
@@ -369,7 +420,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     fun performWatchdogReset() {
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
-                ShellEngine.runCommand("wm size reset && wm density reset")
+                ShellEngine.runCommand("wm size reset && wm density reset && echo 60 > /proc/sys/vm/swappiness")
             }
             prefs.edit().putBoolean("is_dirty", false).apply()
             prefs.edit().remove("active_profile_name").apply()
@@ -383,16 +434,21 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    private fun createNotificationChannel() {
+    private fun createNotificationChannels() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val name = "Avisos Térmicos"
-            val descriptionText = "Notificações de proteção contra superaquecimento"
-            val importance = NotificationManager.IMPORTANCE_HIGH
-            val channel = NotificationChannel("THERMAL_ALERTS", name, importance).apply {
-                description = descriptionText
-            }
             val notificationManager: NotificationManager = getApplication<Application>().getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            notificationManager.createNotificationChannel(channel)
+
+            // Thermal Channel
+            val thermalChannel = NotificationChannel("THERMAL_ALERTS", "Avisos Térmicos", NotificationManager.IMPORTANCE_HIGH).apply {
+                description = "Notificações de proteção contra superaquecimento"
+            }
+            notificationManager.createNotificationChannel(thermalChannel)
+
+            // Game Mode Channel
+            val gameChannel = NotificationChannel("GAME_MODE", "Modo Jogo", NotificationManager.IMPORTANCE_LOW).apply {
+                description = "Notificação persistente de jogo ativo"
+            }
+            notificationManager.createNotificationChannel(gameChannel)
         }
     }
 
@@ -409,6 +465,28 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
 
         with(NotificationManagerCompat.from(context)) {
             notify(1001, builder.build())
+        }
+    }
+
+    private fun showGameModeNotification(context: Context, packageName: String) {
+        if (ActivityCompat.checkSelfPermission(context, android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            return
+        }
+        val builder = NotificationCompat.Builder(context, "GAME_MODE")
+            .setSmallIcon(android.R.drawable.ic_media_play)
+            .setContentTitle("Modo Turbo Ativo")
+            .setContentText("Jogo detectado: $packageName")
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setOngoing(true)
+
+        with(NotificationManagerCompat.from(context)) {
+            notify(GAME_MODE_NOTIFICATION_ID, builder.build())
+        }
+    }
+
+    private fun cancelGameModeNotification(context: Context) {
+        with(NotificationManagerCompat.from(context)) {
+            cancel(GAME_MODE_NOTIFICATION_ID)
         }
     }
 }
