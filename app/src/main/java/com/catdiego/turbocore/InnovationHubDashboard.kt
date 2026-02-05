@@ -5,6 +5,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Warning
@@ -23,6 +25,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -93,18 +96,20 @@ fun InnovationHubDashboard(
                 Column {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            text = "TURBO CORE V300",
+                            text = "TURBO CORE V400",
                             color = Color.Cyan,
                             fontSize = 24.sp,
                             fontWeight = FontWeight.Bold
                         )
                         Spacer(modifier = Modifier.width(12.dp))
                         // Status LED
+                        val ledColor = uiState.selectedProfile?.color
+                            ?: if (uiState.isShizukuReady) Color.Green else Color.Red
                         Box(
                             modifier = Modifier
                                 .size(12.dp)
                                 .background(
-                                    color = if (uiState.isShizukuReady) Color.Green else Color.Red,
+                                    color = ledColor,
                                     shape = RoundedCornerShape(50)
                                 )
                         )
@@ -115,7 +120,30 @@ fun InnovationHubDashboard(
                         fontSize = 14.sp,
                         letterSpacing = 2.sp
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // PROFILE CHIPS
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        items(viewModel.profiles) { profile ->
+                            FilterChip(
+                                selected = uiState.selectedProfile?.name == profile.name,
+                                onClick = { viewModel.applyProfile(profile) },
+                                label = { Text(profile.name) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = profile.color.copy(alpha = 0.2f),
+                                    selectedLabelColor = profile.color
+                                ),
+                                border = FilterChipDefaults.filterChipBorder(
+                                    borderColor = if(uiState.selectedProfile?.name == profile.name) profile.color else Color.Gray
+                                )
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
 
                     // Shizuku Status
                     Row(
