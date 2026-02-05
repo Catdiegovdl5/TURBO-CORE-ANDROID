@@ -102,17 +102,17 @@ fun InnovationHubDashboard(
                         modifier = Modifier
                             .fillMaxWidth()
                             .background(Color(0xFF111111), RoundedCornerShape(8.dp))
-                            .border(1.dp, if (uiState.isShizukuActive) Color.Green else Color.Red, RoundedCornerShape(8.dp))
+                            .border(1.dp, if (uiState.isShizukuReady) Color.Green else Color.Red, RoundedCornerShape(8.dp))
                             .padding(12.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = if(uiState.isShizukuActive) "Motor Ativo" else "Motor Inativo",
-                            color = if (uiState.isShizukuActive) Color.Green else Color.Red,
+                            text = if(uiState.isShizukuReady) "Motor Ativo" else "Motor Inativo",
+                            color = if (uiState.isShizukuReady) Color.Green else Color.Red,
                             fontSize = 14.sp
                         )
-                        if (!uiState.isShizukuActive) {
+                        if (!uiState.isShizukuReady) {
                             Button(
                                 onClick = onConnectShizuku,
                                 colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray),

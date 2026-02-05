@@ -30,7 +30,7 @@ data class DashboardUiState(
     val logText: String = "Sistema pronto. Aguardando comandos...",
     val isCritical: Boolean = false,
     val pollingRate: Long = 5000L,
-    val isShizukuActive: Boolean = false,
+    val isShizukuReady: Boolean = false, // Renamed from isShizukuActive for clarity
     val userMessage: String? = null
 )
 
@@ -46,33 +46,29 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     private val INTERVAL_CRITICAL = 15000L
     private val TEMP_CRITICAL_THRESHOLD = 40.0f
 
-    // Shizuku Listeners
-    private val binderReceivedListener = Shizuku.OnBinderReceivedListener {
-        _uiState.update { it.copy(isShizukuActive = true) }
-    }
-
+    // Shizuku Listeners (Managed by Activity now for granular control, but keeping clean-up here just in case)
     private val binderDeadListener = Shizuku.OnBinderDeadListener {
-        _uiState.update { it.copy(isShizukuActive = false, userMessage = "Shizuku desconectado!") }
+        _uiState.update { it.copy(isShizukuReady = false, userMessage = "Shizuku desconectado!") }
     }
 
     init {
-        // Register Shizuku listeners
         runCatching {
-            Shizuku.addBinderReceivedListener(binderReceivedListener)
-            Shizuku.addBinderDeadListener(binderDeadListener)
-            // Initial check
-            if (Shizuku.pingBinder()) {
-                _uiState.update { it.copy(isShizukuActive = true) }
-            }
+             Shizuku.addBinderDeadListener(binderDeadListener)
+             if (ShellEngine.isAvailable()) {
+                 _uiState.update { it.copy(isShizukuReady = true) }
+             }
         }
     }
 
     override fun onCleared() {
         super.onCleared()
         runCatching {
-            Shizuku.removeBinderReceivedListener(binderReceivedListener)
             Shizuku.removeBinderDeadListener(binderDeadListener)
         }
+    }
+
+    fun updateShizukuStatus(isReady: Boolean) {
+        _uiState.update { it.copy(isShizukuReady = isReady) }
     }
 
     /**
@@ -116,7 +112,6 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
 
         try {
             // 1. Temperature (Native BatteryManager) - Very Low CPU overhead
-            // Using sticky intent is the most reliable way across devices and API levels (including 15+)
             val batteryIntent = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
             val tempRaw = batteryIntent?.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0) ?: 0
             val tempC = tempRaw / 10.0f
@@ -150,7 +145,6 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
                 )
             }
         } catch (e: Exception) {
-            // Fail silently or log to UI if needed, but don't crash loop
             _uiState.update { it.copy(logText = "Erro ao ler sensores: ${e.message}") }
         }
     }

@@ -10,7 +10,7 @@ import java.io.InputStreamReader
 
 object ShellEngine {
     fun runCommand(command: String): String {
-        if (!Shizuku.pingBinder()) return "Erro: Serviço Shizuku parado no sistema!"
+        if (!isAvailable()) return "Erro: Serviço Shizuku parado ou sem permissão!"
         return try {
             val method = Shizuku::class.java.getDeclaredMethod(
                 "newProcess",
@@ -23,6 +23,14 @@ object ShellEngine {
             process.waitFor()
             if (output.isEmpty()) "Sucesso" else output
         } catch (e: Exception) { "Erro: ${e.message}" }
+    }
+
+    fun isAvailable(): Boolean {
+        return try {
+            Shizuku.pingBinder() && Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED
+        } catch (e: Exception) {
+            false
+        }
     }
 
     fun isShizukuInstalled(context: Context): Boolean {

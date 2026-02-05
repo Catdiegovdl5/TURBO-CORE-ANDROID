@@ -22,57 +22,51 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import kotlinx.coroutines.delay
 import rikka.shizuku.Shizuku
 
 class MainActivity : ComponentActivity() {
     private val REQUEST_CODE = 1001
+    private lateinit var viewModel: DashboardViewModel
 
-    // State to trigger recomposition when permission result comes in
-    private var permissionStateTrigger by mutableStateOf(0)
+    private val binderReceivedListener = Shizuku.OnBinderReceivedListener {
+        checkShizukuPermission()
+    }
 
-    private val permissionListener = Shizuku.OnRequestPermissionResultListener { _, _ ->
-        permissionStateTrigger++
+    private val permissionListener = Shizuku.OnRequestPermissionResultListener { _, grantResult ->
+        if (grantResult == PackageManager.PERMISSION_GRANTED) {
+            viewModel.updateShizukuStatus(true)
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        runCatching { Shizuku.addRequestPermissionResultListener(permissionListener) }
+
+        runCatching {
+            Shizuku.addBinderReceivedListener(binderReceivedListener)
+            Shizuku.addRequestPermissionResultListener(permissionListener)
+        }
 
         setContent {
-            val viewModel: DashboardViewModel = viewModel()
+            viewModel = viewModel()
             val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-            // Re-evaluate check whenever trigger increments OR binder state changes
-            val currentPermissionTrigger = permissionStateTrigger
-            var showPermissionDialog by remember { mutableStateOf(false) }
-
-            // Logic to determine if we should show the blocking dialog
-            LaunchedEffect(uiState.isShizukuActive, currentPermissionTrigger) {
-                // If binder is not active (not received), we wait or show dialog
-                if (!uiState.isShizukuActive) {
-                    // Double check manually in case ViewModel missed it initially
-                    if (!Shizuku.pingBinder()) {
-                        showPermissionDialog = true
-                        return@LaunchedEffect
-                    }
-                }
-
-                // Binder is active, check permission
-                if (Shizuku.checkSelfPermission() != PackageManager.PERMISSION_GRANTED) {
-                    Shizuku.requestPermission(REQUEST_CODE)
-                    showPermissionDialog = true
-                } else {
-                    showPermissionDialog = false
+            // Initial check on UI composition
+            LaunchedEffect(Unit) {
+                if (Shizuku.pingBinder()) {
+                    checkShizukuPermission()
                 }
             }
 
-            if (showPermissionDialog) {
+            if (!uiState.isShizukuReady) {
                 ShizukuPermissionDialog(
                     onConnect = {
                         try {
                             if (Shizuku.pingBinder()) {
-                                Shizuku.requestPermission(REQUEST_CODE)
+                                if (Shizuku.checkSelfPermission() != PackageManager.PERMISSION_GRANTED) {
+                                    Shizuku.requestPermission(REQUEST_CODE)
+                                } else {
+                                    viewModel.updateShizukuStatus(true)
+                                }
                             } else {
                                 launchShizukuApp(this)
                             }
@@ -80,18 +74,28 @@ class MainActivity : ComponentActivity() {
                             launchShizukuApp(this)
                         }
                     },
-                    onDismiss = { /* Non-dismissable until connected/authorized */ }
+                    onDismiss = { /* Blocking Dialog */ }
                 )
             }
 
             InnovationHubDashboard(
                 viewModel = viewModel,
-                shizukuStatus = if (!showPermissionDialog && uiState.isShizukuActive) "Conectado" else "Desconectado",
+                shizukuStatus = if (uiState.isShizukuReady) "Conectado" else "Desconectado",
                 onConnectShizuku = {
-                     // Manual trigger
-                     permissionStateTrigger++
+                     checkShizukuPermission()
                 }
             )
+        }
+    }
+
+    private fun checkShizukuPermission() {
+        if (Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED) {
+            viewModel.updateShizukuStatus(true)
+        } else {
+            // Request permission if binder is alive but permission missing
+             if (Shizuku.pingBinder()) {
+                 Shizuku.requestPermission(REQUEST_CODE)
+             }
         }
     }
 
@@ -114,7 +118,10 @@ class MainActivity : ComponentActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        runCatching { Shizuku.removeRequestPermissionResultListener(permissionListener) }
+        runCatching {
+            Shizuku.removeBinderReceivedListener(binderReceivedListener)
+            Shizuku.removeRequestPermissionResultListener(permissionListener)
+        }
     }
 }
 
