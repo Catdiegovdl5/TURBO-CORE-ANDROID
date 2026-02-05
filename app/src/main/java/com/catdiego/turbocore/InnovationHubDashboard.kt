@@ -116,7 +116,7 @@ fun InnovationHubDashboard(
                         )
                     }
                     Text(
-                        text = "GOLDEN ALPHA",
+                        text = "DIAMOND ALPHA",
                         color = Color.Gray,
                         fontSize = 14.sp,
                         letterSpacing = 2.sp
@@ -196,7 +196,7 @@ fun InnovationHubDashboard(
                 }
             }
 
-            // COCKPIT (Gauges: Temp & Ping)
+            // COCKPIT (Gauges)
             item {
                 Card(
                     colors = CardDefaults.cardColors(containerColor = Color(0xFF111111)),
@@ -217,7 +217,18 @@ fun InnovationHubDashboard(
                                 max = 60f,
                                 label = "SOC TEMP",
                                 unit = "°C",
-                                color = if (uiState.temperature > 40) Color.Red else Color.Cyan
+                                color = if (uiState.temperature > 40) Color.Red else Color.Cyan,
+                                size = 70.dp
+                            )
+
+                            // AMPERAGE GAUGE
+                            GaugeItem(
+                                value = uiState.currentMa.toFloat().coerceAtLeast(0f), // Show only discharge usually or absolute
+                                max = 3000f, // Max 3A usually for phones
+                                label = "CURRENT",
+                                unit = "mA",
+                                color = Color.Magenta,
+                                size = 70.dp
                             )
 
                             // PING GAUGE
@@ -227,7 +238,8 @@ fun InnovationHubDashboard(
                                 max = 300f,
                                 label = "PING",
                                 unit = "ms",
-                                color = if (pingVal < 100) Color.Green else Color.Yellow
+                                color = if (pingVal < 100) Color.Green else Color.Yellow,
+                                size = 70.dp
                             )
                         }
                     }
@@ -441,16 +453,16 @@ fun GaugeItem(
                     text = String.format("%.0f", value),
                     color = Color.White,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp
+                    fontSize = 14.sp
                 )
                 Text(
                     text = unit,
                     color = Color.Gray,
-                    fontSize = 12.sp
+                    fontSize = 10.sp
                 )
             }
         }
         Spacer(modifier = Modifier.height(4.dp))
-        Text(text = label, color = Color.Gray, fontSize = 12.sp)
+        Text(text = label, color = Color.Gray, fontSize = 10.sp)
     }
 }

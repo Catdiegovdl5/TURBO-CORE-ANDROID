@@ -1,13 +1,20 @@
 package com.catdiego.turbocore
 
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.content.Context
 import android.content.SharedPreferences
 import android.app.ActivityManager
 import android.app.Application
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.PackageManager
 import android.os.BatteryManager
+import android.os.Build
 import android.provider.Settings
+import androidx.core.app.ActivityCompat
+import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.compose.ui.graphics.Color
@@ -30,6 +37,7 @@ data class DashboardUiState(
     val ramUsage: String = "-- / --",
     val ramPercent: Float = 0f,
     val ping: Long = 0L,
+    val currentMa: Int = 0,
     val logText: String = "Sistema pronto. Aguardando comandos...",
     val isCritical: Boolean = false,
     val pollingRate: Long = 5000L,
@@ -53,6 +61,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     private val INTERVAL_NORMAL = 5000L
     private val INTERVAL_CRITICAL = 15000L
     private val TEMP_CRITICAL_THRESHOLD = 40.0f
+    private val THERMAL_SHUTDOWN_THRESHOLD = 45.0f
 
     val profiles = listOf(
         Profile("Eco", 0.7f, null, 1, false, Color.Green),
@@ -80,10 +89,21 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
             _uiState.update { it.copy(selectedProfile = savedProfile) }
         }
 
+        // Load FPS overlay state
+        val fpsEnabled = prefs.getBoolean("fps_overlay_enabled", false)
+        if (fpsEnabled) {
+             // We don't auto-start service here to respect background limits, but we set toggle state.
+             // Or should we? User expects it to be on. Let's update state, UI will trigger toggle logic if we want,
+             // but simpler to just sync state for now.
+             _uiState.update { it.copy(isFpsOverlayEnabled = true) }
+        }
+
         // Watchdog Init Check
         if (prefs.getBoolean("is_dirty", false)) {
             _uiState.update { it.copy(showSafetyDialog = true) }
         }
+
+        createNotificationChannel()
     }
 
     override fun onCleared() {
@@ -108,8 +128,8 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
             if (Settings.canDrawOverlays(context)) {
                 context.startService(Intent(context, FpsOverlayService::class.java))
                 _uiState.update { it.copy(isFpsOverlayEnabled = true) }
+                prefs.edit().putBoolean("fps_overlay_enabled", true).apply()
             } else {
-                // Request Permission
                 val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, android.net.Uri.parse("package:${context.packageName}"))
                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 context.startActivity(intent)
@@ -118,6 +138,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         } else {
             context.stopService(Intent(context, FpsOverlayService::class.java))
             _uiState.update { it.copy(isFpsOverlayEnabled = false) }
+            prefs.edit().putBoolean("fps_overlay_enabled", false).apply()
         }
     }
 
@@ -129,24 +150,17 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
             val sb = StringBuilder()
             var calculatedResString: String? = null
 
-            // Dynamic Resolution Logic
             if (profile.scale != 1.0f || profile.dpi != null) {
-                // Safety Flag for Display Changes
                 prefs.edit().putBoolean("is_dirty", true).apply()
-
-                // Fetch Physical Resolution
                 val physicalRes = withContext(Dispatchers.IO) { ShellEngine.getPhysicalResolution() }
 
                 if (physicalRes != null && profile.scale != 1.0f) {
                     val newWidth = (physicalRes.first * profile.scale).toInt()
                     val newHeight = (physicalRes.second * profile.scale).toInt()
-
-                    // Sanity check
                     if (newWidth > 200 && newHeight > 200) {
                         sb.append("wm size ${newWidth}x${newHeight}")
                         calculatedResString = "${newWidth}x${newHeight}"
                     } else {
-                        // Fallback to safe defaults if calculation is weird
                         if (profile.name == "Turbo") sb.append("wm size 540x1200")
                         else if (profile.name == "Eco") sb.append("wm size 480x1066")
                         else sb.append("wm size reset")
@@ -154,38 +168,22 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
                 } else if (profile.scale == 1.0f) {
                      sb.append("wm size reset")
                 } else {
-                    // Fallback if physical res fetch failed
                     if (profile.name == "Turbo") sb.append("wm size 540x1200")
                     else if (profile.name == "Eco") sb.append("wm size 480x1066")
                     else sb.append("wm size reset")
                 }
 
-                // Density Command
-                if (profile.dpi != null) {
-                    sb.append(" && wm density ${profile.dpi}")
-                } else {
-                    sb.append(" && wm density reset")
-                }
+                if (profile.dpi != null) sb.append(" && wm density ${profile.dpi}")
+                else sb.append(" && wm density reset")
 
-                // Show dialog with calculated resolution
                 _uiState.update { it.copy(showSafetyDialog = true, pendingResolution = calculatedResString) }
             } else {
-                // Balanced / Default
                 sb.append("wm size reset && wm density reset")
             }
 
-            if (profile.powerMode != null) {
-                sb.append(" && settings put global low_power ${profile.powerMode}")
-            }
-
-            if (profile.trimRam) {
-                sb.append(" && cmd activity trim-caches 20")
-            }
-
-            // Kill-All for Turbo (Brute Force)
-            if (profile.name == "Turbo") {
-                sb.append(" && cmd activity kill-all")
-            }
+            if (profile.powerMode != null) sb.append(" && settings put global low_power ${profile.powerMode}")
+            if (profile.trimRam) sb.append(" && cmd activity trim-caches 20")
+            if (profile.name == "Turbo") sb.append(" && cmd activity kill-all")
 
             runOptimization(sb.toString(), "Perfil: ${profile.name}")
         }
@@ -230,9 +228,14 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
             val totalMemGB = totalMemBytes.toFloat() / (1024 * 1024 * 1024)
             val usedMemGB = usedMemBytes.toFloat() / (1024 * 1024 * 1024)
             val ramPercent = (usedMemBytes.toFloat() / totalMemBytes.toFloat()) * 100
-
             val ramStr = String.format("%.1fGB / %.1fGB", usedMemGB, totalMemGB)
+
             val isCritical = tempC >= TEMP_CRITICAL_THRESHOLD
+
+            // Amperage (Native BatteryManager Service)
+            val batteryManager = context.getSystemService(Context.BATTERY_SERVICE) as BatteryManager
+            val currentMicroA = batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CURRENT_NOW)
+            val currentMa = currentMicroA / 1000 // Normalize to mA
 
             val pingMs = measurePing()
 
@@ -242,9 +245,23 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
                     ramUsage = ramStr,
                     ramPercent = ramPercent,
                     ping = pingMs,
+                    currentMa = currentMa,
                     isCritical = isCritical
                 )
             }
+
+            // Thermal Watchdog 2.0
+            if (tempC >= THERMAL_SHUTDOWN_THRESHOLD) {
+                val ecoProfile = profiles.find { it.name == "Eco" }
+                if (ecoProfile != null && _uiState.value.selectedProfile?.name != "Eco") {
+                    withContext(Dispatchers.Main) {
+                        applyProfile(ecoProfile)
+                        showThermalNotification(context, tempC)
+                        _uiState.update { it.copy(userMessage = "Superaquecimento! Modo Eco ativado.") }
+                    }
+                }
+            }
+
         } catch (e: Exception) {
             _uiState.update { it.copy(logText = "Erro ao ler sensores: ${e.message}") }
         }
@@ -266,6 +283,10 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun runOptimization(command: String, description: String) {
         viewModelScope.launch {
+            if (command.contains("wm size") || command.contains("wm density")) {
+                prefs.edit().putBoolean("is_dirty", true).apply()
+            }
+
             _uiState.update { it.copy(logText = "Executando: $description...") }
 
             try {
@@ -290,14 +311,13 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    // Explicit reset method for watchdog
     fun performWatchdogReset() {
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
                 ShellEngine.runCommand("wm size reset && wm density reset")
             }
             prefs.edit().putBoolean("is_dirty", false).apply()
-            prefs.edit().remove("active_profile_name").apply() // Clear active profile persistence
+            prefs.edit().remove("active_profile_name").apply()
 
             val balanced = profiles.find { it.name == "Balanceado" }
             _uiState.update { it.copy(
@@ -305,6 +325,35 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
                 showSafetyDialog = false,
                 selectedProfile = balanced
             ) }
+        }
+    }
+
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val name = "Avisos Térmicos"
+            val descriptionText = "Notificações de proteção contra superaquecimento"
+            val importance = NotificationManager.IMPORTANCE_HIGH
+            val channel = NotificationChannel("THERMAL_ALERTS", name, importance).apply {
+                description = descriptionText
+            }
+            val notificationManager: NotificationManager = getApplication<Application>().getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            notificationManager.createNotificationChannel(channel)
+        }
+    }
+
+    private fun showThermalNotification(context: Context, temp: Float) {
+        if (ActivityCompat.checkSelfPermission(context, android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            return
+        }
+        val builder = NotificationCompat.Builder(context, "THERMAL_ALERTS")
+            .setSmallIcon(android.R.drawable.stat_sys_warning)
+            .setContentTitle("ALERTA TÉRMICO: ${temp}°C")
+            .setContentText("Modo Eco forçado para proteger o hardware.")
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setAutoCancel(true)
+
+        with(NotificationManagerCompat.from(context)) {
+            notify(1001, builder.build())
         }
     }
 }
