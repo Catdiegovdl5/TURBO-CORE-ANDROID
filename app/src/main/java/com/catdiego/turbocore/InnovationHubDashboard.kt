@@ -20,11 +20,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
-import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -60,45 +58,11 @@ fun InnovationHubDashboard(
         }
     }
 
-    // Watchdog Dialog Logic
+    // Watchdog Dialog (Modularized)
     if (uiState.showSafetyDialog) {
-        var secondsRemaining by remember { mutableStateOf(10) }
-
-        LaunchedEffect(Unit) {
-            while (secondsRemaining > 0) {
-                delay(1000)
-                secondsRemaining--
-            }
-            // Timeout reached
-            viewModel.performWatchdogReset()
-        }
-
-        AlertDialog(
-            onDismissRequest = { /* Prevent dismiss */ },
-            containerColor = Color(0xFF111111),
-            title = { Text("Verificação de Segurança", color = Color.Yellow) },
-            text = {
-                Text(
-                    "Uma alteração de tela foi detectada. Se você pode ler isso, clique em MANTER.\n\nReset em $secondsRemaining segundos.",
-                    color = Color.White
-                )
-            },
-            confirmButton = {
-                Button(
-                    onClick = { viewModel.confirmSafety() },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.Green)
-                ) {
-                    Text("MANTER", color = Color.Black)
-                }
-            },
-            dismissButton = {
-                Button(
-                    onClick = { viewModel.performWatchdogReset() },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
-                ) {
-                    Text("RESETAR")
-                }
-            }
+        SafetyCountdownDialog(
+            onConfirm = { viewModel.confirmSafety() },
+            onDismiss = { viewModel.performWatchdogReset() }
         )
     }
 
