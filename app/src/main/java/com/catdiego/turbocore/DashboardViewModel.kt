@@ -56,6 +56,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
 
     private var monitoringJob: Job? = null
     private val prefs: SharedPreferences = application.getSharedPreferences("turbo_core_prefs", Context.MODE_PRIVATE)
+    private var lastThermalNotificationTime: Long = 0L
 
     // Adaptive Polling Constants
     private val INTERVAL_NORMAL = 5000L
@@ -92,9 +93,6 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         // Load FPS overlay state
         val fpsEnabled = prefs.getBoolean("fps_overlay_enabled", false)
         if (fpsEnabled) {
-             // We don't auto-start service here to respect background limits, but we set toggle state.
-             // Or should we? User expects it to be on. Let's update state, UI will trigger toggle logic if we want,
-             // but simpler to just sync state for now.
              _uiState.update { it.copy(isFpsOverlayEnabled = true) }
         }
 
@@ -214,6 +212,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     private suspend fun updateMetrics() {
         val context = getApplication<Application>()
         try {
+            // Sequential Native Readings
             val batteryIntent = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
             val tempRaw = batteryIntent?.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0) ?: 0
             val tempC = tempRaw / 10.0f
@@ -224,18 +223,16 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
 
             val totalMemBytes = memInfo.totalMem
             val usedMemBytes = totalMemBytes - memInfo.availMem
-
-            val totalMemGB = totalMemBytes.toFloat() / (1024 * 1024 * 1024)
             val usedMemGB = usedMemBytes.toFloat() / (1024 * 1024 * 1024)
+            val totalMemGB = totalMemBytes.toFloat() / (1024 * 1024 * 1024)
             val ramPercent = (usedMemBytes.toFloat() / totalMemBytes.toFloat()) * 100
             val ramStr = String.format("%.1fGB / %.1fGB", usedMemGB, totalMemGB)
 
             val isCritical = tempC >= TEMP_CRITICAL_THRESHOLD
 
-            // Amperage (Native BatteryManager Service)
             val batteryManager = context.getSystemService(Context.BATTERY_SERVICE) as BatteryManager
             val currentMicroA = batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CURRENT_NOW)
-            val currentMa = currentMicroA / 1000 // Normalize to mA
+            val currentMa = currentMicroA / 1000
 
             val pingMs = measurePing()
 
@@ -250,14 +247,18 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
                 )
             }
 
-            // Thermal Watchdog 2.0
+            // Thermal Watchdog 2.0 with Hysteresis (5 minutes)
             if (tempC >= THERMAL_SHUTDOWN_THRESHOLD) {
-                val ecoProfile = profiles.find { it.name == "Eco" }
-                if (ecoProfile != null && _uiState.value.selectedProfile?.name != "Eco") {
-                    withContext(Dispatchers.Main) {
-                        applyProfile(ecoProfile)
-                        showThermalNotification(context, tempC)
-                        _uiState.update { it.copy(userMessage = "Superaquecimento! Modo Eco ativado.") }
+                val currentTime = System.currentTimeMillis()
+                if (currentTime - lastThermalNotificationTime > 5 * 60 * 1000) {
+                    val ecoProfile = profiles.find { it.name == "Eco" }
+                    if (ecoProfile != null && _uiState.value.selectedProfile?.name != "Eco") {
+                        withContext(Dispatchers.Main) {
+                            applyProfile(ecoProfile)
+                            showThermalNotification(context, tempC)
+                            _uiState.update { it.copy(userMessage = "Superaquecimento! Modo Eco ativado.") }
+                            lastThermalNotificationTime = currentTime
+                        }
                     }
                 }
             }

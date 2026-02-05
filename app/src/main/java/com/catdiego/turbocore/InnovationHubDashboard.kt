@@ -116,7 +116,7 @@ fun InnovationHubDashboard(
                         )
                     }
                     Text(
-                        text = "DIAMOND ALPHA",
+                        text = "RELEASE CANDIDATE",
                         color = Color.Gray,
                         fontSize = 14.sp,
                         letterSpacing = 2.sp
@@ -209,38 +209,43 @@ fun InnovationHubDashboard(
 
                         Row(
                             Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceEvenly
+                            // Removing SpaceEvenly for weights
                         ) {
                             // TEMP GAUGE
-                            GaugeItem(
-                                value = uiState.temperature,
-                                max = 60f,
-                                label = "SOC TEMP",
-                                unit = "°C",
-                                color = if (uiState.temperature > 40) Color.Red else Color.Cyan,
-                                size = 70.dp
-                            )
+                            Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                                GaugeItem(
+                                    value = uiState.temperature,
+                                    max = 60f,
+                                    label = "TEMP",
+                                    unit = "°C",
+                                    color = if (uiState.temperature > 40) Color.Red else Color.Cyan,
+                                    size = 70.dp
+                                )
+                            }
 
                             // AMPERAGE GAUGE
-                            GaugeItem(
-                                value = uiState.currentMa.toFloat().coerceAtLeast(0f), // Show only discharge usually or absolute
-                                max = 3000f, // Max 3A usually for phones
-                                label = "CURRENT",
-                                unit = "mA",
-                                color = Color.Magenta,
-                                size = 70.dp
-                            )
+                            Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                                GaugeItem(
+                                    value = uiState.currentMa.toFloat().coerceAtLeast(0f),
+                                    max = 3000f,
+                                    label = "AMP",
+                                    unit = "mA",
+                                    color = Color.Magenta,
+                                    size = 70.dp
+                                )
+                            }
 
                             // PING GAUGE
-                            val pingVal = if(uiState.ping == -1L) 999f else uiState.ping.toFloat()
-                            GaugeItem(
-                                value = pingVal,
-                                max = 300f,
-                                label = "PING",
-                                unit = "ms",
-                                color = if (pingVal < 100) Color.Green else Color.Yellow,
-                                size = 70.dp
-                            )
+                            Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                                GaugeItem(
+                                    value = if(uiState.ping == -1L) 999f else uiState.ping.toFloat(),
+                                    max = 300f,
+                                    label = "PING",
+                                    unit = "ms",
+                                    color = if (uiState.ping != -1L && uiState.ping < 100) Color.Green else Color.Yellow,
+                                    size = 70.dp
+                                )
+                            }
                         }
                     }
                 }
