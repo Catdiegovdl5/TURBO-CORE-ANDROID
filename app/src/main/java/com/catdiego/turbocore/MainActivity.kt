@@ -5,6 +5,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
+import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
@@ -86,6 +87,13 @@ class MainActivity : ComponentActivity() {
                 }
             )
         }
+    }
+
+    // Handle Overlay Permission Result (Optional UX improvement)
+    override fun onResume() {
+        super.onResume()
+        // If we came back from settings and permission is granted, we could auto-enable overlay,
+        // but explicit toggle is fine.
     }
 
     private fun checkShizukuPermission() {

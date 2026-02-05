@@ -7,6 +7,7 @@ import android.app.Application
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.BatteryManager
+import android.provider.Settings
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.compose.ui.graphics.Color
@@ -36,7 +37,8 @@ data class DashboardUiState(
     val userMessage: String? = null,
     val showSafetyDialog: Boolean = false,
     val selectedProfile: Profile? = null,
-    val pendingResolution: String? = null
+    val pendingResolution: String? = null,
+    val isFpsOverlayEnabled: Boolean = false
 )
 
 class DashboardViewModel(application: Application) : AndroidViewModel(application) {
@@ -100,6 +102,25 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         _uiState.update { it.copy(showSafetyDialog = false) }
     }
 
+    fun toggleFpsOverlay(enabled: Boolean) {
+        val context = getApplication<Application>()
+        if (enabled) {
+            if (Settings.canDrawOverlays(context)) {
+                context.startService(Intent(context, FpsOverlayService::class.java))
+                _uiState.update { it.copy(isFpsOverlayEnabled = true) }
+            } else {
+                // Request Permission
+                val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, android.net.Uri.parse("package:${context.packageName}"))
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                context.startActivity(intent)
+                _uiState.update { it.copy(userMessage = "Permita a sobreposição e tente novamente.") }
+            }
+        } else {
+            context.stopService(Intent(context, FpsOverlayService::class.java))
+            _uiState.update { it.copy(isFpsOverlayEnabled = false) }
+        }
+    }
+
     fun applyProfile(profile: Profile) {
         _uiState.update { it.copy(selectedProfile = profile) }
         prefs.edit().putString("active_profile_name", profile.name).apply()
@@ -159,6 +180,11 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
 
             if (profile.trimRam) {
                 sb.append(" && cmd activity trim-caches 20")
+            }
+
+            // Kill-All for Turbo (Brute Force)
+            if (profile.name == "Turbo") {
+                sb.append(" && cmd activity kill-all")
             }
 
             runOptimization(sb.toString(), "Perfil: ${profile.name}")

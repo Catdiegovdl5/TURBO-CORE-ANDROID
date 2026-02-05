@@ -116,7 +116,7 @@ fun InnovationHubDashboard(
                         )
                     }
                     Text(
-                        text = "INNOVATION HUB",
+                        text = "GOLDEN ALPHA",
                         color = Color.Gray,
                         fontSize = 14.sp,
                         letterSpacing = 2.sp
@@ -142,6 +142,27 @@ fun InnovationHubDashboard(
                                 )
                             )
                         }
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // FPS SWITCH
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Exibir Contador FPS", color = Color.White, fontSize = 14.sp)
+                        Switch(
+                            checked = uiState.isFpsOverlayEnabled,
+                            onCheckedChange = { viewModel.toggleFpsOverlay(it) },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = Color.Green,
+                                checkedTrackColor = Color.DarkGray,
+                                uncheckedThumbColor = Color.Gray,
+                                uncheckedTrackColor = Color.Black
+                            )
+                        )
                     }
 
                     Spacer(modifier = Modifier.height(12.dp))
