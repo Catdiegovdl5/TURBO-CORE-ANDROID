@@ -1,8 +1,9 @@
 package com.catdiego.turbocore
 
+import android.content.Context
+import android.content.SharedPreferences
 import android.app.ActivityManager
 import android.app.Application
-import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.BatteryManager
@@ -30,7 +31,7 @@ data class DashboardUiState(
     val logText: String = "Sistema pronto. Aguardando comandos...",
     val isCritical: Boolean = false,
     val pollingRate: Long = 5000L,
-    val isShizukuReady: Boolean = false, // Renamed from isShizukuActive for clarity
+    val isShizukuReady: Boolean = false,
     val userMessage: String? = null
 )
 
@@ -40,13 +41,14 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     val uiState: StateFlow<DashboardUiState> = _uiState.asStateFlow()
 
     private var monitoringJob: Job? = null
+    private val prefs: SharedPreferences = application.getSharedPreferences("turbo_core_prefs", Context.MODE_PRIVATE)
 
     // Adaptive Polling Constants
     private val INTERVAL_NORMAL = 5000L
     private val INTERVAL_CRITICAL = 15000L
     private val TEMP_CRITICAL_THRESHOLD = 40.0f
 
-    // Shizuku Listeners (Managed by Activity now for granular control, but keeping clean-up here just in case)
+    // Shizuku Listeners
     private val binderDeadListener = Shizuku.OnBinderDeadListener {
         _uiState.update { it.copy(isShizukuReady = false, userMessage = "Shizuku desconectado!") }
     }
@@ -71,33 +73,27 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         _uiState.update { it.copy(isShizukuReady = isReady) }
     }
 
-    /**
-     * Starts the adaptive polling loop.
-     * Should be called when UI is visible (onResume).
-     */
+    fun isRecoveryNeeded(): Boolean {
+        return prefs.getBoolean("is_configuration_active", false)
+    }
+
+    fun confirmConfigurationStability() {
+        prefs.edit().putBoolean("is_configuration_active", false).apply()
+    }
+
     fun startMonitoring() {
         if (monitoringJob?.isActive == true) return
 
         monitoringJob = viewModelScope.launch(Dispatchers.Default) {
             while (isActive) {
                 updateMetrics()
-
-                // Adaptive Logic:
-                // If Critical (Temp > 40C) -> Slow down to 15s to reduce heat
-                // Else -> 5s for responsiveness
                 val currentDelay = if (_uiState.value.isCritical) INTERVAL_CRITICAL else INTERVAL_NORMAL
-
                 _uiState.update { it.copy(pollingRate = currentDelay) }
                 delay(currentDelay)
             }
         }
     }
 
-    /**
-     * Stops the monitoring loop.
-     * Should be called when UI goes background (onPause) or is destroyed.
-     * This fulfills the requirement: "isBackground -> Long.MAX_VALUE // Pausa total"
-     */
     fun stopMonitoring() {
         monitoringJob?.cancel()
         monitoringJob = null
@@ -109,21 +105,17 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
 
     private suspend fun updateMetrics() {
         val context = getApplication<Application>()
-
         try {
-            // 1. Temperature (Native BatteryManager) - Very Low CPU overhead
             val batteryIntent = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
             val tempRaw = batteryIntent?.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0) ?: 0
             val tempC = tempRaw / 10.0f
 
-            // 2. RAM (Native ActivityManager)
             val actManager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
             val memInfo = ActivityManager.MemoryInfo()
             actManager.getMemoryInfo(memInfo)
 
             val totalMemBytes = memInfo.totalMem
-            val availMemBytes = memInfo.availMem
-            val usedMemBytes = totalMemBytes - availMemBytes
+            val usedMemBytes = totalMemBytes - memInfo.availMem
 
             val totalMemGB = totalMemBytes.toFloat() / (1024 * 1024 * 1024)
             val usedMemGB = usedMemBytes.toFloat() / (1024 * 1024 * 1024)
@@ -132,7 +124,6 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
             val ramStr = String.format("%.1fGB / %.1fGB", usedMemGB, totalMemGB)
             val isCritical = tempC >= TEMP_CRITICAL_THRESHOLD
 
-            // 3. Ping (Native Socket)
             val pingMs = measurePing()
 
             _uiState.update {
@@ -153,19 +144,23 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
          return withContext(Dispatchers.IO) {
             try {
                 val startTime = System.currentTimeMillis()
-                // TCP Connect to Google DNS (8.8.8.8:53) - Fast and lightweight
                 val socket = Socket()
                 socket.connect(InetSocketAddress("8.8.8.8", 53), 2000)
                 socket.close()
                 System.currentTimeMillis() - startTime
             } catch (e: Exception) {
-                -1L // Error or Timeout
+                -1L
             }
         }
     }
 
     fun runOptimization(command: String, description: String) {
         viewModelScope.launch {
+            // Safety Flag: Set before execution
+            if (command.contains("wm size") || command.contains("wm density")) {
+                prefs.edit().putBoolean("is_configuration_active", true).apply()
+            }
+
             _uiState.update { it.copy(logText = "Executando: $description...") }
 
             try {
@@ -178,8 +173,10 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
                         logText = "[$description] FALHA: $output",
                         userMessage = "O motor Shizuku parou. Reinicie o serviço."
                     ) }
+                    // Revert flag on immediate failure if needed, but safer to keep it true until confirmed stable
                 } else {
                     _uiState.update { it.copy(logText = "[$description]: $output") }
+                    // Don't auto-clear flag here; wait for explicit confirmation or app restart/stability check
                 }
             } catch (e: Exception) {
                 _uiState.update { it.copy(
@@ -187,6 +184,15 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
                     userMessage = "O motor Shizuku parou. Reinicie o serviço."
                 ) }
             }
+        }
+    }
+
+    // Explicit reset method for watchdog
+    fun performWatchdogReset() {
+        viewModelScope.launch {
+            ShellEngine.runCommand("wm size reset && wm density reset")
+            prefs.edit().putBoolean("is_configuration_active", false).apply()
+            _uiState.update { it.copy(logText = "Recuperação automática executada com sucesso.") }
         }
     }
 }

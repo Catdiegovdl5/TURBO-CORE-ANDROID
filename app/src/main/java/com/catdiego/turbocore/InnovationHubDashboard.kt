@@ -107,11 +107,17 @@ fun InnovationHubDashboard(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = if(uiState.isShizukuReady) "Motor Ativo" else "Motor Inativo",
-                            color = if (uiState.isShizukuReady) Color.Green else Color.Red,
-                            fontSize = 14.sp
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Canvas(modifier = Modifier.size(10.dp)) {
+                                drawCircle(color = if (uiState.isShizukuReady) Color.Green else Color.Red)
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = if(uiState.isShizukuReady) "Motor Ativo" else "Motor Inativo",
+                                color = if (uiState.isShizukuReady) Color.Green else Color.Red,
+                                fontSize = 14.sp
+                            )
+                        }
                         if (!uiState.isShizukuReady) {
                             Button(
                                 onClick = onConnectShizuku,
