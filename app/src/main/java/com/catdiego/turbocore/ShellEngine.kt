@@ -83,9 +83,9 @@ object ShellEngine {
                 pm.getInstalledApplications(0)
             }
             apps.filter { (it.flags and ApplicationInfo.FLAG_SYSTEM) == 0 }
-                .map { it.loadLabel(pm).toString() }
+                .map { it.packageName }
         } catch (e: Exception) {
-            listOf("Erro ao carregar apps")
+            emptyList()
         }
     }
 }

@@ -69,6 +69,13 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
+            // Usage Stats Permission Dialog
+            if (!AppDetector.hasPermission(this)) {
+                UsageStatsPermissionDialog {
+                    startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
+                }
+            }
+
             if (!uiState.isShizukuReady) {
                 ShizukuPermissionDialog(
                     onConnect = {
@@ -148,6 +155,45 @@ class MainActivity : ComponentActivity() {
         runCatching {
             Shizuku.removeBinderReceivedListener(binderReceivedListener)
             Shizuku.removeRequestPermissionResultListener(permissionListener)
+        }
+    }
+}
+
+@Composable
+fun UsageStatsPermissionDialog(onSettings: () -> Unit) {
+    Dialog(onDismissRequest = { /* Blocking */ }) {
+        Card(
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF111111)),
+            shape = RoundedCornerShape(16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(1.dp, Color.Cyan, RoundedCornerShape(16.dp))
+        ) {
+            Column(
+                modifier = Modifier.padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "ACESSO NECESSÁRIO",
+                    color = Color.Cyan,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = "Para ativar o Modo Turbo automaticamente nos seus jogos, o Turbo Core precisa acessar as estatísticas de uso.",
+                    color = Color.White,
+                    fontSize = 14.sp
+                )
+                Spacer(modifier = Modifier.height(24.dp))
+                Button(
+                    onClick = onSettings,
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Cyan),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("AUTORIZAR", color = Color.Black)
+                }
+            }
         }
     }
 }

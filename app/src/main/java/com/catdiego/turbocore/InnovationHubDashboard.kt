@@ -3,12 +3,14 @@ package com.catdiego.turbocore
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -17,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
@@ -25,7 +28,10 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -37,6 +43,12 @@ fun InnovationHubDashboard(
     val uiState by viewModel.uiState.collectAsState()
     val lifecycleOwner = LocalLifecycleOwner.current
     val snackbarHostState = remember { SnackbarHostState() }
+    val context = LocalContext.current
+
+    // Game Selection Dialog State
+    var showGameDialog by remember { mutableStateOf(false) }
+    var installedApps by remember { mutableStateOf<List<String>>(emptyList()) }
+    val scope = rememberCoroutineScope()
 
     // Lifecycle Observer for Adaptive Polling
     DisposableEffect(lifecycleOwner) {
@@ -68,6 +80,54 @@ fun InnovationHubDashboard(
             onConfirm = { viewModel.confirmSafety() },
             onDismiss = { viewModel.performWatchdogReset() }
         )
+    }
+
+    // Game Selection Dialog
+    if (showGameDialog) {
+        AlertDialog(
+            onDismissRequest = { showGameDialog = false },
+            containerColor = Color(0xFF111111),
+            title = { Text("Adicionar Jogo", color = Color.Cyan) },
+            text = {
+                LazyColumn(modifier = Modifier.height(300.dp)) {
+                    if (installedApps.isEmpty()) {
+                        item { Text("Carregando apps...", color = Color.Gray) }
+                    }
+                    items(installedApps) { pkg ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    if (uiState.myGames.contains(pkg)) {
+                                        viewModel.removeGame(pkg)
+                                    } else {
+                                        viewModel.addGame(pkg)
+                                    }
+                                }
+                                .padding(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Checkbox(
+                                checked = uiState.myGames.contains(pkg),
+                                onCheckedChange = null // Handled by Row click
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(pkg, color = Color.White, fontSize = 12.sp)
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(onClick = { showGameDialog = false }) { Text("FECHAR") }
+            }
+        )
+
+        LaunchedEffect(Unit) {
+            withContext(Dispatchers.IO) {
+                val apps = ShellEngine.getFilteredApps(context)
+                installedApps = apps
+            }
+        }
     }
 
     Scaffold(
@@ -116,7 +176,7 @@ fun InnovationHubDashboard(
                         )
                     }
                     Text(
-                        text = "RELEASE CANDIDATE",
+                        text = "STABLE RELEASE",
                         color = Color.Gray,
                         fontSize = 14.sp,
                         letterSpacing = 2.sp
@@ -165,6 +225,24 @@ fun InnovationHubDashboard(
                         )
                     }
 
+                    // MEUS JOGOS
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF111111)),
+                        modifier = Modifier.fillMaxWidth().clickable { showGameDialog = true }
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(16.dp).fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text("MEUS JOGOS", color = Color.Cyan, fontWeight = FontWeight.Bold)
+                                Text("${uiState.myGames.size} jogos configurados", color = Color.Gray, fontSize = 12.sp)
+                            }
+                            Icon(Icons.Default.Add, contentDescription = "Adicionar", tint = Color.Cyan)
+                        }
+                    }
+
                     Spacer(modifier = Modifier.height(12.dp))
 
                     // Shizuku Status
@@ -209,7 +287,6 @@ fun InnovationHubDashboard(
 
                         Row(
                             Modifier.fillMaxWidth(),
-                            // Removing SpaceEvenly for weights
                         ) {
                             // TEMP GAUGE
                             Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {

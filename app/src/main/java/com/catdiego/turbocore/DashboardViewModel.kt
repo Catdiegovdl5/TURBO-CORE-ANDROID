@@ -46,7 +46,9 @@ data class DashboardUiState(
     val showSafetyDialog: Boolean = false,
     val selectedProfile: Profile? = null,
     val pendingResolution: String? = null,
-    val isFpsOverlayEnabled: Boolean = false
+    val isFpsOverlayEnabled: Boolean = false,
+    val myGames: Set<String> = emptySet(),
+    val isGameActive: Boolean = false
 )
 
 class DashboardViewModel(application: Application) : AndroidViewModel(application) {
@@ -57,6 +59,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     private var monitoringJob: Job? = null
     private val prefs: SharedPreferences = application.getSharedPreferences("turbo_core_prefs", Context.MODE_PRIVATE)
     private var lastThermalNotificationTime: Long = 0L
+    private var gameModeExitTimer: Job? = null
 
     // Adaptive Polling Constants
     private val INTERVAL_NORMAL = 5000L
@@ -83,7 +86,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
              }
         }
 
-        // Load active profile name from persistence
+        // Load active profile
         val savedProfileName = prefs.getString("active_profile_name", "Balanceado")
         val savedProfile = profiles.find { it.name == savedProfileName }
         if (savedProfile != null) {
@@ -95,6 +98,10 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         if (fpsEnabled) {
              _uiState.update { it.copy(isFpsOverlayEnabled = true) }
         }
+
+        // Load Games
+        val games = prefs.getStringSet("my_games", emptySet()) ?: emptySet()
+        _uiState.update { it.copy(myGames = games) }
 
         // Watchdog Init Check
         if (prefs.getBoolean("is_dirty", false)) {
@@ -138,6 +145,20 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
             _uiState.update { it.copy(isFpsOverlayEnabled = false) }
             prefs.edit().putBoolean("fps_overlay_enabled", false).apply()
         }
+    }
+
+    fun addGame(packageName: String) {
+        val current = _uiState.value.myGames.toMutableSet()
+        current.add(packageName)
+        _uiState.update { it.copy(myGames = current) }
+        prefs.edit().putStringSet("my_games", current).apply()
+    }
+
+    fun removeGame(packageName: String) {
+        val current = _uiState.value.myGames.toMutableSet()
+        current.remove(packageName)
+        _uiState.update { it.copy(myGames = current) }
+        prefs.edit().putStringSet("my_games", current).apply()
     }
 
     fun applyProfile(profile: Profile) {
@@ -212,7 +233,40 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     private suspend fun updateMetrics() {
         val context = getApplication<Application>()
         try {
-            // Sequential Native Readings
+            // App Detection
+            if (AppDetector.hasPermission(context)) {
+                val topPackage = AppDetector.getTopPackage(context)
+                val games = _uiState.value.myGames
+
+                if (topPackage != null && games.contains(topPackage)) {
+                    // Game Detected!
+                    if (!_uiState.value.isGameActive) {
+                        _uiState.update { it.copy(isGameActive = true) }
+                        gameModeExitTimer?.cancel()
+                        val turbo = profiles.find { it.name == "Turbo" }
+                        if (turbo != null && _uiState.value.selectedProfile?.name != "Turbo") {
+                            withContext(Dispatchers.Main) { applyProfile(turbo) }
+                        }
+                    } else {
+                        // Still in game, ensure timer is cancelled
+                        gameModeExitTimer?.cancel()
+                    }
+                } else if (_uiState.value.isGameActive) {
+                    // Left game, start hysteresis
+                    if (gameModeExitTimer?.isActive != true) {
+                        gameModeExitTimer = viewModelScope.launch {
+                            delay(30000) // 30s Hysteresis
+                            _uiState.update { it.copy(isGameActive = false) }
+                            val balanced = profiles.find { it.name == "Balanceado" }
+                            if (balanced != null) {
+                                withContext(Dispatchers.Main) { applyProfile(balanced) }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Sensors
             val batteryIntent = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
             val tempRaw = batteryIntent?.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0) ?: 0
             val tempC = tempRaw / 10.0f
