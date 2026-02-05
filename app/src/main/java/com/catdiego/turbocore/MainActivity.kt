@@ -68,7 +68,7 @@ class MainActivity : ComponentActivity() {
 
             if (Shizuku.pingBinder()) {
                 // Samsung Knox relaxation delay
-                if (SmartCoreEngineV240.brand.contains("SAMSUNG")) {
+                if (SmartCoreEngineV250.brand.contains("SAMSUNG")) {
                     delay(2000)
                 }
                 checkAndRequestShizukuPermission()
@@ -82,24 +82,24 @@ class MainActivity : ComponentActivity() {
 
     @Composable
     fun TurboCoreTheme(content: @Composable () -> Unit) {
-        val brand = SmartCoreEngineV240.brand
+        val brand = SmartCoreEngineV250.brand
         val colorScheme = when {
             brand.contains("SAMSUNG") -> darkColorScheme(
                 primary = Color(0xFF0A84FF), // Samsung Blue
-                surface = Color(0xFF1C1C1E), // Space Gray
-                background = Color(0xFF000000),
+                surface = Color(0xFF121212),
+                background = Color(0xFF000000), // AMOLED BLACK
                 onSurface = Color.White
             )
             brand.contains("XIAOMI") -> darkColorScheme(
                 primary = Color(0xFFFF6700), // Xiaomi Orange
                 surface = Color(0xFF111111),
-                background = Color(0xFF000000),
+                background = Color(0xFF000000), // AMOLED BLACK
                 onSurface = Color.White
             )
             else -> darkColorScheme(
                 primary = Color(0xFF00E5FF), // Cyan
-                surface = Color(0xFF171717),
-                background = Color(0xFF0A0A0A),
+                surface = Color(0xFF111111),
+                background = Color(0xFF000000), // AMOLED BLACK
                 onSurface = Color.White
             )
         }
@@ -120,7 +120,7 @@ class MainActivity : ComponentActivity() {
     fun TurboCoreUI() {
         val lifecycleOwner = androidx.compose.ui.platform.LocalLifecycleOwner.current
         var selectedTab by rememberSaveable { mutableStateOf(0) }
-        val tabsV220 = listOf("UNIVERSAL", "GAMER", "SYSTEM")
+        val tabsV250 = listOf("UNIVERSAL", "GAMER", "SYSTEM")
 
         val themeColor = remember(selectedTab) {
             when (selectedTab) {
@@ -212,6 +212,8 @@ class MainActivity : ComponentActivity() {
             Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).padding(paddingValues)) {
                 HealthCheckDashboard(shizukuStatus, currentTemp, bloatwareCount)
 
+                FloatingPanicButton()
+
                 if (isOptimizing) {
                     Card(modifier = Modifier.fillMaxWidth().padding(8.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
                         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -255,7 +257,7 @@ class MainActivity : ComponentActivity() {
                     containerColor = Color.Black,
                     contentColor = MaterialTheme.colorScheme.primary
                 ) {
-                    tabsV220.forEachIndexed { index, title ->
+                    tabsV250.forEachIndexed { index, title ->
                         Tab(selected = selectedTab == index, onClick = { selectedTab = index }, text = {
                             Text(title, style = MaterialTheme.typography.labelSmall)
                         })
@@ -302,7 +304,7 @@ class MainActivity : ComponentActivity() {
                         Spacer(Modifier.height(8.dp))
                     }
 
-                    val modes = SmartCoreEngineV240.getModesByCategory(when(selectedTab) {
+                    val modes = SmartCoreEngineV250.getModesByCategory(when(selectedTab) {
                         0 -> ModeCategory.POWER
                         1 -> ModeCategory.CPU
                         else -> ModeCategory.DEBLOAT
@@ -373,20 +375,52 @@ class MainActivity : ComponentActivity() {
     @Composable
     fun HealthCheckDashboard(status: String, temp: Float, bloat: Int) {
         val ramData = HealthManager.getRamPieData(this)
+        val trend = HealthManager.tempTrend
+        val ping = NetworkManager.lastLatency
+
+        var showPingShield by remember { mutableStateOf(false) }
+
+        LaunchedEffect(Unit) {
+            while(true) {
+                val p = NetworkManager.measureLatency()
+                if (p > 100) showPingShield = true
+                delay(10000)
+            }
+        }
 
         GlassCard(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-            Text("COCKPIT DASHBOARD V240", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+            Text("INNOVATION HUB V250", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
             Spacer(Modifier.height(16.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround, verticalAlignment = Alignment.CenterVertically) {
-                CircularGauge("TEMP", temp, 50f, if(temp < 38) Color.Green else Color.Red)
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    CircularGauge("TEMP", temp, 50f, if(temp < 38) Color.Green else Color.Red)
+                    Text(if(trend > 0) "▲ Sobe" else "▼ Desce", style = MaterialTheme.typography.labelSmall, color = if(trend > 0) Color.Red else Color.Green)
+                }
                 RamPieChart(ramData)
-                CircularGauge("PING", NetworkManager.getPing(this@MainActivity).toFloat(), 200f, Color.Cyan)
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    val pingColor = if(ping < 50) Color.Green else if(ping < 100) Color.Yellow else Color.Red
+                    CircularGauge("PING", ping.toFloat(), 200f, pingColor)
+                    if (showPingShield) {
+                        Text("🛡️ PING SHIELD", style = MaterialTheme.typography.labelSmall, color = Color.Cyan)
+                    }
+                }
             }
             Spacer(Modifier.height(16.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 HealthItem("Shizuku", if(status == "Conectado") "ONLINE" else "OFFLINE", if(status == "Conectado") Color.Green else Color.Red)
                 HealthItem("Bloat", "$bloat", if(bloat == 0) Color.Green else Color.Yellow)
-                HealthItem("Status", if(temp > 40) "PERIGO" else "OK", if(temp > 40) Color.Red else Color.Green)
+                HealthItem("Safety", if(HealthManager.isCoolingDown()) "THROTTLING" else "SAFE", if(HealthManager.isCoolingDown()) Color.Red else Color.Green)
+            }
+
+            if (showPingShield) {
+                Button(onClick = {
+                    lifecycleScope.launch {
+                        NetworkManager.optimizePing()
+                        showPingShield = false
+                    }
+                }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
+                    Text("ATIVAR ESCUDO DE PING")
+                }
             }
         }
     }
@@ -451,6 +485,26 @@ class MainActivity : ComponentActivity() {
         ) {
             Column(Modifier.padding(16.dp)) {
                 content()
+            }
+        }
+    }
+
+    @Composable
+    fun FloatingPanicButton() {
+        Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.BottomEnd) {
+            Button(
+                onClick = {
+                    lifecycleScope.launch {
+                        PerformanceManager.triggerCriticalReset()
+                        android.widget.Toast.makeText(this@MainActivity, "EMERGENCY RESET!", android.widget.Toast.LENGTH_SHORT).show()
+                    }
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
+                shape = CircleShape,
+                modifier = Modifier.size(60.dp),
+                contentPadding = PaddingValues(0.dp)
+            ) {
+                Text("🆘", style = MaterialTheme.typography.titleLarge)
             }
         }
     }

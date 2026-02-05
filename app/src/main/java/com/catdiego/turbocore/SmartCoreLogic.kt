@@ -24,6 +24,9 @@ import java.io.InputStreamReader
 object HealthManager {
     var coolingUntil: Long = 0
     var useNativeThermal: Boolean = false
+    private var lastTemp: Float = 0f
+    private var lastTime: Long = 0
+    var tempTrend: Float = 0f // delta T / delta t
 
     fun getRamPieData(context: Context): List<Float> {
         val am = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
@@ -52,19 +55,28 @@ object HealthManager {
     }
 
     fun getTemperature(context: Context): Float {
-        // Tenta ler do sistema de arquivos (Thermal Zone) - V220
-        val sysTemp = readSysThermal()
-        if (sysTemp > 0) {
+        val currentTime = System.currentTimeMillis()
+
+        // Tenta ler do sistema de arquivos (Thermal Zone) - V250
+        var celsius = readSysThermal()
+        if (celsius > 0) {
             useNativeThermal = true
-            if (sysTemp >= 40f) coolingUntil = System.currentTimeMillis() + (3 * 60 * 1000)
-            return sysTemp
+        } else {
+            // Fallback: Bateria
+            useNativeThermal = false
+            val intent = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+            val temp = intent?.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0) ?: 0
+            celsius = temp / 10f
         }
 
-        // Fallback: Bateria
-        useNativeThermal = false
-        val intent = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
-        val temp = intent?.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0) ?: 0
-        val celsius = temp / 10f
+        // Calculate trend (Predictive Cooling)
+        if (lastTime > 0 && currentTime > lastTime) {
+            val dt = (currentTime - lastTime) / 1000f // seconds
+            val dT = celsius - lastTemp
+            tempTrend = dT / dt // Celsius per second
+        }
+        lastTemp = celsius
+        lastTime = currentTime
 
         if (celsius >= 40f) {
             coolingUntil = System.currentTimeMillis() + (3 * 60 * 1000)
@@ -142,9 +154,11 @@ class ShizukuKeeperService : Service() {
 }
 
 // =========================================================================
-// 1.5 NETWORK MANAGER (CONNECTIVITY & PING)
+// 1.5 NETWORK MANAGER (V250 PING SHIELD)
 // =========================================================================
 object NetworkManager {
+    var lastLatency: Int = 0
+
     fun getPing(context: Context): Int {
         val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         val activeNetwork = cm.activeNetwork
@@ -160,8 +174,26 @@ object NetworkManager {
     }
 
     suspend fun optimizePing(): String {
-        val cmd = "settings put global tcp_default_init_rwnd 10 && cmd netpolicy set restrict-background false"
+        val cmd = "settings put global tcp_default_init_rwnd 10 && cmd netpolicy set restrict-background false && settings put global private_dns_mode hostname && settings put global private_dns_specifier 1dot1dot1dot1.cloudflare-dns.com"
         return PerformanceManager.runRawCommand(cmd)
+    }
+
+    suspend fun measureLatency(): Int {
+        return withContext(Dispatchers.IO) {
+            try {
+                val startTime = System.currentTimeMillis()
+                val address = java.net.InetAddress.getByName("8.8.8.8")
+                if (address.isReachable(2000)) {
+                    val latency = (System.currentTimeMillis() - startTime).toInt()
+                    lastLatency = latency
+                    latency
+                } else {
+                    999
+                }
+            } catch (e: Exception) {
+                999
+            }
+        }
     }
 }
 
@@ -261,9 +293,28 @@ data class OptimizationMode(
 data class AppInfo(val name: String, val packageName: String, val isSystem: Boolean)
 
 // =========================================================================
+// 2.5 CONFIGURATION MANAGER (V250 SHARED CONFIGS)
+// =========================================================================
+object ConfigurationManager {
+    fun exportSensiConfig(dpi: Int, speed: Int): String {
+        return "{\"dpi\": $dpi, \"speed\": $speed, \"version\": \"V250\"}"
+    }
+
+    fun importSensiConfig(json: String): Pair<Int, Int> {
+        return try {
+            val dpi = json.substringAfter("\"dpi\":").substringBefore(",").trim().toInt()
+            val speed = json.substringAfter("\"speed\":").substringBefore(",").trim().toInt()
+            Pair(dpi, speed)
+        } catch (e: Exception) {
+            Pair(160, 7)
+        }
+    }
+}
+
+// =========================================================================
 // 3. ENGINE ZUEIRA V206 (DATABASE DE 25 MODOS)
 // =========================================================================
-object SmartCoreEngineV240 {
+object SmartCoreEngineV250 {
     val brand: String = Build.MANUFACTURER.uppercase()
     private val modes = mutableListOf<OptimizationMode>()
 
@@ -272,7 +323,7 @@ object SmartCoreEngineV240 {
     }
 
     private fun generateModes() {
-        // --- SAMSUNG (PRODUCT V220) ---
+        // --- SAMSUNG (PRODUCT V250) ---
         modes.add(OptimizationMode(1, "Bixby no Vasco", "Manda a assistente inútil pra Série B.",
             "pm disable-user com.samsung.android.bixby.agent && am force-stop com.samsung.android.bixby.agent", ModeCategory.DEBLOAT, 1, "SAMSUNG"))
         modes.add(OptimizationMode(2, "Balanced FF Priority", "Prioridade total ao Free Fire via AppOps.",
@@ -288,7 +339,7 @@ object SmartCoreEngineV240 {
         modes.add(OptimizationMode(7, "Ram Plus é o KCT", "Desativa a RAM virtual que gasta memória.",
             "settings put global ram_expand_size_list 0", ModeCategory.CPU, 1, "SAMSUNG"))
 
-        // --- XIAOMI (BALANCED V220) ---
+        // --- XIAOMI (BALANCED V250) ---
         modes.add(OptimizationMode(8, "Poco Seguro", "Otimização térmica equilibrada.",
             "cmd thermalservice override 0 && settings put global thermal_limit_strategy 1", ModeCategory.CPU, 1, "XIAOMI"))
         modes.add(OptimizationMode(9, "Xing Ling Spyware", "Remove espionagem da MIUI (Joyose).",
@@ -304,7 +355,7 @@ object SmartCoreEngineV240 {
         modes.add(OptimizationMode(14, "Modo Tijolo", "Economia extrema. Vira peso de papel.",
             "cmd power set-mode 1 && settings put global low_power 1", ModeCategory.POWER, 2, "XIAOMI"))
 
-        // --- UNIVERSAL (BALANCED V220) ---
+        // --- UNIVERSAL (BALANCED V250) ---
         modes.add(OptimizationMode(15, "Batata Gamer", "Resolução 480p. Gráfico de Minecraft.",
             "wm size 480x960 && wm density 160", ModeCategory.GPU, 2))
         modes.add(OptimizationMode(16, "Sensi do Capa 👿", "DPI Alta + Ponteiro Rápido.",
@@ -328,7 +379,7 @@ object SmartCoreEngineV240 {
         modes.add(OptimizationMode(25, "ULTIMATE GAMBIARRA", "Botão do Pânico. Reseta tudo.",
             "wm size reset && wm density reset && cmd package compile --reset -a && cmd power set-fixed-performance-mode-enabled false", ModeCategory.CHIMERA, 1))
 
-        // --- PREMIUM V220 ---
+        // --- PREMIUM V250 ---
         modes.add(OptimizationMode(26, "Escudo de Ping", "Otimiza DNS e pacotes de rede.",
             "cmd netpolicy set restrict-background false && settings put global private_dns_specifier 1.1.1.1", ModeCategory.REDE, 1))
         modes.add(OptimizationMode(27, "Congelador de Apps", "Suspende apps que acordam sozinhos.",
@@ -402,9 +453,13 @@ object PerformanceManager {
         // Background priority check
         android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND)
 
-        if (!Shizuku.pingBinder()) return@withContext "Erro: Shizuku OFF"
+        if (!Shizuku.pingBinder()) {
+            // Attempt to force re-bind check
+            delay(1000)
+            if (!Shizuku.pingBinder()) return@withContext "Erro: Shizuku OFF"
+        }
 
-        // V240 Architecture: Throttling Lockout via HealthManager
+        // V250 Architecture: Throttling Lockout via HealthManager
         if (HealthManager.isCoolingDown() && (command.contains("speed") || command.contains("allow") || command.contains("set-debug-app") || command.contains("game_driver"))) {
             return@withContext "BLOQUEIO TÉRMICO: Aguarde resfriamento (3 min)."
         }
@@ -412,11 +467,11 @@ object PerformanceManager {
         try {
             withTimeout(3000L) {
                 // Protocolo Samsung Safe Mode: Knox relax delay
-                if (SmartCoreEngineV240.brand.contains("SAMSUNG")) {
+                if (SmartCoreEngineV250.brand.contains("SAMSUNG")) {
                     delay(2000)
                 }
 
-                val finalCommand = if (SmartCoreEngineV240.brand.contains("SAMSUNG")) {
+                val finalCommand = if (SmartCoreEngineV250.brand.contains("SAMSUNG")) {
                     "settings put global adb_wifi_enabled 1 && am force-stop com.samsung.android.lool && $command"
                 } else {
                     command
@@ -446,8 +501,16 @@ object PerformanceManager {
     }
 
     suspend fun triggerCriticalReset(): String {
-        val cmd = "cmd package compile --reset -a && content stop-sync && setprop ctl.stop logd && cmd power set-fixed-performance-mode-enabled false"
+        val cmd = "wm size reset && wm density reset && cmd package compile --reset -a && content stop-sync && setprop ctl.stop logd && cmd power set-fixed-performance-mode-enabled false && pm unsuspend com.google.android.gms"
         return runRawCommand(cmd)
+    }
+
+    suspend fun clearKernelLogs(): String {
+        return runRawCommand("logcat -c && dmesg -c")
+    }
+
+    suspend fun getZramStatus(): String {
+        return runRawCommand("cat /proc/swaps")
     }
 
     // --- Gerenciamento de Apps ---
