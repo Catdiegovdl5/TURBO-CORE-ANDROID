@@ -51,7 +51,10 @@ data class DashboardUiState(
     val pendingResolution: String? = null,
     val isFpsOverlayEnabled: Boolean = false,
     val myGames: Set<String> = emptySet(),
-    val isGameActive: Boolean = false
+    val isGameActive: Boolean = false,
+    val isCompiling: Boolean = false,
+    val compilingPackage: String? = null,
+    val isCpuPinned: Boolean = false
 )
 
 class DashboardViewModel(application: Application) : AndroidViewModel(application) {
@@ -169,6 +172,16 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         prefs.edit().putStringSet("my_games", current).apply()
     }
 
+    fun compilePackage(packageName: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isCompiling = true, compilingPackage = packageName, logText = "Compilando $packageName...") }
+            withContext(Dispatchers.IO) {
+                ShellEngine.runCommand("cmd package compile -m speed $packageName")
+            }
+            _uiState.update { it.copy(isCompiling = false, compilingPackage = null, logText = "$packageName compilado!") }
+        }
+    }
+
     fun applyProfile(profile: Profile) {
         _uiState.update { it.copy(selectedProfile = profile) }
         prefs.edit().putString("active_profile_name", profile.name).apply()
@@ -272,6 +285,18 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
                                 showGameModeNotification(context, topPackage)
                             }
                         }
+
+                        // Thread Pinning & I/O Urgency (V700)
+                        withContext(Dispatchers.IO) {
+                            delay(5000) // Wait 5s for game to start process
+                            val pid = ShellEngine.getPid(topPackage)
+                            if (pid != null) {
+                                ShellEngine.runCommand("taskset -p f0 $pid")
+                                ShellEngine.runCommand("echo 0 > /sys/module/sync/parameters/fsync_enabled")
+                                _uiState.update { it.copy(isCpuPinned = true) }
+                            }
+                        }
+
                     } else {
                         gameModeExitTimer?.cancel()
                     }
@@ -279,7 +304,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
                     if (gameModeExitTimer?.isActive != true) {
                         gameModeExitTimer = viewModelScope.launch {
                             delay(30000) // 30s Hysteresis
-                            _uiState.update { it.copy(isGameActive = false) }
+                            _uiState.update { it.copy(isGameActive = false, isCpuPinned = false) }
                             withContext(Dispatchers.Main) { cancelGameModeNotification(context) }
                             val balanced = profiles.find { it.name == "Balanceado" }
                             if (balanced != null) {

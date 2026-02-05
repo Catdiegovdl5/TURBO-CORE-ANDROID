@@ -32,6 +32,9 @@ class MainActivity : ComponentActivity() {
     private val REQUEST_CODE = 1001
     private lateinit var viewModel: DashboardViewModel
 
+    // Reactive state for permission checks
+    private var permissionCheckTrigger by mutableStateOf(0)
+
     private val binderReceivedListener = Shizuku.OnBinderReceivedListener {
         checkShizukuPermission()
     }
@@ -62,21 +65,23 @@ class MainActivity : ComponentActivity() {
             viewModel = viewModel()
             val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-            // Initial check on UI composition
-            LaunchedEffect(Unit) {
+            // Reactive Usage Permission Check
+            var hasUsageStats by remember { mutableStateOf(AppDetector.hasPermission(this)) }
+
+            // Re-check when trigger updates (onResume)
+            LaunchedEffect(permissionCheckTrigger) {
+                hasUsageStats = AppDetector.hasPermission(this@MainActivity)
                 if (Shizuku.pingBinder()) {
                     checkShizukuPermission()
                 }
             }
 
             // Usage Stats Permission Dialog
-            if (!AppDetector.hasPermission(this)) {
+            if (!hasUsageStats) {
                 UsageStatsPermissionDialog {
                     startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
                 }
-            }
-
-            if (!uiState.isShizukuReady) {
+            } else if (!uiState.isShizukuReady) {
                 ShizukuPermissionDialog(
                     onConnect = {
                         try {
@@ -95,15 +100,15 @@ class MainActivity : ComponentActivity() {
                     },
                     onDismiss = { /* Blocking Dialog */ }
                 )
+            } else {
+                InnovationHubDashboard(
+                    viewModel = viewModel,
+                    shizukuStatus = if (uiState.isShizukuReady) "Conectado" else "Desconectado",
+                    onConnectShizuku = {
+                         checkShizukuPermission()
+                    }
+                )
             }
-
-            InnovationHubDashboard(
-                viewModel = viewModel,
-                shizukuStatus = if (uiState.isShizukuReady) "Conectado" else "Desconectado",
-                onConnectShizuku = {
-                     checkShizukuPermission()
-                }
-            )
         }
     }
 
@@ -115,18 +120,18 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    // Handle Overlay Permission Result (Optional UX improvement)
     override fun onResume() {
         super.onResume()
-        // If we came back from settings and permission is granted, we could auto-enable overlay,
-        // but explicit toggle is fine.
+        // Trigger recomposition to check permissions again
+        permissionCheckTrigger++
     }
 
     private fun checkShizukuPermission() {
         if (Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED) {
-            viewModel.updateShizukuStatus(true)
+            if (::viewModel.isInitialized) {
+                viewModel.updateShizukuStatus(true)
+            }
         } else {
-            // Request permission if binder is alive but permission missing
              if (Shizuku.pingBinder()) {
                  Shizuku.requestPermission(REQUEST_CODE)
              }

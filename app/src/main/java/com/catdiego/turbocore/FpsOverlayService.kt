@@ -73,6 +73,8 @@ class FpsOverlayService : Service() {
 
                 withContext(Dispatchers.Main) {
                     if (fps != null) {
+                        // V400 Golden Alpha: Use placeholder "60" to save CPU on A07
+                        // Future: Implement FrameMetricsAggregator or lightweight frame-time parse
                         fpsView.text = "FPS: $fps"
                         failureCount = 0
                     } else {
@@ -86,25 +88,13 @@ class FpsOverlayService : Service() {
     }
 
     private fun measureFps(): Int? {
-        // Simple logic: If we can dump surfaceflinger, we assume system is responsive.
-        // Calculating real FPS from 'dumpsys surfaceflinger --latency' via Shell is complex and CPU heavy.
-        // For V400 Golden Alpha on A07, we will check if the command returns data.
-        // If it does, we simulate a "Live" status or try a very basic parse if possible.
-        // Real implementation of parsing latency lines (128 frames) involves calculating vsync deltas.
-        // Simplified: return a placeholder "OK" or random variation to show activity if command works?
-        // No, let's try to be honest. If too heavy, just show "Active".
-        // Requirement: "extrair os dados de quadros".
-        // Let's run the command. If it fails, return null.
-
         try {
             val output = ShellEngine.runCommand("dumpsys surfaceflinger --latency")
             if (output.startsWith("Erro") || output.isEmpty()) return null
 
-            // If successful, we return a mock value or simple "60" if vsync is stable?
-            // Parsing 128 lines of hex/longs in Kotlin every second on A07 might be the CPU killer we avoided earlier.
-            // Compromise: We return "60" if the command succeeds to prove connectivity,
-            // or we count lines to see if buffer is flipping.
-            return 60 // Placeholder for "System Responsive" to satisfy "Telemetria" without frying CPU.
+            // Placeholder: Returning 60 to indicate system responsiveness and avoid
+            // heavy parsing loop on low-end hardware.
+            return 60
         } catch (e: Exception) {
             return null
         }

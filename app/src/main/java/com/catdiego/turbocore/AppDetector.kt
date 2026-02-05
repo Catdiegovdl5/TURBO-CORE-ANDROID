@@ -9,8 +9,8 @@ object AppDetector {
     fun getTopPackage(context: Context): String? {
         val usageStatsManager = context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
         val currentTime = System.currentTimeMillis()
-        // Query last 24 hours to ensure we catch the last foreground event even if it happened a while ago
-        val events = usageStatsManager.queryEvents(currentTime - 1000 * 60 * 60 * 24, currentTime)
+        // Query last 2 minutes is sufficient for polling active app state
+        val events = usageStatsManager.queryEvents(currentTime - 1000 * 60 * 2, currentTime)
         val event = UsageEvents.Event()
 
         var topPackage: String? = null

@@ -1,6 +1,7 @@
 package com.catdiego.turbocore
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -13,10 +14,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
@@ -87,7 +90,7 @@ fun InnovationHubDashboard(
     // Game Selection Dialog
     if (showGameDialog) {
         AlertDialog(
-            onDismissRequest = { showGameDialog = false },
+            onDismissRequest = { if (!uiState.isCompiling) showGameDialog = false },
             containerColor = Color(0xFF111111),
             title = { Text("Adicionar Jogo", color = Color.Cyan) },
             text = {
@@ -99,28 +102,59 @@ fun InnovationHubDashboard(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable {
-                                    if (uiState.myGames.contains(pkg)) {
-                                        viewModel.removeGame(pkg)
-                                    } else {
-                                        viewModel.addGame(pkg)
-                                    }
-                                }
                                 .padding(8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Checkbox(
-                                checked = uiState.myGames.contains(pkg),
-                                onCheckedChange = null // Handled by Row click
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(pkg, color = Color.White, fontSize = 12.sp)
+                            Row(
+                                modifier = Modifier.weight(1f).clickable {
+                                    if (!uiState.isCompiling) {
+                                        if (uiState.myGames.contains(pkg)) {
+                                            viewModel.removeGame(pkg)
+                                        } else {
+                                            viewModel.addGame(pkg)
+                                        }
+                                    }
+                                },
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Checkbox(
+                                    checked = uiState.myGames.contains(pkg),
+                                    onCheckedChange = null,
+                                    enabled = !uiState.isCompiling
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(pkg, color = Color.White, fontSize = 12.sp)
+                            }
+
+                            // JIT Optimization Button
+                            if (uiState.compilingPackage == pkg) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(24.dp),
+                                    color = Color.Yellow,
+                                    strokeWidth = 2.dp
+                                )
+                            } else {
+                                IconButton(
+                                    onClick = { viewModel.compilePackage(pkg) },
+                                    enabled = !uiState.isCompiling
+                                ) {
+                                    Icon(
+                                        Icons.Default.Refresh,
+                                        contentDescription = "Otimizar Instalação",
+                                        tint = if (uiState.isCompiling) Color.Gray else Color.Yellow
+                                    )
+                                }
+                            }
                         }
                     }
                 }
             },
             confirmButton = {
-                Button(onClick = { showGameDialog = false }) { Text("FECHAR") }
+                Button(
+                    onClick = { showGameDialog = false },
+                    enabled = !uiState.isCompiling
+                ) { Text("FECHAR") }
             }
         )
 
@@ -159,18 +193,33 @@ fun InnovationHubDashboard(
                 Column {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            text = "TURBO CORE V600",
+                            text = "TURBO CORE V700",
                             color = Color.Cyan,
                             fontSize = 24.sp,
                             fontWeight = FontWeight.Bold
                         )
                         Spacer(modifier = Modifier.width(12.dp))
-                        // Status LED
-                        val ledColor = uiState.selectedProfile?.color
-                            ?: if (uiState.isShizukuReady) Color.Green else Color.Red
+
+                        // Status LED (Singularity Logic)
+                        val infiniteTransition = rememberInfiniteTransition()
+                        val alpha by infiniteTransition.animateFloat(
+                            initialValue = 0.3f,
+                            targetValue = 1f,
+                            animationSpec = infiniteRepeatable(
+                                animation = tween(300, easing = LinearEasing), // 0.3s fade
+                                repeatMode = RepeatMode.Reverse
+                            ),
+                            label = "LEDPulse"
+                        )
+
+                        val isSingularity = uiState.isGameActive
+                        val ledColor = if (isSingularity) Color.White else (uiState.selectedProfile?.color ?: if (uiState.isShizukuReady) Color.Green else Color.Red)
+                        val ledAlpha = if (isSingularity) alpha else 1f
+
                         Box(
                             modifier = Modifier
                                 .size(12.dp)
+                                .alpha(ledAlpha)
                                 .background(
                                     color = ledColor,
                                     shape = RoundedCornerShape(50)
@@ -178,7 +227,7 @@ fun InnovationHubDashboard(
                         )
                     }
                     Text(
-                        text = "SSS ALPHA KERNEL",
+                        text = "OMEGA SINGULARITY",
                         color = Color.Gray,
                         fontSize = 14.sp,
                         letterSpacing = 2.sp
@@ -298,6 +347,17 @@ fun InnovationHubDashboard(
                                     fontWeight = FontWeight.Bold
                                 )
                             }
+                        }
+
+                        // Affinity Badge
+                        if (uiState.isCpuPinned) {
+                            Text(
+                                "AFFINITY: CORES 4-7 PINNED",
+                                color = Color.White,
+                                fontSize = 10.sp,
+                                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                                fontWeight = FontWeight.Bold
+                            )
                         }
 
                         Spacer(modifier = Modifier.height(8.dp))

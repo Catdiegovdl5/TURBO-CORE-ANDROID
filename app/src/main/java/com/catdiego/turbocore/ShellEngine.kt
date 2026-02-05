@@ -44,6 +44,11 @@ object ShellEngine {
         }
     }
 
+    fun getPid(packageName: String): String? {
+        val output = runCommand("pidof -s $packageName")
+        return if (output.isNotEmpty() && !output.startsWith("Erro")) output.trim() else null
+    }
+
     fun applyGpuBoost() {
         if (!isAvailable()) return
         val paths = listOf(
