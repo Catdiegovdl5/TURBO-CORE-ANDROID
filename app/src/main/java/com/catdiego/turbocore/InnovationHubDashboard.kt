@@ -345,7 +345,7 @@ fun GaugeItem(
     color: Color,
     size: Dp = 80.dp
 ) {
-    Column(horizontalAlignment = Alignment.CenterVertically) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Box(contentAlignment = Alignment.Center, modifier = Modifier.size(size)) {
             Canvas(modifier = Modifier.size(size)) {
                 // Background Arc
@@ -366,7 +366,7 @@ fun GaugeItem(
                     style = Stroke(width = 8.dp.toPx(), cap = StrokeCap.Round)
                 )
             }
-            Column(horizontalAlignment = Alignment.CenterVertically) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
                     text = String.format("%.0f", value),
                     color = Color.White,
