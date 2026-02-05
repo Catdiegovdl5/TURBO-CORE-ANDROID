@@ -6,6 +6,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -22,6 +24,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun InnovationHubDashboard(
     viewModel: DashboardViewModel = viewModel(),
@@ -31,7 +34,7 @@ fun InnovationHubDashboard(
     val uiState by viewModel.uiState.collectAsState()
     val lifecycleOwner = LocalLifecycleOwner.current
 
-    // Lifecycle Observer for Adaptive Polling (Active vs Background)
+    // Lifecycle Observer for Adaptive Polling
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
@@ -46,14 +49,24 @@ fun InnovationHubDashboard(
         }
     }
 
-    // AMOLED Black Background
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = Color(0xFF000000)
-    ) {
+    Scaffold(
+        containerColor = Color(0xFF000000),
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = {
+                    viewModel.runOptimization("wm size reset && wm density reset", "Reset SOS")
+                },
+                containerColor = MaterialTheme.colorScheme.error,
+                contentColor = Color.White
+            ) {
+                Icon(Icons.Default.Warning, contentDescription = "SOS Reset")
+            }
+        }
+    ) { paddingValues ->
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
+                .padding(paddingValues)
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
@@ -103,7 +116,7 @@ fun InnovationHubDashboard(
                 }
             }
 
-            // COCKPIT (Gauges)
+            // COCKPIT (Gauges: Temp & Ping)
             item {
                 Card(
                     colors = CardDefaults.cardColors(containerColor = Color(0xFF111111)),
@@ -127,28 +140,61 @@ fun InnovationHubDashboard(
                                 color = if (uiState.temperature > 40) Color.Red else Color.Cyan
                             )
 
-                            // RAM GAUGE
+                            // PING GAUGE
+                            val pingVal = if(uiState.ping == -1L) 999f else uiState.ping.toFloat()
                             GaugeItem(
-                                value = uiState.ramPercent,
-                                max = 100f,
-                                label = "RAM USAGE",
-                                unit = "%",
-                                color = if (uiState.ramPercent > 85) Color.Yellow else Color.Green
+                                value = pingVal,
+                                max = 300f,
+                                label = "PING",
+                                unit = "ms",
+                                color = if (pingVal < 100) Color.Green else Color.Yellow
+                            )
+                        }
+                    }
+                }
+            }
+
+            // RAM DETAIL CARD
+            item {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF111111)),
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(Modifier.padding(16.dp)) {
+                        Text("MEMÓRIA RAM", color = Color.White, fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        LinearProgressIndicator(
+                            progress = uiState.ramPercent / 100f,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(8.dp),
+                            color = if (uiState.ramPercent > 85) Color.Red else Color.Cyan,
+                            trackColor = Color.DarkGray
+                        )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text(
+                                text = uiState.ramUsage,
+                                color = Color.Gray,
+                                fontSize = 14.sp
+                            )
+                            Text(
+                                text = String.format("%.0f%%", uiState.ramPercent),
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold
                             )
                         }
 
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "RAM: ${uiState.ramUsage}",
-                            color = Color.Gray,
-                            fontSize = 12.sp,
-                            modifier = Modifier.align(Alignment.CenterHorizontally)
-                        )
-                        Text(
-                            text = "Delay Atual: ${uiState.pollingRate}ms",
+                            text = "Delay: ${uiState.pollingRate}ms",
                             color = Color.DarkGray,
                             fontSize = 10.sp,
-                            modifier = Modifier.align(Alignment.CenterHorizontally)
+                            modifier = Modifier.align(Alignment.End)
                         )
                     }
                 }

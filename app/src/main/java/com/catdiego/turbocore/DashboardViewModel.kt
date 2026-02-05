@@ -15,13 +15,17 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.net.InetSocketAddress
+import java.net.Socket
 
 data class DashboardUiState(
     val temperature: Float = 0f,
     val ramUsage: String = "-- / --",
     val ramPercent: Float = 0f,
+    val ping: Long = 0L,
     val logText: String = "Sistema pronto. Aguardando comandos...",
     val isCritical: Boolean = false,
     val pollingRate: Long = 5000L
@@ -47,7 +51,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         if (monitoringJob?.isActive == true) return
 
         monitoringJob = viewModelScope.launch(Dispatchers.Default) {
-            while (true) {
+            while (isActive) {
                 updateMetrics()
 
                 // Adaptive Logic:
@@ -71,7 +75,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         monitoringJob = null
     }
 
-    private fun updateMetrics() {
+    private suspend fun updateMetrics() {
         val context = getApplication<Application>()
 
         try {
@@ -97,11 +101,15 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
             val ramStr = String.format("%.1fGB / %.1fGB", usedMemGB, totalMemGB)
             val isCritical = tempC >= TEMP_CRITICAL_THRESHOLD
 
+            // 3. Ping (Native Socket)
+            val pingMs = measurePing()
+
             _uiState.update {
                 it.copy(
                     temperature = tempC,
                     ramUsage = ramStr,
                     ramPercent = ramPercent,
+                    ping = pingMs,
                     isCritical = isCritical
                 )
             }
@@ -111,12 +119,27 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
+    private suspend fun measurePing(): Long {
+         return withContext(Dispatchers.IO) {
+            try {
+                val startTime = System.currentTimeMillis()
+                // TCP Connect to Google DNS (8.8.8.8:53) - Fast and lightweight
+                val socket = Socket()
+                socket.connect(InetSocketAddress("8.8.8.8", 53), 2000)
+                socket.close()
+                System.currentTimeMillis() - startTime
+            } catch (e: Exception) {
+                -1L // Error or Timeout
+            }
+        }
+    }
+
     fun runOptimization(command: String, description: String) {
         viewModelScope.launch {
             _uiState.update { it.copy(logText = "Executando: $description...") }
 
             val output = withContext(Dispatchers.IO) {
-                AppManager.runCommand(command)
+                ShellEngine.runCommand(command)
             }
 
             _uiState.update { it.copy(logText = "[$description]: $output") }

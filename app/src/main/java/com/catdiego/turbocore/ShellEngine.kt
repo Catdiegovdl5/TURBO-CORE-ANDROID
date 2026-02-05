@@ -8,7 +8,7 @@ import rikka.shizuku.Shizuku
 import java.io.BufferedReader
 import java.io.InputStreamReader
 
-object AppManager {
+object ShellEngine {
     fun runCommand(command: String): String {
         if (!Shizuku.pingBinder()) return "Erro: Serviço Shizuku parado no sistema!"
         return try {
