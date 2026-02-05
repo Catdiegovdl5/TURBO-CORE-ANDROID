@@ -6,6 +6,8 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Canvas
@@ -47,6 +49,18 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         createNotificationChannel()
+
+        // ContentObserver for ADB Status (V250 Protocol)
+        val adbObserver = object : android.database.ContentObserver(Handler(Looper.getMainLooper())) {
+            override fun onChange(selfChange: Boolean) {
+                checkAndRequestShizukuPermission()
+            }
+        }
+        contentResolver.registerContentObserver(
+            android.provider.Settings.Global.getUriFor("adb_wifi_enabled"),
+            false,
+            adbObserver
+        )
 
         PerformanceManager.registerBinderListener {
             checkAndRequestShizukuPermission()
@@ -120,13 +134,14 @@ class MainActivity : ComponentActivity() {
     fun TurboCoreUI() {
         val lifecycleOwner = androidx.compose.ui.platform.LocalLifecycleOwner.current
         var selectedTab by rememberSaveable { mutableStateOf(0) }
-        val tabsV250 = listOf("UNIVERSAL", "GAMER", "SYSTEM")
+        val tabsV250 = listOf("DESEMPENHO", "ECONOMIA", "COMPETITIVO", "APPS")
 
         val themeColor = remember(selectedTab) {
             when (selectedTab) {
-                0 -> Color(0xFF00FFFF) // Ice for Universal (Power/Rede)
-                1 -> Color(0xFFFF4500) // Fire for Gamer (CPU/GPU)
-                else -> Color(0xFF9C27B0) // Purple for System (Debloat)
+                0 -> Color(0xFFFF4500) // Fire for Desempenho
+                1 -> Color(0xFF00FF00) // Green for Economia
+                2 -> Color(0xFF00E5FF) // Cyan for Competitivo
+                else -> Color(0xFF9C27B0) // Purple for Apps
             }
         }
 
@@ -154,7 +169,12 @@ class MainActivity : ComponentActivity() {
                     while(true) {
                         currentRam = PerformanceManager.getRamUsage(this@MainActivity)
                         currentCpu = PerformanceManager.getCpuStatus()
-                        val pollingDelay = if (currentTemp >= 40f) 15000L else 5000L
+                        // Adaptive Refresh: Slow down UI polling under thermal or CPU stress
+                        val pollingDelay = when {
+                            currentTemp >= 40f -> 15000L
+                            currentCpu == "CRÍTICO" -> 10000L
+                            else -> 5000L
+                        }
                         delay(pollingDelay)
                     }
                 }
@@ -304,17 +324,15 @@ class MainActivity : ComponentActivity() {
                         Spacer(Modifier.height(8.dp))
                     }
 
-                    val modes = SmartCoreEngineV250.getModesByCategory(when(selectedTab) {
-                        0 -> ModeCategory.POWER
-                        1 -> ModeCategory.CPU
-                        else -> ModeCategory.DEBLOAT
-                    }).filter {
-                        when(selectedTab) {
-                            0 -> it.category == ModeCategory.POWER || it.category == ModeCategory.REDE
-                            1 -> it.category == ModeCategory.CPU || it.category == ModeCategory.GPU || it.category == ModeCategory.CHIMERA || it.category == ModeCategory.MIRA
-                            else -> it.category == ModeCategory.DEBLOAT
-                        }
-                    }
+                    val modes = when(selectedTab) {
+                        0 -> SmartCoreEngineV250.getModesByCategory(ModeCategory.CPU) +
+                             SmartCoreEngineV250.getModesByCategory(ModeCategory.GPU) +
+                             SmartCoreEngineV250.getModesByCategory(ModeCategory.CHIMERA)
+                        1 -> SmartCoreEngineV250.getModesByCategory(ModeCategory.POWER)
+                        2 -> SmartCoreEngineV250.getModesByCategory(ModeCategory.MIRA) +
+                             SmartCoreEngineV250.getModesByCategory(ModeCategory.REDE)
+                        else -> emptyList()
+                    }.distinctBy { it.id }
 
                     if (selectedTab < 3) {
                         items(modes) { mode ->
@@ -325,8 +343,8 @@ class MainActivity : ComponentActivity() {
                                 onToggle = {
                                     lifecycleScope.launch {
                                         if (activeModeId == mode.id) {
-                                            // Desativar
-                                            terminalLog = PerformanceManager.runRawCommand("wm size reset && wm density reset && settings put global low_power 0 && pm unsuspend com.google.android.gms && cmd power set-fixed-performance-mode-enabled false && settings put global window_animation_scale 1 && settings put global transition_animation_scale 1 && settings put global animator_duration_scale 1")
+                                            // Desativar (V250 SOS Protocol)
+                                            terminalLog = PerformanceManager.triggerCriticalReset()
                                             activeModeName = "Nenhum"
                                             activeModeId = null
                                             stopService(Intent(this@MainActivity, ShizukuKeeperService::class.java))

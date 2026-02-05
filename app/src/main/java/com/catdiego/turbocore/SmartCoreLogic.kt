@@ -181,15 +181,12 @@ object NetworkManager {
     suspend fun measureLatency(): Int {
         return withContext(Dispatchers.IO) {
             try {
-                val startTime = System.currentTimeMillis()
-                val address = java.net.InetAddress.getByName("8.8.8.8")
-                if (address.isReachable(2000)) {
-                    val latency = (System.currentTimeMillis() - startTime).toInt()
-                    lastLatency = latency
-                    latency
-                } else {
-                    999
-                }
+                val output = PerformanceManager.runRawCommand("ping -c 1 -w 1 8.8.8.8")
+                val regex = "time=([0-9.]+)".toRegex()
+                val match = regex.find(output)
+                val latency = match?.groupValues?.get(1)?.toFloatOrNull()?.toInt() ?: 999
+                lastLatency = latency
+                latency
             } catch (e: Exception) {
                 999
             }
@@ -323,6 +320,20 @@ object SmartCoreEngineV250 {
     }
 
     private fun generateModes() {
+        // --- V140 CLASSICS ---
+        modes.add(OptimizationMode(101, "Modo Bruto", "Resolução 540x1200 e DPI 210.",
+            "wm size 540x1200 && wm density 210", ModeCategory.GPU, 2))
+        modes.add(OptimizationMode(102, "Usual Turbo", "Reseta resolução e densidade.",
+            "wm size reset && wm density reset", ModeCategory.GPU, 1))
+        modes.add(OptimizationMode(103, "Super Economia", "Ativa low power e suspende GMS.",
+            "settings put global low_power 1 && pm suspend com.google.android.gms", ModeCategory.POWER, 2))
+        modes.add(OptimizationMode(104, "Ultra Economia", "Resolução 360x800 e low power.",
+            "wm size 360x800 && settings put global low_power 1", ModeCategory.POWER, 2))
+        modes.add(OptimizationMode(105, "Gamer Ultimate", "Modo de performance fixa do Android.",
+            "cmd power set-fixed-performance-mode-enabled true", ModeCategory.CPU, 2))
+        modes.add(OptimizationMode(106, "Sensi Free Fire", "DPI 180 para melhor sensibilidade.",
+            "wm density 180", ModeCategory.MIRA, 1))
+
         // --- SAMSUNG (PRODUCT V250) ---
         modes.add(OptimizationMode(1, "Bixby no Vasco", "Manda a assistente inútil pra Série B.",
             "pm disable-user com.samsung.android.bixby.agent && am force-stop com.samsung.android.bixby.agent", ModeCategory.DEBLOAT, 1, "SAMSUNG"))
@@ -501,8 +512,12 @@ object PerformanceManager {
     }
 
     suspend fun triggerCriticalReset(): String {
-        val cmd = "wm size reset && wm density reset && cmd package compile --reset -a && content stop-sync && setprop ctl.stop logd && cmd power set-fixed-performance-mode-enabled false && pm unsuspend com.google.android.gms"
+        val cmd = "wm size reset && wm density reset && cmd package compile --reset -a && content stop-sync && setprop ctl.stop logd && cmd power set-fixed-performance-mode-enabled false && cmd power set-mode 0 && pm unsuspend com.google.android.gms"
         return runRawCommand(cmd)
+    }
+
+    suspend fun fixSamsungGhostProcesses(): String {
+        return runRawCommand("settings put global phantom_process_handling false && device_config put activity_manager max_phantom_processes 2147483647")
     }
 
     suspend fun clearKernelLogs(): String {
