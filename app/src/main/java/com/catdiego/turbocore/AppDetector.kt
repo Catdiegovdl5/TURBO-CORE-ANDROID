@@ -18,7 +18,7 @@ object AppDetector {
                 mySortedMap[usageStats.lastTimeUsed] = usageStats
             }
             if (mySortedMap.isNotEmpty()) {
-                return mySortedMap[mySortedMap.lastKey()].packageName
+                return mySortedMap[mySortedMap.lastKey()]?.packageName
             }
         }
         return null
