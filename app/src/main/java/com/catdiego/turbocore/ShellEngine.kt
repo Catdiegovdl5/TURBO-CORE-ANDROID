@@ -7,6 +7,7 @@ import android.os.Build
 import rikka.shizuku.Shizuku
 import java.io.BufferedReader
 import java.io.InputStreamReader
+import java.util.regex.Pattern
 
 object ShellEngine {
     fun runCommand(command: String): String {
@@ -23,6 +24,24 @@ object ShellEngine {
             process.waitFor()
             if (output.isEmpty()) "Sucesso" else output
         } catch (e: Exception) { "Erro: ${e.message}" }
+    }
+
+    fun getPhysicalResolution(): Pair<Int, Int>? {
+        if (!isAvailable()) return null
+        return try {
+            val output = runCommand("wm size")
+            // Pattern to match "Physical size: 720x1600"
+            val matcher = Pattern.compile("Physical size: (\\d+)x(\\d+)").matcher(output)
+            if (matcher.find()) {
+                val width = matcher.group(1)?.toIntOrNull()
+                val height = matcher.group(2)?.toIntOrNull()
+                if (width != null && height != null) {
+                    Pair(width, height)
+                } else null
+            } else null
+        } catch (e: Exception) {
+            null
+        }
     }
 
     fun isAvailable(): Boolean {

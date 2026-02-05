@@ -7,6 +7,7 @@ import kotlinx.coroutines.delay
 
 @Composable
 fun SafetyCountdownDialog(
+    message: String? = null,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -27,7 +28,10 @@ fun SafetyCountdownDialog(
         title = { Text("Verificação de Segurança", color = Color.Yellow) },
         text = {
             Text(
-                "Uma alteração de tela foi detectada. Se você pode ler isso, clique em MANTER.\n\nReset em $secondsRemaining segundos.",
+                text = if (message != null)
+                    "Aplicando: $message\n\nSe você pode ler isso, clique em MANTER.\n\nReset em $secondsRemaining segundos."
+                else
+                    "Uma alteração de tela foi detectada. Se você pode ler isso, clique em MANTER.\n\nReset em $secondsRemaining segundos.",
                 color = Color.White
             )
         },

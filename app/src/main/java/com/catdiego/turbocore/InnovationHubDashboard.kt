@@ -64,6 +64,7 @@ fun InnovationHubDashboard(
     // Watchdog Dialog (Modularized)
     if (uiState.showSafetyDialog) {
         SafetyCountdownDialog(
+            message = uiState.pendingResolution,
             onConfirm = { viewModel.confirmSafety() },
             onDismiss = { viewModel.performWatchdogReset() }
         )

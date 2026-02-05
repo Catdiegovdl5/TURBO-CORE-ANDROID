@@ -35,7 +35,8 @@ data class DashboardUiState(
     val isShizukuReady: Boolean = false,
     val userMessage: String? = null,
     val showSafetyDialog: Boolean = false,
-    val selectedProfile: Profile? = null
+    val selectedProfile: Profile? = null,
+    val pendingResolution: String? = null
 )
 
 class DashboardViewModel(application: Application) : AndroidViewModel(application) {
@@ -70,6 +71,13 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
              }
         }
 
+        // Load active profile name from persistence
+        val savedProfileName = prefs.getString("active_profile_name", "Balanceado")
+        val savedProfile = profiles.find { it.name == savedProfileName }
+        if (savedProfile != null) {
+            _uiState.update { it.copy(selectedProfile = savedProfile) }
+        }
+
         // Watchdog Init Check
         if (prefs.getBoolean("is_dirty", false)) {
             _uiState.update { it.copy(showSafetyDialog = true) }
@@ -94,51 +102,55 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun applyProfile(profile: Profile) {
         _uiState.update { it.copy(selectedProfile = profile) }
+        prefs.edit().putString("active_profile_name", profile.name).apply()
+
         viewModelScope.launch {
             val sb = StringBuilder()
+            var calculatedResString: String? = null
 
-            // Build commands
+            // Dynamic Resolution Logic
             if (profile.scale != 1.0f || profile.dpi != null) {
                 // Safety Flag for Display Changes
                 prefs.edit().putBoolean("is_dirty", true).apply()
-                // Force Watchdog dialog to appear if it was hidden, or ensure it's ready to handle reset
-                // Since this is a user action, we don't necessarily show dialog *before* reboot,
-                // but the flag ensures safety *if* reboot happens.
-                // However, user prompt implies: "Garanta que a troca de perfil também dispare o SafetyCountdownDialog"
-                // So we trigger the dialog flow immediately? Or just set flag?
-                // "Fluxo de Segurança: Toda mudança de perfil que acione o ShellEngine para alterar wm size deve obrigatoriamente disparar o SafetyCountdownDialog."
-                // This means we show the dialog to confirm the change worked.
-                _uiState.update { it.copy(showSafetyDialog = true) }
-            }
 
-            // Resolution
-            if (profile.scale == 1.0f && profile.dpi == null) {
-                sb.append("wm size reset && wm density reset")
+                // Fetch Physical Resolution
+                val physicalRes = withContext(Dispatchers.IO) { ShellEngine.getPhysicalResolution() }
+
+                if (physicalRes != null && profile.scale != 1.0f) {
+                    val newWidth = (physicalRes.first * profile.scale).toInt()
+                    val newHeight = (physicalRes.second * profile.scale).toInt()
+
+                    // Sanity check
+                    if (newWidth > 200 && newHeight > 200) {
+                        sb.append("wm size ${newWidth}x${newHeight}")
+                        calculatedResString = "${newWidth}x${newHeight}"
+                    } else {
+                        // Fallback to safe defaults if calculation is weird
+                        if (profile.name == "Turbo") sb.append("wm size 540x1200")
+                        else if (profile.name == "Eco") sb.append("wm size 480x1066")
+                        else sb.append("wm size reset")
+                    }
+                } else if (profile.scale == 1.0f) {
+                     sb.append("wm size reset")
+                } else {
+                    // Fallback if physical res fetch failed
+                    if (profile.name == "Turbo") sb.append("wm size 540x1200")
+                    else if (profile.name == "Eco") sb.append("wm size 480x1066")
+                    else sb.append("wm size reset")
+                }
+
+                // Density Command
+                if (profile.dpi != null) {
+                    sb.append(" && wm density ${profile.dpi}")
+                } else {
+                    sb.append(" && wm density reset")
+                }
+
+                // Show dialog with calculated resolution
+                _uiState.update { it.copy(showSafetyDialog = true, pendingResolution = calculatedResString) }
             } else {
-                val densityCmd = if (profile.dpi != null) "wm density ${profile.dpi}" else "wm density reset"
-                // For scale, we assume strict resolution setting or wm size percentage if supported?
-                // "wm size" usually takes pixels. Percentage requires calculation or physical size knowledge.
-                // However, for V400 Alpha, prompt says "Scale 0.7x".
-                // Standard approach: "wm size 70%". If not supported, we need raw pixels.
-                // Let's assume standard "wm size" works with pixels usually.
-                // But `wm size` doesn't natively support percentage on all Android versions.
-                // Given previous code used "540x1200", I should stick to safe knowns or use simple logic?
-                // Prompt: "Reduzir a resolução em 20%".
-                // I will use "wm size reset" for Balanceado.
-                // For Turbo (0.8x) and Eco (0.7x), safely I might need to calculate or use a safe command.
-                // Actually, wm size takes "reset" or "WxH".
-                // To keep V400 Alpha simple and safe without complex display querying logic:
-                // I will interpret "Scale 0.7x" as a placeholder for "wm size 720x1600" or similar based on typical A07?
-                // Wait, A07 is 720x1560.
-                // Let's implement logic to run command based on explicit user instruction: "Reduzir a resolução em 20%".
-                // Shell command: `cmd window size 80%`? No.
-                // I'll leave resolution strict logic simpler:
-                // Turbo: `wm size 540x1200` (Approx 0.8 of 720p width) - Matches V1.0 "Modo Bruto".
-                // Eco: `wm size 360x800` (Approx 0.5/0.6) - Matches V1.0 "Ultra Economia".
-                // Adjusting based on profile parameters:
-                if (profile.name == "Turbo") sb.append("wm size 540x1200 && wm density 440")
-                else if (profile.name == "Eco") sb.append("wm size 480x1066 && wm density 280") // Safe approx
-                else sb.append("wm size reset && wm density reset")
+                // Balanced / Default
+                sb.append("wm size reset && wm density reset")
             }
 
             if (profile.powerMode != null) {
@@ -228,11 +240,6 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun runOptimization(command: String, description: String) {
         viewModelScope.launch {
-            // Watchdog Flag: Set before execution of risky commands
-            if (command.contains("wm size") || command.contains("wm density")) {
-                prefs.edit().putBoolean("is_dirty", true).apply()
-            }
-
             _uiState.update { it.copy(logText = "Executando: $description...") }
 
             try {
@@ -264,10 +271,13 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
                 ShellEngine.runCommand("wm size reset && wm density reset")
             }
             prefs.edit().putBoolean("is_dirty", false).apply()
+            prefs.edit().remove("active_profile_name").apply() // Clear active profile persistence
+
+            val balanced = profiles.find { it.name == "Balanceado" }
             _uiState.update { it.copy(
                 logText = "Recuperação automática executada com sucesso.",
                 showSafetyDialog = false,
-                selectedProfile = profiles.find { it.name == "Balanceado" }
+                selectedProfile = balanced
             ) }
         }
     }
