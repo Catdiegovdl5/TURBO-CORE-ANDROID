@@ -48,6 +48,44 @@ object ShellEngine {
         }
     }
 
+    suspend fun getCpuRawStats(): Pair<Long, Long> = withContext(Dispatchers.IO) {
+        try {
+            // Read first line of /proc/stat
+            val output = runCommand("cat /proc/stat | head -n 1")
+            val parts = output.trim().split("\\s+".toRegex())
+            // parts[0] is "cpu", values start at parts[1]
+            // user + nice + system + idle + iowait + irq + softirq
+            if (parts.size >= 8) {
+                val user = parts[1].toLong()
+                val nice = parts[2].toLong()
+                val system = parts[3].toLong()
+                val idle = parts[4].toLong()
+                val iowait = parts[5].toLong()
+                val irq = parts[6].toLong()
+                val softirq = parts[7].toLong()
+
+                val total = user + nice + system + idle + iowait + irq + softirq
+                val active = total - idle - iowait
+                return@withContext Pair(active, total)
+            }
+            Pair(0L, 0L)
+        } catch (e: Exception) {
+            Pair(0L, 0L)
+        }
+    }
+
+    suspend fun getThermalTemp(): Float = withContext(Dispatchers.IO) {
+        try {
+            // Try common thermal zone for CPU/SoC on MTK/Samsung
+            val raw = runCommand("cat /sys/class/thermal/thermal_zone0/temp")
+            val temp = raw.trim().toIntOrNull() ?: 0
+            // Kernel usually returns millidegrees
+            return@withContext temp / 1000f
+        } catch (e: Exception) {
+            0f
+        }
+    }
+
     suspend fun applyRankXi(): String {
         val sb = StringBuilder()
 

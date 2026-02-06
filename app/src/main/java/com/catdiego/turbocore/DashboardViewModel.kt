@@ -10,7 +10,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlin.random.Random
 import android.app.ActivityManager
 import android.content.Context
 
@@ -26,14 +25,14 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
 
     var terminalLog by mutableStateOf("Aguardando comando...")
 
-    val quickActions = listOf(
-        QuickAction("Limpar RAM", "echo 3 > /proc/sys/vm/drop_caches", "Limpa cache de página"),
-        QuickAction("JIT Speed", "cmd package compile -m speed com.android.systemui", "Otimiza SystemUI"), // Example, should be current app
-        QuickAction("DNS Google", "settings put global private_dns_mode hostname && settings put global private_dns_specifier dns.google", "DNS Privado"),
-        QuickAction("Reset DNS", "settings put global private_dns_mode off", "DNS Padrão")
-    )
+    var quickActions by mutableStateOf(emptyList<QuickAction>())
+        private set
+
+    private var prevTotal = 0L
+    private var prevActive = 0L
 
     init {
+        updateDynamicActions()
         startMonitoring()
     }
 
@@ -47,18 +46,49 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     private fun updateMetrics() {
-        // RAM
-        val am = getApplication<Application>().getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-        val memInfo = ActivityManager.MemoryInfo()
-        am.getMemoryInfo(memInfo)
-        val total = memInfo.totalMem.toFloat()
-        val avail = memInfo.availMem.toFloat()
-        ramUsage = ((total - avail) / total) * 100
+        viewModelScope.launch {
+            // 1. RAM (Nativo - Mantém)
+            val am = getApplication<Application>().getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+            val memInfo = ActivityManager.MemoryInfo()
+            am.getMemoryInfo(memInfo)
+            val totalRam = memInfo.totalMem.toFloat()
+            val availRam = memInfo.availMem.toFloat()
+            ramUsage = ((totalRam - availRam) / totalRam) * 100
 
-        // CPU & Temp (Simulated/Placeholder as file reading requires IO and specific paths)
-        // In a real scenario, we would parse /proc/stat and thermal zones.
-        cpuLoad = Random.nextFloat() * 100
-        temp = 35f + Random.nextFloat() * 10
+            // 2. CPU REAL (Cálculo Delta via ShellEngine)
+            val stats = ShellEngine.getCpuRawStats()
+            val currentActive = stats.first
+            val currentTotal = stats.second
+
+            if (prevTotal != 0L) {
+                val deltaTotal = currentTotal - prevTotal
+                val deltaActive = currentActive - prevActive
+                if (deltaTotal > 0) {
+                    cpuLoad = (deltaActive.toFloat() / deltaTotal.toFloat()) * 100
+                }
+            }
+            prevTotal = currentTotal
+            prevActive = currentActive
+
+            // 3. Temperatura REAL
+            val realTemp = ShellEngine.getThermalTemp()
+            temp = if (realTemp > 0) realTemp else 0f
+
+            // Atualiza ações dinâmicas periodicamente para pegar app foreground atual
+            updateDynamicActions()
+        }
+    }
+
+    private fun updateDynamicActions() {
+        val context = getApplication<Application>()
+        // Pega o app atual ou fallback para systemui se null
+        val currentApp = AppDetector.getForegroundApp(context) ?: "com.android.systemui"
+
+        quickActions = listOf(
+            QuickAction("Limpar RAM", "echo 3 > /proc/sys/vm/drop_caches", "Limpa cache de página"),
+            QuickAction("Boost App Atual", "cmd package compile -m speed $currentApp", "Compila $currentApp"),
+            QuickAction("DNS Gamer", "settings put global private_dns_mode hostname && settings put global private_dns_specifier 1.1.1.1", "Cloudflare Low Ping")
+        )
     }
 
     fun setProfile(profile: Profile) {

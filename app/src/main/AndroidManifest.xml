@@ -9,7 +9,6 @@
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <uses-permission android:name="com.catdiego.turbocore.permission.RECEIVE_ADM_DATA" />
 
     <queries>
         <package android:name="moe.shizuku.privileged.api" />
