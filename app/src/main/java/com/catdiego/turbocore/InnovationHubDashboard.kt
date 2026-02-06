@@ -5,7 +5,11 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -15,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 @Composable
 fun InnovationHubDashboard(viewModel: DashboardViewModel) {
@@ -101,6 +106,23 @@ fun InnovationHubDashboard(viewModel: DashboardViewModel) {
             Spacer(modifier = Modifier.height(20.dp))
         }
 
+        // Quick Actions Grid (V800 Stable)
+        Text("AÇÕES RÁPIDAS", color = Color.Gray, style = MaterialTheme.typography.labelSmall)
+        Spacer(modifier = Modifier.height(8.dp))
+
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(2),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.height(140.dp) // Fixed height to fit screen
+        ) {
+            items(viewModel.quickActions) { action ->
+                QuickActionCard(action) { viewModel.executeQuickAction(action) }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
         // Metrics (Simplified)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
             MetricBadge("CPU", "${viewModel.cpuLoad.toInt()}%")
@@ -108,7 +130,7 @@ fun InnovationHubDashboard(viewModel: DashboardViewModel) {
             MetricBadge("TEMP", "${viewModel.temp.toInt()}°C")
         }
 
-        Spacer(modifier = Modifier.height(30.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
         // Profile Selector
         Text("PERFIL ATIVO: ${currentProfile.name}", color = Color.Gray)
@@ -120,16 +142,28 @@ fun InnovationHubDashboard(viewModel: DashboardViewModel) {
             ProfileChip(Profile.Turbo, currentProfile) { viewModel.setProfile(it) }
         }
         Spacer(modifier = Modifier.height(8.dp))
-        Button(
-            onClick = { showSafetyDialog = true },
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6200EE)),
-            modifier = Modifier.fillMaxWidth(),
-            border = if (currentProfile is Profile.Sacrifice) BorderStroke(2.dp, Color.White) else null
-        ) {
-            Text("RANK Ξ (SACRIFÍCIO)")
+
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+             Button(
+                onClick = { viewModel.setProfile(Profile.SensiFF) },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (currentProfile is Profile.SensiFF) Color(0xFFFF9800) else Color.DarkGray
+                ),
+                modifier = Modifier.weight(1f)
+            ) {
+                Text("SENSI FF")
+            }
+            Button(
+                onClick = { showSafetyDialog = true },
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6200EE)),
+                modifier = Modifier.weight(1f),
+                border = if (currentProfile is Profile.Sacrifice) BorderStroke(2.dp, Color.White) else null
+            ) {
+                Text("RANK Ξ")
+            }
         }
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
         // Terminal
         Text("TERMINAL:", color = Color.Green, style = MaterialTheme.typography.labelSmall)
@@ -147,15 +181,29 @@ fun InnovationHubDashboard(viewModel: DashboardViewModel) {
 }
 
 @Composable
+fun QuickActionCard(action: QuickAction, onClick: () -> Unit) {
+    Card(
+        onClick = onClick,
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E)),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(Modifier.padding(12.dp)) {
+            Text(action.name, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            Text(action.description, color = Color.Gray, fontSize = 10.sp)
+        }
+    }
+}
+
+@Composable
 fun MetricBadge(label: String, value: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Box(
             modifier = Modifier
-                .size(60.dp)
+                .size(50.dp) // Reduced size slightly
                 .border(2.dp, Color.DarkGray, CircleShape),
             contentAlignment = Alignment.Center
         ) {
-            Text(value, color = Color.White)
+            Text(value, color = Color.White, style = MaterialTheme.typography.bodySmall)
         }
         Text(label, color = Color.Gray, style = MaterialTheme.typography.labelSmall)
     }

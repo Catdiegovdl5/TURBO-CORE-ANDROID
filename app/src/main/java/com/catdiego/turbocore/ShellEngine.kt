@@ -81,12 +81,33 @@ object ShellEngine {
         return sb.toString()
     }
 
+    suspend fun applySensiFF(): String {
+        val sb = StringBuilder()
+        // 1. DPI Adjustment (Example value for Sensi)
+        sb.append(runCommand("wm density 180")).append("\n")
+
+        // 2. Touch IRQ Pinning to Core 0
+        val irq = findTouchIrq()
+        if (irq != null) {
+            val result = runCommand("echo 1 > /proc/irq/$irq/smp_affinity")
+            if (result.contains("Permission denied") || result.contains("Erro")) {
+                sb.append("Sensi: IRQ Access Denied")
+            } else {
+                sb.append("Sensi: Touch IRQ -> Core 0")
+            }
+        } else {
+            sb.append("Sensi: Touch IRQ not found")
+        }
+        return sb.toString()
+    }
+
     suspend fun applyProfile(profile: Profile): String {
         // Basic implementation for other profiles based on memory/context
         return when (profile) {
             is Profile.Eco -> runCommand("settings put global low_power 1 && pm suspend com.google.android.gms")
             is Profile.Balanced -> runCommand("wm size reset && wm density reset && settings put global low_power 0")
             is Profile.Turbo -> runCommand("cmd activity kill-all && echo 10 > /proc/sys/vm/swappiness")
+            is Profile.SensiFF -> applySensiFF()
             is Profile.Sacrifice -> applyRankXi()
         }
     }

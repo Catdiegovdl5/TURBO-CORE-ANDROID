@@ -26,6 +26,13 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
 
     var terminalLog by mutableStateOf("Aguardando comando...")
 
+    val quickActions = listOf(
+        QuickAction("Limpar RAM", "echo 3 > /proc/sys/vm/drop_caches", "Limpa cache de página"),
+        QuickAction("JIT Speed", "cmd package compile -m speed com.android.systemui", "Otimiza SystemUI"), // Example, should be current app
+        QuickAction("DNS Google", "settings put global private_dns_mode hostname && settings put global private_dns_specifier dns.google", "DNS Privado"),
+        QuickAction("Reset DNS", "settings put global private_dns_mode off", "DNS Padrão")
+    )
+
     init {
         startMonitoring()
     }
@@ -62,6 +69,14 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
 
             val result = ShellEngine.applyProfile(profile)
             terminalLog = result
+        }
+    }
+
+    fun executeQuickAction(action: QuickAction) {
+        viewModelScope.launch {
+            terminalLog = "Executando: ${action.name}...\n"
+            val result = ShellEngine.runCommand(action.command)
+            terminalLog += ">> $result"
         }
     }
 }
