@@ -5,23 +5,43 @@ import android.util.Log
 import rikka.shizuku.Shizuku
 import java.io.BufferedReader
 import java.io.InputStreamReader
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeout
-import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.*
 
 object ShellEngine {
+    private var job: Job? = null
 
-    suspend fun runCommand(command: String): String = withContext(Dispatchers.IO) {
-        if (!Shizuku.pingBinder()) return@withContext "Erro: Serviço Shizuku parado no sistema!"
+    // 1. PID Retriever (Necessário para Rank Ω/Ξ Thread Pinning)
+    suspend fun getPid(packageName: String): String? = withContext(Dispatchers.IO) {
+        val output = runCommand("pidof -s $packageName")
+        if (output.any { it.isDigit() }) output.trim() else null
+    }
+
+    // 2. CPU Delta Parser (Substituindo o Random por Realidade)
+    suspend fun getCpuRawStats(): Pair<Long, Long> = withContext(Dispatchers.IO) {
         try {
-            withTimeout(5000L) {
+            val output = runCommand("cat /proc/stat | head -n 1")
+            val p = output.trim().split("\\s+".toRegex())
+            if (p.size >= 8) {
+                // user + nice + system + irq + softirq
+                val active = p[1].toLong() + p[2].toLong() + p[3].toLong() + p[6].toLong() + p[7].toLong()
+                // active + idle + iowait
+                val total = active + p[4].toLong() + p[5].toLong()
+                return@withContext Pair(active, total)
+            }
+        } catch (e: Exception) {}
+        Pair(0L, 0L)
+    }
+
+    // 3. Executor com Timeout (Proteção contra processos zumbis)
+    suspend fun runCommand(command: String): String = withContext(Dispatchers.IO) {
+        if (!Shizuku.pingBinder()) return@withContext "Erro: Shizuku Offline"
+        try {
+            withTimeout(3000L) { // Rank Ξ: 3s de limite para segurança do A07
                 val method = Shizuku::class.java.getDeclaredMethod(
                     "newProcess",
                     Array<String>::class.java, Array<String>::class.java, String::class.java
                 )
                 method.isAccessible = true
-                // Redirect stderr to stdout to capture error messages
                 val process = method.invoke(null, arrayOf("sh", "-c", "$command 2>&1"), null, null) as Process
                 val reader = BufferedReader(InputStreamReader(process.inputStream))
                 val output = reader.readText()
@@ -51,32 +71,6 @@ object ShellEngine {
             null
         } catch (e: Exception) {
             null
-        }
-    }
-
-    suspend fun getCpuRawStats(): Pair<Long, Long> = withContext(Dispatchers.IO) {
-        try {
-            // Read first line of /proc/stat
-            val output = runCommand("cat /proc/stat | head -n 1")
-            val parts = output.trim().split("\\s+".toRegex())
-            // parts[0] is "cpu", values start at parts[1]
-            // user + nice + system + idle + iowait + irq + softirq
-            if (parts.size >= 8) {
-                val user = parts[1].toLong()
-                val nice = parts[2].toLong()
-                val system = parts[3].toLong()
-                val idle = parts[4].toLong()
-                val iowait = parts[5].toLong()
-                val irq = parts[6].toLong()
-                val softirq = parts[7].toLong()
-
-                val total = user + nice + system + idle + iowait + irq + softirq
-                val active = total - idle - iowait
-                return@withContext Pair(active, total)
-            }
-            Pair(0L, 0L)
-        } catch (e: Exception) {
-            Pair(0L, 0L)
         }
     }
 

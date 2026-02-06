@@ -13,9 +13,10 @@ class MainActivity : ComponentActivity() {
     private val viewModel: DashboardViewModel by viewModels()
     private val REQUEST_CODE = 1001
 
+    // Referência estável para evitar criação de múltiplos objetos de escuta
     private val permissionListener = Shizuku.OnRequestPermissionResultListener { _, grantResult ->
         if (grantResult == PackageManager.PERMISSION_GRANTED) {
-            viewModel.terminalLog = "Shizuku Conectado"
+            viewModel.terminalLog = "Ξ: Autorizado"
             viewModel.shizukuStatus.value = "Conectado"
         } else {
              viewModel.terminalLog = "Shizuku Negado"
@@ -23,22 +24,15 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    // Usando o novo manager para reconexão automática
-    private var binderListener: Shizuku.OnBinderReceivedListener? = null
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Inicializa o listener usando o ShizukuManager
-        binderListener = ShizukuManager.setupAutoReconnect(this, viewModel.shizukuStatus)
-
-        // Shizuku Setup
-        runCatching { Shizuku.addRequestPermissionResultListener(permissionListener) }
-        runCatching {
-            binderListener?.let { Shizuku.addBinderReceivedListener(it) }
+        // Adiciona apenas se o binder estiver vivo
+        if (Shizuku.pingBinder()) {
+            Shizuku.addRequestPermissionResultListener(permissionListener)
         }
 
-        // Tentativa inicial de conexão
+        // Tentativa inicial de conexão via Manager
         ShizukuManager.autoConnectShizuku(this, viewModel.shizukuStatus)
 
         setContent {
@@ -48,9 +42,9 @@ class MainActivity : ComponentActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        runCatching { Shizuku.removeRequestPermissionResultListener(permissionListener) }
+        // PONTO CRÍTICO: Limpeza obrigatória para evitar vazamento do Handler interno do Shizuku
         runCatching {
-            binderListener?.let { Shizuku.removeBinderReceivedListener(it) }
+            Shizuku.removeRequestPermissionResultListener(permissionListener)
         }
     }
 }
