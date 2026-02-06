@@ -15,13 +15,15 @@ import android.content.Context
 
 class DashboardViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val _currentProfile = MutableStateFlow<Profile>(Profile.Balanced)
+    private val prefsManager = PreferencesManager(application)
+
+    private val _currentProfile = MutableStateFlow<Profile>(getProfileByName(prefsManager.getLastProfile()))
     val currentProfile = _currentProfile.asStateFlow()
 
     var cpuLoad by mutableStateOf(0f)
     var ramUsage by mutableStateOf(0f)
     var temp by mutableStateOf(0f)
-    var isGlitchActive by mutableStateOf(false)
+    var isGlitchActive by mutableStateOf(_currentProfile.value is Profile.Sacrifice)
 
     var terminalLog by mutableStateOf("Aguardando comando...")
 
@@ -34,6 +36,8 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     init {
         updateDynamicActions()
         startMonitoring()
+        // Re-apply saved profile on startup
+        setProfile(_currentProfile.value)
     }
 
     private fun startMonitoring() {
@@ -94,6 +98,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     fun setProfile(profile: Profile) {
         viewModelScope.launch {
             _currentProfile.value = profile
+            prefsManager.saveLastProfile(profile.name)
 
             isGlitchActive = (profile is Profile.Sacrifice)
 
@@ -107,6 +112,17 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
             terminalLog = "Executando: ${action.name}...\n"
             val result = ShellEngine.runCommand(action.command)
             terminalLog += ">> $result"
+        }
+    }
+
+    private fun getProfileByName(name: String): Profile {
+        return when (name) {
+            Profile.Eco.name -> Profile.Eco
+            Profile.Balanced.name -> Profile.Balanced
+            Profile.Turbo.name -> Profile.Turbo
+            Profile.SensiFF.name -> Profile.SensiFF
+            Profile.Sacrifice.name -> Profile.Sacrifice
+            else -> Profile.Balanced
         }
     }
 }
