@@ -65,31 +65,34 @@ object ShizukuManager {
     fun autoConnectShizuku(context: Context, statusState: MutableState<String>) {
         Thread {
             var connected = false
-            repeat(5) {
+            repeat(10) { attempt -> // Aumentado para 10 tentativas
                 try {
                     if (Shizuku.pingBinder()) {
                         connected = true
                         if (Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED) {
                             statusState.value = "Conectado"
                         } else {
-                            statusState.value = "Conectando..."
+                            statusState.value = "Permissão Necessária"
                             Shizuku.requestPermission(REQUEST_CODE)
                         }
                         return@repeat
+                    } else {
+                        statusState.value = "Tentando conectar... ($attempt)"
                     }
-                } catch (e: Exception) { }
-                Thread.sleep(500)
+                } catch (e: Exception) {
+                    statusState.value = "Erro: ${e.message}"
+                }
+                Thread.sleep(1000) // Aumentado para 1s
             }
             if (!connected) {
-                // Se após 5 tentativas não conectar, assume que o serviço está parado
-                statusState.value = "Offline (Inicie o Shizuku)"
+                statusState.value = "Offline (Clique p/ Iniciar)"
             }
         }.start()
     }
 
     fun setupAutoReconnect(context: Context, statusState: MutableState<String>): Shizuku.OnBinderReceivedListener {
         return Shizuku.OnBinderReceivedListener {
-            statusState.value = "Detectando..."
+            statusState.value = "Binder Detectado!"
             autoConnectShizuku(context, statusState)
         }
     }

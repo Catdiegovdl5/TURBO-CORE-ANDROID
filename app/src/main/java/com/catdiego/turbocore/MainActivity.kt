@@ -24,15 +24,21 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private val binderListener = Shizuku.OnBinderReceivedListener {
+        viewModel.shizukuStatus.value = "Binder Sticky Detectado!"
+        ShizukuManager.autoConnectShizuku(this, viewModel.shizukuStatus)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Adiciona apenas se o binder estiver vivo
-        if (Shizuku.pingBinder()) {
-            Shizuku.addRequestPermissionResultListener(permissionListener)
-        }
+        // IMPORTANTE: addBinderReceivedListenerSticky dispara imediatamente se o serviço já estiver rodando
+        Shizuku.addBinderReceivedListenerSticky(binderListener)
 
-        // Tentativa inicial de conexão via Manager
+        // Listener de permissão
+        Shizuku.addRequestPermissionResultListener(permissionListener)
+
+        // Tentativa inicial direta (caso sticky demore ou falhe)
         ShizukuManager.autoConnectShizuku(this, viewModel.shizukuStatus)
 
         setContent {
@@ -42,9 +48,9 @@ class MainActivity : ComponentActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        // PONTO CRÍTICO: Limpeza obrigatória para evitar vazamento do Handler interno do Shizuku
         runCatching {
             Shizuku.removeRequestPermissionResultListener(permissionListener)
+            Shizuku.removeBinderReceivedListener(binderListener)
         }
     }
 }
