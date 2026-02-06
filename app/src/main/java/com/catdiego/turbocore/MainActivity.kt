@@ -24,13 +24,14 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private val binderListener = Shizuku.OnBinderReceivedListener {
-        viewModel.shizukuStatus.value = "Binder Sticky Detectado!"
-        ShizukuManager.autoConnectShizuku(this, viewModel.shizukuStatus)
-    }
+    // Agora inicializado com o logger
+    private var binderListener: Shizuku.OnBinderReceivedListener? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Inicializa o listener usando o ShizukuManager e o Logger do ViewModel
+        binderListener = ShizukuManager.setupAutoReconnect(this, viewModel.shizukuStatus, viewModel::logDebug)
 
         // IMPORTANTE: addBinderReceivedListenerSticky dispara imediatamente se o serviço já estiver rodando
         Shizuku.addBinderReceivedListenerSticky(binderListener)
@@ -39,7 +40,7 @@ class MainActivity : ComponentActivity() {
         Shizuku.addRequestPermissionResultListener(permissionListener)
 
         // Tentativa inicial direta (caso sticky demore ou falhe)
-        ShizukuManager.autoConnectShizuku(this, viewModel.shizukuStatus)
+        ShizukuManager.autoConnectShizuku(this, viewModel.shizukuStatus, viewModel::logDebug)
 
         setContent {
             InnovationHubDashboard(viewModel = viewModel)
@@ -50,7 +51,7 @@ class MainActivity : ComponentActivity() {
         super.onDestroy()
         runCatching {
             Shizuku.removeRequestPermissionResultListener(permissionListener)
-            Shizuku.removeBinderReceivedListener(binderListener)
+            binderListener?.let { Shizuku.removeBinderReceivedListener(it) }
         }
     }
 }

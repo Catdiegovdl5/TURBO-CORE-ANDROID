@@ -62,14 +62,21 @@ object ShizukuManager {
         }
     }
 
-    fun autoConnectShizuku(context: Context, statusState: MutableState<String>) {
+    fun autoConnectShizuku(context: Context, statusState: MutableState<String>, logger: (String) -> Unit = {}) {
         Thread {
             var connected = false
-            repeat(10) { attempt -> // Aumentado para 10 tentativas
+            logger("Iniciando autoConnect...")
+            repeat(10) { attempt ->
                 try {
-                    if (Shizuku.pingBinder()) {
+                    val ping = Shizuku.pingBinder()
+                    logger("Ping ($attempt): $ping")
+
+                    if (ping) {
                         connected = true
-                        if (Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED) {
+                        val permission = Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED
+                        logger("Permissão: $permission")
+
+                        if (permission) {
                             statusState.value = "Conectado"
                         } else {
                             statusState.value = "Permissão Necessária"
@@ -81,19 +88,22 @@ object ShizukuManager {
                     }
                 } catch (e: Exception) {
                     statusState.value = "Erro: ${e.message}"
+                    logger("Exception: ${e.message}")
                 }
-                Thread.sleep(1000) // Aumentado para 1s
+                Thread.sleep(1000)
             }
             if (!connected) {
                 statusState.value = "Offline (Clique p/ Iniciar)"
+                logger("Falha na conexão: Binder não respondeu.")
             }
         }.start()
     }
 
-    fun setupAutoReconnect(context: Context, statusState: MutableState<String>): Shizuku.OnBinderReceivedListener {
+    fun setupAutoReconnect(context: Context, statusState: MutableState<String>, logger: (String) -> Unit): Shizuku.OnBinderReceivedListener {
         return Shizuku.OnBinderReceivedListener {
             statusState.value = "Binder Detectado!"
-            autoConnectShizuku(context, statusState)
+            logger("Listener: Binder Recebido!")
+            autoConnectShizuku(context, statusState, logger)
         }
     }
 }

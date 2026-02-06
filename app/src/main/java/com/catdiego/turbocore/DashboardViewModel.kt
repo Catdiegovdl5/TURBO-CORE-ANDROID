@@ -26,7 +26,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     var temp by mutableStateOf(0f)
     var isGlitchActive by mutableStateOf(_currentProfile.value is Profile.Sacrifice)
 
-    var terminalLog by mutableStateOf("Aguardando comando...")
+    var terminalLog by mutableStateOf("Inicializando...")
     var shizukuStatus = mutableStateOf("Verificando...")
 
     var quickActions by mutableStateOf(emptyList<QuickAction>())
@@ -41,8 +41,15 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         // Re-apply saved profile on startup
         setProfile(_currentProfile.value)
 
-        // Initial Shizuku Check
-        ShizukuManager.autoConnectShizuku(application, shizukuStatus)
+        // Initial Shizuku Check com Logger
+        ShizukuManager.autoConnectShizuku(application, shizukuStatus, ::logDebug)
+    }
+
+    fun logDebug(message: String) {
+        val timestamp = java.text.SimpleDateFormat("HH:mm:ss").format(java.util.Date())
+        // Mantém apenas as últimas 5 linhas para não poluir a UI
+        val lines = terminalLog.split("\n").takeLast(5)
+        terminalLog = (lines + "[$timestamp] $message").joinToString("\n")
     }
 
     private fun startMonitoring() {
@@ -114,9 +121,9 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun executeQuickAction(action: QuickAction) {
         viewModelScope.launch {
-            terminalLog = "Executando: ${action.name}...\n"
+            logDebug("Executando: ${action.name}...")
             val result = ShellEngine.runCommand(action.command)
-            terminalLog += ">> $result"
+            logDebug(">> $result")
         }
     }
 
