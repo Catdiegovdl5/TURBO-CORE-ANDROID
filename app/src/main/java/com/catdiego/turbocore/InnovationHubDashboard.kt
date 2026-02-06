@@ -185,6 +185,7 @@ fun InnovationHubDashboard(viewModel: DashboardViewModel) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun QuickActionCard(action: QuickAction, onClick: () -> Unit) {
     Card(
