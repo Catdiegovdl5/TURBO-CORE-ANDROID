@@ -7,23 +7,29 @@ import java.io.BufferedReader
 import java.io.InputStreamReader
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.TimeoutCancellationException
 
 object ShellEngine {
 
     suspend fun runCommand(command: String): String = withContext(Dispatchers.IO) {
         if (!Shizuku.pingBinder()) return@withContext "Erro: Serviço Shizuku parado no sistema!"
         try {
-            val method = Shizuku::class.java.getDeclaredMethod(
-                "newProcess",
-                Array<String>::class.java, Array<String>::class.java, String::class.java
-            )
-            method.isAccessible = true
-            // Redirect stderr to stdout to capture error messages
-            val process = method.invoke(null, arrayOf("sh", "-c", "$command 2>&1"), null, null) as Process
-            val reader = BufferedReader(InputStreamReader(process.inputStream))
-            val output = reader.readText()
-            process.waitFor()
-            if (output.isEmpty()) "Sucesso" else output
+            withTimeout(5000L) {
+                val method = Shizuku::class.java.getDeclaredMethod(
+                    "newProcess",
+                    Array<String>::class.java, Array<String>::class.java, String::class.java
+                )
+                method.isAccessible = true
+                // Redirect stderr to stdout to capture error messages
+                val process = method.invoke(null, arrayOf("sh", "-c", "$command 2>&1"), null, null) as Process
+                val reader = BufferedReader(InputStreamReader(process.inputStream))
+                val output = reader.readText()
+                process.waitFor()
+                if (output.isEmpty()) "Sucesso" else output
+            }
+        } catch (e: TimeoutCancellationException) {
+            "Erro: Timeout (Comando demorou demais)"
         } catch (e: Exception) {
             "Erro: ${e.message}"
         }

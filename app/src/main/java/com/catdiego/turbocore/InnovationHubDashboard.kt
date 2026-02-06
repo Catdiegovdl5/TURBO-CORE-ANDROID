@@ -37,26 +37,28 @@ fun InnovationHubDashboard(viewModel: DashboardViewModel) {
         )
     }
 
-    // Glitch Animation
-    val infiniteTransition = rememberInfiniteTransition()
-    val glitchColor by infiniteTransition.animateColor(
-        initialValue = Color(0xFF6200EE),
-        targetValue = Color.White,
-        animationSpec = infiniteRepeatable(
-            animation = keyframes {
-                durationMillis = 300 // Irregular total duration
-                Color(0xFF6200EE) at 0
-                Color.Transparent at 50 // Blink off
-                Color.White at 80 // Flash white
-                Color(0xFF6200EE) at 120 // Back to purple
-                Color.Black at 200 // Flicker dark
-                Color(0xFF6200EE) at 300
-            },
-            repeatMode = RepeatMode.Restart
+    val ledColor = if (isGlitchActive) {
+        val infiniteTransition = rememberInfiniteTransition()
+        val glitchColor by infiniteTransition.animateColor(
+            initialValue = Color(0xFF6200EE),
+            targetValue = Color.White,
+            animationSpec = infiniteRepeatable(
+                animation = keyframes {
+                    durationMillis = 300 // Irregular total duration
+                    Color(0xFF6200EE) at 0
+                    Color.Transparent at 50 // Blink off
+                    Color.White at 80 // Flash white
+                    Color(0xFF6200EE) at 120 // Back to purple
+                    Color.Black at 200 // Flicker dark
+                    Color(0xFF6200EE) at 300
+                },
+                repeatMode = RepeatMode.Restart
+            )
         )
-    )
-
-    val ledColor = if (isGlitchActive) glitchColor else Color(currentProfile.colorHex)
+        glitchColor
+    } else {
+        Color(currentProfile.colorHex)
+    }
 
     Column(
         modifier = Modifier
@@ -85,6 +87,7 @@ fun InnovationHubDashboard(viewModel: DashboardViewModel) {
 
         // Rank Xi Badge
         if (currentProfile is Profile.Sacrifice) {
+             val infiniteTransition = rememberInfiniteTransition()
              val pulseAlpha by infiniteTransition.animateFloat(
                 initialValue = 0.5f,
                 targetValue = 1f,
