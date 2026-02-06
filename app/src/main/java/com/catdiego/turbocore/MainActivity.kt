@@ -34,7 +34,7 @@ class MainActivity : ComponentActivity() {
         binderListener = ShizukuManager.setupAutoReconnect(this, viewModel.shizukuStatus, viewModel::logDebug)
 
         // IMPORTANTE: addBinderReceivedListenerSticky dispara imediatamente se o serviço já estiver rodando
-        Shizuku.addBinderReceivedListenerSticky(binderListener)
+        binderListener?.let { Shizuku.addBinderReceivedListenerSticky(it) }
 
         // Listener de permissão
         Shizuku.addRequestPermissionResultListener(permissionListener)
