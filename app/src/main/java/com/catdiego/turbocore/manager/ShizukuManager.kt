@@ -13,14 +13,11 @@ object ShizukuManager {
     private const val SHIZUKU_PACKAGE = "rikka.app.shizuku"
     private const val SHIZUKU_PRIVILEGED = "moe.shizuku.privileged.api"
     private const val GITHUB_RELEASE = "https://github.com/RikkaApps/Shizuku/releases"
+    private const val REQUEST_CODE = 1001
 
-    /**
-     * Verifica se Shizuku está instalado no sistema
-     */
     fun isShizukuInstalled(context: Context): Boolean {
         val packages = listOf(SHIZUKU_PACKAGE, SHIZUKU_PRIVILEGED)
         val pm = context.packageManager
-
         return packages.any { pkg ->
             try {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -35,11 +32,6 @@ object ShizukuManager {
         }
     }
 
-    /**
-     * Trata o clique inteligente:
-     * - Se não instalado → Download
-     * - Se instalado → Abre o app
-     */
     fun handleShizukuButtonClick(context: Context) {
         if (!isShizukuInstalled(context)) {
             openShizukuDownload(context)
@@ -48,22 +40,14 @@ object ShizukuManager {
         }
     }
 
-    /**
-     * Abre o GitHub para download do Shizuku
-     */
     private fun openShizukuDownload(context: Context) {
         try {
             val intent = Intent(Intent.ACTION_VIEW, Uri.parse(GITHUB_RELEASE))
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             context.startActivity(intent)
-        } catch (e: Exception) {
-            // Fallback se falhar
-        }
+        } catch (e: Exception) { }
     }
 
-    /**
-     * Abre o app Shizuku (com fallback para privileged)
-     */
     fun launchShizukuApp(context: Context) {
         try {
             val intent = context.packageManager.getLaunchIntentForPackage(SHIZUKU_PACKAGE)
@@ -78,32 +62,34 @@ object ShizukuManager {
         }
     }
 
-    /**
-     * Verificação automática com reconnect
-     */
     fun autoConnectShizuku(context: Context, statusState: MutableState<String>) {
         Thread {
-            repeat(5) { attempt ->
+            var connected = false
+            repeat(5) {
                 try {
                     if (Shizuku.pingBinder()) {
-                        statusState.value = "Conectando..."
-                        Shizuku.requestPermission(1001)
+                        connected = true
+                        if (Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED) {
+                            statusState.value = "Conectado"
+                        } else {
+                            statusState.value = "Conectando..."
+                            Shizuku.requestPermission(REQUEST_CODE)
+                        }
                         return@repeat
                     }
-                } catch (e: Exception) {
-                    // Continua tentando
-                }
-                Thread.sleep(500) // Espera 500ms entre tentativas
+                } catch (e: Exception) { }
+                Thread.sleep(500)
+            }
+            if (!connected) {
+                // Se após 5 tentativas não conectar, assume que o serviço está parado
+                statusState.value = "Offline (Inicie o Shizuku)"
             }
         }.start()
     }
 
-    /**
-     * Listener para reconectar quando Shizuku volta online
-     */
     fun setupAutoReconnect(context: Context, statusState: MutableState<String>): Shizuku.OnBinderReceivedListener {
         return Shizuku.OnBinderReceivedListener {
-            statusState.value = "Shizuku Detectado! Reconectando..."
+            statusState.value = "Detectando..."
             autoConnectShizuku(context, statusState)
         }
     }
