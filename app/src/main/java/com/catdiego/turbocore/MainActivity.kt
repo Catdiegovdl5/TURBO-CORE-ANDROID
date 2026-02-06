@@ -6,6 +6,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import rikka.shizuku.Shizuku
+import com.catdiego.turbocore.manager.ShizukuManager
 
 class MainActivity : ComponentActivity() {
 
@@ -15,46 +16,41 @@ class MainActivity : ComponentActivity() {
     private val permissionListener = Shizuku.OnRequestPermissionResultListener { _, grantResult ->
         if (grantResult == PackageManager.PERMISSION_GRANTED) {
             viewModel.terminalLog = "Shizuku Conectado"
+            viewModel.shizukuStatus.value = "Conectado"
         } else {
              viewModel.terminalLog = "Shizuku Negado"
+             viewModel.shizukuStatus.value = "Negado"
         }
     }
 
-    private val binderListener = Shizuku.OnBinderReceivedListener {
-        checkAndRequestShizukuPermission()
-    }
+    // Usando o novo manager para reconexão automática
+    private var binderListener: Shizuku.OnBinderReceivedListener? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // Inicializa o listener usando o ShizukuManager
+        binderListener = ShizukuManager.setupAutoReconnect(this, viewModel.shizukuStatus)
+
         // Shizuku Setup
         runCatching { Shizuku.addRequestPermissionResultListener(permissionListener) }
-        runCatching { Shizuku.addBinderReceivedListener(binderListener) }
-
-        if (Shizuku.pingBinder()) {
-             checkAndRequestShizukuPermission()
+        runCatching {
+            binderListener?.let { Shizuku.addBinderReceivedListener(it) }
         }
+
+        // Tentativa inicial de conexão
+        ShizukuManager.autoConnectShizuku(this, viewModel.shizukuStatus)
 
         setContent {
             InnovationHubDashboard(viewModel = viewModel)
         }
     }
 
-    private fun checkAndRequestShizukuPermission() {
-        try {
-            if (Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED) {
-                 viewModel.terminalLog = "Shizuku Pronto"
-            } else {
-                Shizuku.requestPermission(REQUEST_CODE)
-            }
-        } catch (e: Exception) {
-             viewModel.terminalLog = "Erro Shizuku: ${e.message}"
-        }
-    }
-
     override fun onDestroy() {
         super.onDestroy()
         runCatching { Shizuku.removeRequestPermissionResultListener(permissionListener) }
-        runCatching { Shizuku.removeBinderReceivedListener(binderListener) }
+        runCatching {
+            binderListener?.let { Shizuku.removeBinderReceivedListener(it) }
+        }
     }
 }

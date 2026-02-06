@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import android.app.ActivityManager
 import android.content.Context
+import com.catdiego.turbocore.manager.ShizukuManager
 
 class DashboardViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -26,6 +27,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     var isGlitchActive by mutableStateOf(_currentProfile.value is Profile.Sacrifice)
 
     var terminalLog by mutableStateOf("Aguardando comando...")
+    var shizukuStatus = mutableStateOf("Verificando...")
 
     var quickActions by mutableStateOf(emptyList<QuickAction>())
         private set
@@ -38,6 +40,9 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         startMonitoring()
         // Re-apply saved profile on startup
         setProfile(_currentProfile.value)
+
+        // Initial Shizuku Check
+        ShizukuManager.autoConnectShizuku(application, shizukuStatus)
     }
 
     private fun startMonitoring() {

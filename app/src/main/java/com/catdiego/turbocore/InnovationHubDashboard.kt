@@ -17,16 +17,21 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.material3.ExperimentalMaterial3Api
+import com.catdiego.turbocore.manager.ShizukuManager
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun InnovationHubDashboard(viewModel: DashboardViewModel) {
     val currentProfile by viewModel.currentProfile.collectAsState()
     val isGlitchActive = viewModel.isGlitchActive
+    val context = LocalContext.current
+    val shizukuStatus by viewModel.shizukuStatus
+
     var showSafetyDialog by remember { mutableStateOf(false) }
 
     if (showSafetyDialog) {
@@ -74,7 +79,18 @@ fun InnovationHubDashboard(viewModel: DashboardViewModel) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("INNOVATION HUB", color = Color.White, style = MaterialTheme.typography.titleLarge)
+            Column {
+                Text("INNOVATION HUB", color = Color.White, style = MaterialTheme.typography.titleLarge)
+                // Shizuku Status (Clickable)
+                Text(
+                    text = "Shizuku: $shizukuStatus",
+                    color = if (shizukuStatus.contains("Conectado")) Color.Green else Color.Red,
+                    style = MaterialTheme.typography.labelSmall,
+                    modifier = Modifier.clickable {
+                        ShizukuManager.handleShizukuButtonClick(context)
+                    }
+                )
+            }
 
             // Status LED
             Box(
