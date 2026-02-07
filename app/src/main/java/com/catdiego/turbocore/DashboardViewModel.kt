@@ -27,7 +27,8 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     var isGlitchActive by mutableStateOf(_currentProfile.value is Profile.RankXi)
 
     var terminalLog by mutableStateOf("Inicializando...")
-    var shizukuStatus = mutableStateOf("Verificando...")
+    // Observa o Flow do ShizukuManager em vez de usar MutableState passado
+    var shizukuStatus by mutableStateOf("Verificando...")
 
     var quickActions by mutableStateOf(emptyList<QuickAction>())
         private set
@@ -42,8 +43,20 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         // Re-apply saved profile on startup
         setProfile(_currentProfile.value)
 
-        // Initial Shizuku Check com Logger
-        ShizukuManager.autoConnectShizuku(application, shizukuStatus, ::logDebug)
+        // Start monitoring connection
+        ShizukuManager.startMonitoring()
+        observeShizukuStatus()
+    }
+
+    private fun observeShizukuStatus() {
+        viewModelScope.launch {
+            ShizukuManager.statusFlow.collect { status ->
+                shizukuStatus = status
+                if (status.startsWith("Erro")) {
+                    logDebug(status)
+                }
+            }
+        }
     }
 
     private fun initializeSmartCore() {

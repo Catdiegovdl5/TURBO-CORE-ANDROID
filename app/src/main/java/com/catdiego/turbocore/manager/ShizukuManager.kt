@@ -5,7 +5,9 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
-import androidx.compose.runtime.MutableState
+import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import rikka.shizuku.Shizuku
 
 object ShizukuManager {
@@ -13,7 +15,41 @@ object ShizukuManager {
     private const val SHIZUKU_PACKAGE = "rikka.app.shizuku"
     private const val SHIZUKU_PRIVILEGED = "moe.shizuku.privileged.api"
     private const val GITHUB_RELEASE = "https://github.com/RikkaApps/Shizuku/releases"
-    private const val REQUEST_CODE = 1001
+    const val REQUEST_CODE = 1001 // Public for Activity
+
+    private val _statusFlow = MutableStateFlow("Inicializando...")
+    val statusFlow = _statusFlow.asStateFlow()
+
+    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private var isMonitoring = false
+
+    fun startMonitoring() {
+        if (isMonitoring) return
+        isMonitoring = true
+
+        scope.launch {
+            while (isActive) {
+                checkStatus()
+                delay(3000) // Heartbeat every 3s
+            }
+        }
+    }
+
+    private fun checkStatus() {
+        try {
+            if (Shizuku.pingBinder()) {
+                if (Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED) {
+                    _statusFlow.value = "Conectado"
+                } else {
+                    _statusFlow.value = "Permissão Necessária"
+                }
+            } else {
+                _statusFlow.value = "Offline (Inicie o Shizuku)"
+            }
+        } catch (e: Exception) {
+            _statusFlow.value = "Erro: ${e.message}"
+        }
+    }
 
     fun isShizukuInstalled(context: Context): Boolean {
         val packages = listOf(SHIZUKU_PACKAGE, SHIZUKU_PRIVILEGED)
@@ -62,48 +98,11 @@ object ShizukuManager {
         }
     }
 
-    fun autoConnectShizuku(context: Context, statusState: MutableState<String>, logger: (String) -> Unit = {}) {
-        Thread {
-            var connected = false
-            logger("Iniciando autoConnect...")
-            repeat(10) { attempt ->
-                try {
-                    val ping = Shizuku.pingBinder()
-                    logger("Ping ($attempt): $ping")
-
-                    if (ping) {
-                        connected = true
-                        val permission = Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED
-                        logger("Permissão: $permission")
-
-                        if (permission) {
-                            statusState.value = "Conectado"
-                        } else {
-                            statusState.value = "Permissão Necessária"
-                            Shizuku.requestPermission(REQUEST_CODE)
-                        }
-                        return@repeat
-                    } else {
-                        statusState.value = "Tentando conectar... ($attempt)"
-                    }
-                } catch (e: Exception) {
-                    statusState.value = "Erro: ${e.message}"
-                    logger("Exception: ${e.message}")
-                }
-                Thread.sleep(1000)
-            }
-            if (!connected) {
-                statusState.value = "Offline (Clique p/ Iniciar)"
-                logger("Falha na conexão: Binder não respondeu.")
-            }
-        }.start()
-    }
-
-    fun setupAutoReconnect(context: Context, statusState: MutableState<String>, logger: (String) -> Unit): Shizuku.OnBinderReceivedListener {
+    // Listener simplificado apenas para log/update imediato
+    fun getStickyListener(): Shizuku.OnBinderReceivedListener {
         return Shizuku.OnBinderReceivedListener {
-            statusState.value = "Binder Detectado!"
-            logger("Listener: Binder Recebido!")
-            autoConnectShizuku(context, statusState, logger)
+            _statusFlow.value = "Binder Detectado!"
+            checkStatus()
         }
     }
 }
