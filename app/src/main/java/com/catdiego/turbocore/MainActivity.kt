@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import rikka.shizuku.Shizuku
 
 class MainActivity : ComponentActivity() {
@@ -41,12 +42,17 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             var terminalLog by remember { mutableStateOf("Aguardando comando...") }
+            val scope = rememberCoroutineScope()
 
             LaunchedEffect(Unit) {
                 delay(1000)
                 if (Shizuku.pingBinder()) {
                     // Se o serviço está vivo, exige a tela de permissão na hora!
-                    Shizuku.requestPermission(REQUEST_CODE)
+                    try {
+                        Shizuku.requestPermission(REQUEST_CODE)
+                    } catch (e: Exception) {
+                        shizukuStatus = "Erro ao solicitar permissão"
+                    }
                 } else {
                     shizukuStatus = "Shizuku desligado no sistema!"
                 }
@@ -66,7 +72,6 @@ class MainActivity : ComponentActivity() {
                                     if (Shizuku.pingBinder()) {
                                         Shizuku.requestPermission(REQUEST_CODE)
                                     } else {
-                                        // Se o binder não responde, abre o app Shizuku direto
                                         launchShizukuApp(this@MainActivity)
                                     }
                                 } catch (e: Exception) {
@@ -85,13 +90,13 @@ class MainActivity : ComponentActivity() {
                         // DESEMPENHO
                         Text("DESEMPENHO", color = Color.Gray, style = MaterialTheme.typography.titleSmall)
                         Button(onClick = {
-                            terminalLog = AppManager.runCommand("wm size 540x1200 && wm density 210")
+                            scope.launch { terminalLog = AppManager.runCommand("wm size 540x1200 && wm density 210") }
                         }, modifier = Modifier.fillMaxWidth()) { Text("MODO BRUTO (720p)") }
 
                         Spacer(Modifier.height(8.dp))
 
                         Button(onClick = {
-                            terminalLog = AppManager.runCommand("wm size reset && wm density reset")
+                            scope.launch { terminalLog = AppManager.runCommand("wm size reset && wm density reset") }
                         }, modifier = Modifier.fillMaxWidth()) { Text("USUAL TURBO") }
 
                         Spacer(Modifier.height(16.dp))
@@ -99,13 +104,13 @@ class MainActivity : ComponentActivity() {
                         // ECONOMIA
                         Text("ECONOMIA", color = Color.Gray, style = MaterialTheme.typography.titleSmall)
                         Button(onClick = {
-                            terminalLog = AppManager.runCommand("settings put global low_power 1 && pm suspend com.google.android.gms")
+                            scope.launch { terminalLog = AppManager.runCommand("settings put global low_power 1 && pm suspend com.google.android.gms") }
                         }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50))) { Text("SUPER ECONOMIA") }
 
                         Spacer(Modifier.height(8.dp))
 
                         Button(onClick = {
-                            terminalLog = AppManager.runCommand("wm size 360x800 && settings put global low_power 1")
+                            scope.launch { terminalLog = AppManager.runCommand("wm size 360x800 && settings put global low_power 1") }
                         }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50))) { Text("ULTRA ECONOMIA") }
 
                         Spacer(Modifier.height(16.dp))
@@ -113,19 +118,19 @@ class MainActivity : ComponentActivity() {
                         // COMPETITIVO
                         Text("COMPETITIVO", color = Color.Gray, style = MaterialTheme.typography.titleSmall)
                         Button(onClick = {
-                            terminalLog = AppManager.runCommand("cmd power set-fixed-performance-mode-enabled true")
+                            scope.launch { terminalLog = AppManager.runCommand("cmd power set-fixed-performance-mode-enabled true") }
                         }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3))) { Text("GAMER ULTIMATE") }
 
                         Spacer(Modifier.height(8.dp))
 
                         Button(onClick = {
-                            terminalLog = AppManager.runCommand("wm density 180")
+                            scope.launch { terminalLog = AppManager.runCommand("wm density 180") }
                         }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3))) { Text("SENSI FREE FIRE") }
 
                         Spacer(Modifier.height(24.dp))
 
                         Button(onClick = {
-                            terminalLog = AppManager.runCommand("wm size reset && wm density reset && settings put global low_power 0")
+                            scope.launch { terminalLog = AppManager.runCommand("wm size reset && wm density reset && settings put global low_power 0") }
                         }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Color.Red)) { Text("RESETAR TUDO") }
 
                         Spacer(Modifier.height(20.dp))
@@ -143,9 +148,7 @@ class MainActivity : ComponentActivity() {
             if (Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED) {
                 shizukuStatus = "Conectado"
             } else {
-                // Tenta o popup padrão
                 Shizuku.requestPermission(REQUEST_CODE)
-                // Se em 2 segundos não conectar, sugere abertura manual
                 shizukuStatus = "Autorize no App Shizuku..."
             }
         } catch (e: Exception) {
@@ -154,20 +157,19 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun updateStatus() {
-        shizukuStatus = if (!Shizuku.pingBinder()) {
-            "Shizuku Parado (Abra o App Shizuku)"
-        } else if (Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED) {
-            "Conectado"
-        } else if (shizukuStatus == "Permissão Negada") {
-            "Configurações Restritas (Habilite Manualmente)"
-        } else {
-            "Aguardando Permissão"
+        try {
+            shizukuStatus = if (!Shizuku.pingBinder()) {
+                "Shizuku Parado (Abra o App Shizuku)"
+            } else if (Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED) {
+                "Conectado"
+            } else if (shizukuStatus == "Permissão Negada") {
+                "Configurações Restritas (Habilite Manualmente)"
+            } else {
+                "Aguardando Permissão"
+            }
+        } catch (e: Exception) {
+            shizukuStatus = "Erro ao verificar status"
         }
-    }
-
-    private fun openShizukuDownload(context: Context) {
-        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/RikkaApps/Shizuku/releases"))
-        context.startActivity(intent)
     }
 
     private fun launchShizukuApp(context: Context) {
@@ -179,7 +181,6 @@ class MainActivity : ComponentActivity() {
                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 context.startActivity(intent)
             } else {
-                // Se o intent falhar por segurança do Android 15, tenta via URI
                 val githubIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/RikkaApps/Shizuku/releases"))
                 context.startActivity(githubIntent)
             }
