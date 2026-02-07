@@ -155,7 +155,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
             prefsManager.saveLastProfile(profile.name)
             isGlitchActive = (profile is Profile.RankXi)
 
-            val targetPid = if (profile is Profile.RankOmega) {
+            val targetPid = if (profile is Profile.RankOmega || profile is Profile.RankXi) {
                 val context = getApplication<Application>()
                 val pkg = AppDetector.getForegroundApp(context)
                 if (pkg != null) ShellEngine.getPid(pkg) else null

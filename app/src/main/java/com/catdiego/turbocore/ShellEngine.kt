@@ -127,8 +127,11 @@ object ShellEngine {
         return runCommand("taskset -p f0 $pid")
     }
 
-    suspend fun applyRankXi(): String {
+    suspend fun applyRankXi(pid: String?): String {
         val sb = StringBuilder()
+        // Herda otimizações do Rank Omega (Pinning, JIT, Fsync)
+        sb.append(applyRankOmega(pid))
+
         sb.append(runCommand("echo 1 > /proc/sys/vm/compact_memory")).append("\n")
         val thermalCommands = listOf(
             "stop thermal-engine",
@@ -201,7 +204,7 @@ object ShellEngine {
             is Profile.RankS -> applyRankS()
             is Profile.RankSSS -> applyRankSSS()
             is Profile.RankOmega -> applyRankOmega(targetPid)
-            is Profile.RankXi -> applyRankXi()
+            is Profile.RankXi -> applyRankXi(targetPid)
             is Profile.SensiFF -> applySensiFF()
             is Profile.Balanced -> runCommand("wm size reset && wm density reset && settings put global low_power 0")
             else -> "Perfil Desconhecido"
