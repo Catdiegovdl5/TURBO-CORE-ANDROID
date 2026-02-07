@@ -39,7 +39,7 @@ fun InnovationHubDashboard(viewModel: DashboardViewModel) {
             onDismiss = { showSafetyDialog = false },
             onConfirm = {
                 showSafetyDialog = false
-                viewModel.setProfile(Profile.Sacrifice)
+                viewModel.setProfile(Profile.RankXi)
             }
         )
     }
@@ -104,7 +104,7 @@ fun InnovationHubDashboard(viewModel: DashboardViewModel) {
         Spacer(modifier = Modifier.height(20.dp))
 
         // Rank Xi Badge
-        if (currentProfile is Profile.Sacrifice) {
+        if (currentProfile is Profile.RankXi) {
              val infiniteTransition = rememberInfiniteTransition()
              val pulseAlpha by infiniteTransition.animateFloat(
                 initialValue = 0.5f,
@@ -178,7 +178,7 @@ fun InnovationHubDashboard(viewModel: DashboardViewModel) {
                 onClick = { showSafetyDialog = true },
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6200EE)),
                 modifier = Modifier.weight(1f),
-                border = if (currentProfile is Profile.Sacrifice) BorderStroke(2.dp, Color.White) else null
+                border = if (currentProfile is Profile.RankXi) BorderStroke(2.dp, Color.White) else null
             ) {
                 Text("RANK Ξ")
             }

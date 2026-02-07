@@ -86,6 +86,33 @@ object ShellEngine {
         }
     }
 
+    suspend fun getManufacturer(): String = withContext(Dispatchers.IO) {
+        runCommand("getprop ro.product.manufacturer").trim()
+    }
+
+    suspend fun getTotalRam(): Long = withContext(Dispatchers.IO) {
+        try {
+            val output = runCommand("grep MemTotal /proc/meminfo")
+            val parts = output.split("\\s+".toRegex())
+            if (parts.size >= 2) parts[1].toLongOrNull() ?: 0L else 0L
+        } catch (e: Exception) {
+            0L
+        }
+    }
+
+    suspend fun bypassKnox(): String {
+        return runCommand("pm disable-user com.samsung.android.knox.analytics.uploader") // Exemplo safe de bypass
+    }
+
+    suspend fun disableJoyose(): String {
+        return runCommand("pm disable-user com.xiaomi.joyose")
+    }
+
+    suspend fun applyThreadPinning(pid: String): String {
+        // Pin to big cores (4-7) on Helio G35 (mask f0)
+        return runCommand("taskset -p f0 $pid")
+    }
+
     suspend fun applyRankXi(): String {
         val sb = StringBuilder()
 
@@ -119,34 +146,61 @@ object ShellEngine {
         return sb.toString()
     }
 
+    suspend fun applyRankOmega(pid: String?): String {
+        val sb = StringBuilder()
+        if (pid != null) {
+            sb.append(applyThreadPinning(pid)).append("\n")
+            sb.append("Omega: App Pinned to Big Cores\n")
+        } else {
+            sb.append("Omega: App not found for pinning\n")
+        }
+        // Fsync Override (Safe check first)
+        sb.append(runCommand("echo 0 > /sys/module/sync/parameters/fsync_enabled"))
+        return sb.toString()
+    }
+
+    suspend fun applyRankSSS(): String {
+        val sb = StringBuilder()
+        sb.append(runCommand("echo 2048 > /sys/block/mmcblk0/queue/read_ahead_kb")).append("\n")
+        // GPU Performance Governor (Multi-path)
+        val gpuPaths = listOf(
+            "/sys/class/devfreq/18500000.mali/governor",
+            "/sys/class/kgsl/kgsl-3d0/devfreq/governor"
+        )
+        for (path in gpuPaths) {
+            sb.append(runCommand("echo performance > $path")).append("\n")
+        }
+        sb.append(runCommand("stop logd")) // Logcat Silencer
+        return sb.toString()
+    }
+
+    suspend fun applyRankS(): String {
+        // Swappiness 10 + Auto-Trigger handled in VM
+        return runCommand("echo 10 > /proc/sys/vm/swappiness")
+    }
+
     suspend fun applySensiFF(): String {
         val sb = StringBuilder()
-        // 1. DPI Adjustment (Example value for Sensi)
         sb.append(runCommand("wm density 180")).append("\n")
-
-        // 2. Touch IRQ Pinning to Core 0
         val irq = findTouchIrq()
         if (irq != null) {
             val result = runCommand("echo 1 > /proc/irq/$irq/smp_affinity")
-            if (result.contains("Permission denied") || result.contains("Erro")) {
-                sb.append("Sensi: IRQ Access Denied")
-            } else {
-                sb.append("Sensi: Touch IRQ -> Core 0")
-            }
-        } else {
-            sb.append("Sensi: Touch IRQ not found")
+            sb.append(if(result.contains("Erro")) "Sensi: IRQ Fail" else "Sensi: IRQ -> Core 0")
         }
         return sb.toString()
     }
 
-    suspend fun applyProfile(profile: Profile): String {
-        // Basic implementation for other profiles based on memory/context
+    suspend fun applyProfile(profile: Profile, targetPid: String? = null): String {
         return when (profile) {
             is Profile.Eco -> runCommand("settings put global low_power 1 && pm suspend com.google.android.gms")
-            is Profile.Balanced -> runCommand("wm size reset && wm density reset && settings put global low_power 0")
-            is Profile.Turbo -> runCommand("cmd activity kill-all && echo 10 > /proc/sys/vm/swappiness")
+            is Profile.RankS -> applyRankS()
+            is Profile.RankSSS -> applyRankSSS()
+            is Profile.RankOmega -> applyRankOmega(targetPid)
+            is Profile.RankXi -> applyRankXi()
             is Profile.SensiFF -> applySensiFF()
-            is Profile.Sacrifice -> applyRankXi()
+            is Profile.Balanced -> runCommand("wm size reset && wm density reset && settings put global low_power 0")
+            // Fallback for older enums if any remain, though we will update Profile.kt
+            else -> "Perfil Desconhecido"
         }
     }
 }

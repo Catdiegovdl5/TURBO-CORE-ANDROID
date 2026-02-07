@@ -24,7 +24,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     var cpuLoad by mutableStateOf(0f)
     var ramUsage by mutableStateOf(0f)
     var temp by mutableStateOf(0f)
-    var isGlitchActive by mutableStateOf(_currentProfile.value is Profile.Sacrifice)
+    var isGlitchActive by mutableStateOf(_currentProfile.value is Profile.RankXi)
 
     var terminalLog by mutableStateOf("Inicializando...")
     var shizukuStatus = mutableStateOf("Verificando...")
@@ -36,6 +36,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     private var prevActive = 0L
 
     init {
+        initializeSmartCore()
         updateDynamicActions()
         startMonitoring()
         // Re-apply saved profile on startup
@@ -43,6 +44,29 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
 
         // Initial Shizuku Check com Logger
         ShizukuManager.autoConnectShizuku(application, shizukuStatus, ::logDebug)
+    }
+
+    private fun initializeSmartCore() {
+        viewModelScope.launch {
+            logDebug("Smart-Core Engine: Iniciando...")
+            val manufacturer = ShellEngine.getManufacturer()
+            logDebug("Fabricante detectado: $manufacturer")
+
+            if (manufacturer.contains("samsung", ignoreCase = true)) {
+                logDebug("Aplicando Bypass Knox (Samsung)...")
+                ShellEngine.bypassKnox()
+            }
+            if (manufacturer.contains("xiaomi", ignoreCase = true)) {
+                logDebug("Desativando Joyose (Xiaomi)...")
+                ShellEngine.disableJoyose()
+            }
+
+            val totalRam = ShellEngine.getTotalRam()
+            if (totalRam < 4000000) { // < 4GB
+                logDebug("Dispositivo Low-End detectado ($totalRam KB). Aplicando Swappiness 10.")
+                ShellEngine.runCommand("echo 10 > /proc/sys/vm/swappiness")
+            }
+        }
     }
 
     fun logDebug(message: String) {
@@ -86,9 +110,15 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
             prevTotal = currentTotal
             prevActive = currentActive
 
-            // 3. Temperatura REAL
+            // 3. Temperatura REAL & Watchdog
             val realTemp = ShellEngine.getThermalTemp()
             temp = if (realTemp > 0) realTemp else 0f
+
+            // Thermal Watchdog (Safety Protocol)
+            if (realTemp > 39 && (_currentProfile.value is Profile.RankXi || _currentProfile.value is Profile.RankOmega)) {
+                logDebug("ALERTA TÉRMICO: ${realTemp}°C. Revertendo para Eco.")
+                setProfile(Profile.Eco)
+            }
 
             // Atualiza ações dinâmicas periodicamente para pegar app foreground atual
             updateDynamicActions()
@@ -112,10 +142,17 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
             _currentProfile.value = profile
             prefsManager.saveLastProfile(profile.name)
 
-            isGlitchActive = (profile is Profile.Sacrifice)
+            isGlitchActive = (profile is Profile.RankXi)
 
-            val result = ShellEngine.applyProfile(profile)
-            terminalLog = result
+            // Detect target app for pinning if needed
+            val targetPid = if (profile is Profile.RankOmega) {
+                val context = getApplication<Application>()
+                val pkg = AppDetector.getForegroundApp(context)
+                if (pkg != null) ShellEngine.getPid(pkg) else null
+            } else null
+
+            val result = ShellEngine.applyProfile(profile, targetPid)
+            logDebug("Perfil ${profile.name}: $result")
         }
     }
 
@@ -131,9 +168,14 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         return when (name) {
             Profile.Eco.name -> Profile.Eco
             Profile.Balanced.name -> Profile.Balanced
-            Profile.Turbo.name -> Profile.Turbo
+            Profile.RankS.name -> Profile.RankS
+            Profile.RankSSS.name -> Profile.RankSSS
+            Profile.RankOmega.name -> Profile.RankOmega
+            Profile.RankXi.name -> Profile.RankXi
             Profile.SensiFF.name -> Profile.SensiFF
-            Profile.Sacrifice.name -> Profile.Sacrifice
+            // Legacy fallbacks
+            "Turbo" -> Profile.RankS
+            "Sacrifício (Ξ)" -> Profile.RankXi
             else -> Profile.Balanced
         }
     }
