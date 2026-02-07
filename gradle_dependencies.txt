@@ -1,0 +1,26 @@
+Downloading https://services.gradle.org/distributions/gradle-8.2-bin.zip
+............10%............20%............30%.............40%............50%............60%............70%.............80%............90%............100%
+
+Welcome to Gradle 8.2!
+
+Here are the highlights of this release:
+ - Kotlin DSL: new reference documentation, assignment syntax by default
+ - Kotlin DSL is now the default with Gradle init
+ - Improved suggestions to resolve errors in console output
+
+For more details see https://docs.gradle.org/8.2/release-notes.html
+
+Starting a Gradle Daemon (subsequent builds will be faster)
+
+> Task :dependencies
+
+------------------------------------------------------------
+Root project 'TurboCore'
+------------------------------------------------------------
+
+No configurations
+
+A web-based, searchable dependency report is available by adding the --scan option.
+
+BUILD SUCCESSFUL in 1m 30s
+1 actionable task: 1 executed
