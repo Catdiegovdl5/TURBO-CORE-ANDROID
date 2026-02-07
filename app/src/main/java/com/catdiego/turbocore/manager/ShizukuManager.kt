@@ -35,6 +35,13 @@ object ShizukuManager {
         }
     }
 
+    fun forceCheck() {
+        scope.launch {
+            _statusFlow.value = "Verificando..."
+            checkStatus()
+        }
+    }
+
     private fun checkStatus() {
         try {
             if (Shizuku.pingBinder()) {

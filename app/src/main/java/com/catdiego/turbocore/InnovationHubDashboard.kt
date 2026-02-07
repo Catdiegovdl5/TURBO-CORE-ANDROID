@@ -56,7 +56,7 @@ fun InnovationHubDashboard(viewModel: DashboardViewModel) {
         DebugConsoleDialog(
             logs = logList,
             onDismiss = { showDebugConsole = false },
-            onForceRebind = { ShizukuManager.autoConnectShizuku(context, mutableStateOf("Rebinding...")) }
+            onForceRebind = { ShizukuManager.forceCheck() }
         )
     }
 
