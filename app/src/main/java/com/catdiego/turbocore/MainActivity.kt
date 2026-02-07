@@ -8,6 +8,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import rikka.shizuku.Shizuku
 import com.catdiego.turbocore.manager.ShizukuManager
+import com.catdiego.turbocore.util.AppLogger
 
 class MainActivity : ComponentActivity() {
 
@@ -16,9 +17,9 @@ class MainActivity : ComponentActivity() {
 
     private val permissionListener = Shizuku.OnRequestPermissionResultListener { _, grantResult ->
         if (grantResult == PackageManager.PERMISSION_GRANTED) {
-            viewModel.terminalLog = "Ξ: Autorizado"
+            AppLogger.s("MainActivity", "Ξ: Autorizado")
         } else {
-             viewModel.terminalLog = "Shizuku Negado"
+             AppLogger.e("MainActivity", "Shizuku Negado")
         }
     }
 
@@ -33,11 +34,9 @@ class MainActivity : ComponentActivity() {
             )
         }
 
-        // Listener Sticky para detecção imediata
         Shizuku.addBinderReceivedListenerSticky(binderListener)
         Shizuku.addRequestPermissionResultListener(permissionListener)
 
-        // Inicia monitoramento
         ShizukuManager.startMonitoring()
 
         setContent {

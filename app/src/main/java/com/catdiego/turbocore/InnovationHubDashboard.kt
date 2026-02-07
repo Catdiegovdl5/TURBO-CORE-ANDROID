@@ -7,6 +7,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -23,6 +25,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.material3.ExperimentalMaterial3Api
 import com.catdiego.turbocore.manager.ShizukuManager
+import com.catdiego.turbocore.util.LogEntry
+import com.catdiego.turbocore.util.LogLevel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -30,9 +34,13 @@ fun InnovationHubDashboard(viewModel: DashboardViewModel) {
     val currentProfile by viewModel.currentProfile.collectAsState()
     val isGlitchActive = viewModel.isGlitchActive
     val context = LocalContext.current
-    val shizukuStatus by viewModel.shizukuStatus
+
+    // UI State from ViewModel
+    val connectionState = viewModel.connectionState
+    val logList by viewModel.logFlow.collectAsState()
 
     var showSafetyDialog by remember { mutableStateOf(false) }
+    var showDebugConsole by remember { mutableStateOf(false) }
 
     if (showSafetyDialog) {
         SafetyCountdownDialog(
@@ -44,6 +52,14 @@ fun InnovationHubDashboard(viewModel: DashboardViewModel) {
         )
     }
 
+    if (showDebugConsole) {
+        DebugConsoleDialog(
+            logs = logList,
+            onDismiss = { showDebugConsole = false },
+            onForceRebind = { ShizukuManager.autoConnectShizuku(context, mutableStateOf("Rebinding...")) }
+        )
+    }
+
     val ledColor = if (isGlitchActive) {
         val infiniteTransition = rememberInfiniteTransition()
         val glitchColor by infiniteTransition.animateColor(
@@ -51,12 +67,12 @@ fun InnovationHubDashboard(viewModel: DashboardViewModel) {
             targetValue = Color.White,
             animationSpec = infiniteRepeatable(
                 animation = keyframes {
-                    durationMillis = 300 // Irregular total duration
+                    durationMillis = 300
                     Color(0xFF6200EE) at 0
-                    Color.Transparent at 50 // Blink off
-                    Color.White at 80 // Flash white
-                    Color(0xFF6200EE) at 120 // Back to purple
-                    Color.Black at 200 // Flicker dark
+                    Color.Transparent at 50
+                    Color.White at 80
+                    Color(0xFF6200EE) at 120
+                    Color.Black at 200
                     Color(0xFF6200EE) at 300
                 },
                 repeatMode = RepeatMode.Restart
@@ -81,10 +97,16 @@ fun InnovationHubDashboard(viewModel: DashboardViewModel) {
         ) {
             Column {
                 Text("INNOVATION HUB", color = Color.White, style = MaterialTheme.typography.titleLarge)
-                // Shizuku Status (Clickable)
+
+                // Connection Status Indicator
+                val statusColor = when(connectionState) {
+                    DashboardViewModel.ConnectionState.CONNECTED -> Color.Green
+                    DashboardViewModel.ConnectionState.OFFLINE -> Color.Red
+                    DashboardViewModel.ConnectionState.CHECKING -> Color.Yellow
+                }
                 Text(
-                    text = "Shizuku: $shizukuStatus",
-                    color = if (shizukuStatus.contains("Conectado")) Color.Green else Color.Red,
+                    text = "Shizuku: ${connectionState.name}",
+                    color = statusColor,
                     style = MaterialTheme.typography.labelSmall,
                     modifier = Modifier.clickable {
                         ShizukuManager.handleShizukuButtonClick(context)
@@ -127,7 +149,7 @@ fun InnovationHubDashboard(viewModel: DashboardViewModel) {
             Spacer(modifier = Modifier.height(20.dp))
         }
 
-        // Quick Actions Grid (V800 Stable)
+        // Quick Actions Grid
         Text("AÇÕES RÁPIDAS", color = Color.Gray, style = MaterialTheme.typography.labelSmall)
         Spacer(modifier = Modifier.height(8.dp))
 
@@ -135,7 +157,7 @@ fun InnovationHubDashboard(viewModel: DashboardViewModel) {
             columns = GridCells.Fixed(2),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.height(140.dp) // Fixed height to fit screen
+            modifier = Modifier.height(140.dp)
         ) {
             items(viewModel.quickActions) { action ->
                 QuickActionCard(action) { viewModel.executeQuickAction(action) }
@@ -144,7 +166,7 @@ fun InnovationHubDashboard(viewModel: DashboardViewModel) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Metrics (Simplified)
+        // Metrics
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
             MetricBadge("CPU", "${viewModel.cpuLoad.toInt()}%")
             MetricBadge("RAM", "${viewModel.ramUsage.toInt()}%")
@@ -160,7 +182,7 @@ fun InnovationHubDashboard(viewModel: DashboardViewModel) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             ProfileChip(Profile.Eco, currentProfile) { viewModel.setProfile(it) }
             ProfileChip(Profile.Balanced, currentProfile) { viewModel.setProfile(it) }
-            ProfileChip(Profile.Turbo, currentProfile) { viewModel.setProfile(it) }
+            ProfileChip(Profile.RankS, currentProfile) { viewModel.setProfile(it) } // Mapped 'Turbo' to RankS in UI
         }
         Spacer(modifier = Modifier.height(8.dp))
 
@@ -186,19 +208,65 @@ fun InnovationHubDashboard(viewModel: DashboardViewModel) {
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Terminal
-        Text("TERMINAL:", color = Color.Green, style = MaterialTheme.typography.labelSmall)
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
-                .background(Color(0xFF0A0A0A), RoundedCornerShape(4.dp))
-                .border(1.dp, Color.DarkGray, RoundedCornerShape(4.dp))
-                .padding(8.dp)
+        // DEBUG CONSOLE BUTTON (Replaces static terminal)
+        Button(
+            onClick = { showDebugConsole = true },
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0A0A0A)),
+            shape = RoundedCornerShape(4.dp),
+            border = BorderStroke(1.dp, Color.DarkGray),
+            modifier = Modifier.fillMaxWidth()
         ) {
-            Text(viewModel.terminalLog, color = Color.Green, style = MaterialTheme.typography.bodySmall)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("TERMINAL / DEBUG CONSOLE", color = Color.Green, style = MaterialTheme.typography.labelSmall)
+                Spacer(Modifier.weight(1f))
+                Text("Abrir >", color = Color.Gray, style = MaterialTheme.typography.labelSmall)
+            }
         }
     }
+}
+
+@Composable
+fun DebugConsoleDialog(logs: List<LogEntry>, onDismiss: () -> Unit, onForceRebind: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = Color(0xFF121212),
+        title = { Text("Debug Console", color = Color.White) },
+        text = {
+            Column {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .background(Color.Black)
+                        .border(1.dp, Color.Gray)
+                        .padding(4.dp)
+                ) {
+                    LazyColumn(reverseLayout = true) {
+                        items(logs.reversed()) { entry ->
+                            val color = when(entry.level) {
+                                LogLevel.ERROR -> Color.Red
+                                LogLevel.SUCCESS -> Color.Green
+                                LogLevel.WARN -> Color.Yellow
+                                else -> Color.White
+                            }
+                            Text(
+                                text = "${entry.timestamp} [${entry.tag}] ${entry.message}",
+                                color = color,
+                                fontSize = 10.sp,
+                                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+                            )
+                        }
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+                Button(onClick = onForceRebind, modifier = Modifier.fillMaxWidth()) {
+                    Text("FORÇAR RE-BIND SHIZUKU")
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("FECHAR") }
+        }
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -221,7 +289,7 @@ fun MetricBadge(label: String, value: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Box(
             modifier = Modifier
-                .size(50.dp) // Reduced size slightly
+                .size(50.dp)
                 .border(2.dp, Color.DarkGray, CircleShape),
             contentAlignment = Alignment.Center
         ) {

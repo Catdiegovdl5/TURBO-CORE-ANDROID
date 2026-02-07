@@ -6,17 +6,18 @@ import rikka.shizuku.Shizuku
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import kotlinx.coroutines.*
+import com.catdiego.turbocore.util.AppLogger
 
 object ShellEngine {
     private var job: Job? = null
 
-    // 1. PID Retriever (Necessário para Rank Ω/Ξ Thread Pinning)
+    // 1. PID Retriever
     suspend fun getPid(packageName: String): String? = withContext(Dispatchers.IO) {
         val output = runCommand("pidof -s $packageName")
         if (output.any { it.isDigit() }) output.trim() else null
     }
 
-    // 2. CPU Delta Parser (Substituindo o Random por Realidade)
+    // 2. CPU Delta Parser
     suspend fun getCpuRawStats(): Pair<Long, Long> = withContext(Dispatchers.IO) {
         try {
             val output = runCommand("cat /proc/stat | head -n 1")
@@ -28,15 +29,21 @@ object ShellEngine {
                 val total = active + p[4].toLong() + p[5].toLong()
                 return@withContext Pair(active, total)
             }
-        } catch (e: Exception) {}
+        } catch (e: Exception) {
+            AppLogger.e("ShellEngine", "Failed to parse CPU stats", e)
+        }
         Pair(0L, 0L)
     }
 
-    // 3. Executor com Timeout (Proteção contra processos zumbis)
+    // 3. Executor com Timeout e Logging
     suspend fun runCommand(command: String): String = withContext(Dispatchers.IO) {
-        if (!Shizuku.pingBinder()) return@withContext "Erro: Shizuku Offline"
+        if (!Shizuku.pingBinder()) {
+            AppLogger.e("ShellEngine", "Shizuku offline during command: $command")
+            return@withContext "Erro: Shizuku Offline"
+        }
         try {
-            withTimeout(3000L) { // Rank Ξ: 3s de limite para segurança do A07
+            AppLogger.d("ShellEngine", "Exec: $command")
+            withTimeout(3000L) {
                 val method = Shizuku::class.java.getDeclaredMethod(
                     "newProcess",
                     Array<String>::class.java, Array<String>::class.java, String::class.java
@@ -46,11 +53,20 @@ object ShellEngine {
                 val reader = BufferedReader(InputStreamReader(process.inputStream))
                 val output = reader.readText()
                 process.waitFor()
+
+                if (output.isNotEmpty()) {
+                    AppLogger.d("ShellEngine", "Output: $output")
+                } else {
+                    AppLogger.s("ShellEngine", "Command success (no output)")
+                }
+
                 if (output.isEmpty()) "Sucesso" else output
             }
         } catch (e: TimeoutCancellationException) {
+            AppLogger.e("ShellEngine", "Timeout on command: $command")
             "Erro: Timeout (Comando demorou demais)"
         } catch (e: Exception) {
+            AppLogger.e("ShellEngine", "Exception on command: $command", e)
             "Erro: ${e.message}"
         }
     }
@@ -61,7 +77,6 @@ object ShellEngine {
             val lines = output.split("\n")
             for (line in lines) {
                 if (line.contains("mtk-tpd", ignoreCase = true) || line.contains("touchscreen", ignoreCase = true)) {
-                    // Format: " 123: ..." -> extract 123
                     val parts = line.trim().split("\\s+".toRegex())
                     if (parts.isNotEmpty()) {
                         return@withContext parts[0].replace(":", "")
@@ -70,18 +85,18 @@ object ShellEngine {
             }
             null
         } catch (e: Exception) {
+            AppLogger.e("ShellEngine", "Failed to find IRQ", e)
             null
         }
     }
 
     suspend fun getThermalTemp(): Float = withContext(Dispatchers.IO) {
         try {
-            // Try common thermal zone for CPU/SoC on MTK/Samsung
             val raw = runCommand("cat /sys/class/thermal/thermal_zone0/temp")
             val temp = raw.trim().toIntOrNull() ?: 0
-            // Kernel usually returns millidegrees
             return@withContext temp / 1000f
         } catch (e: Exception) {
+            AppLogger.e("ShellEngine", "Failed to read temp", e)
             0f
         }
     }
@@ -101,7 +116,7 @@ object ShellEngine {
     }
 
     suspend fun bypassKnox(): String {
-        return runCommand("pm disable-user com.samsung.android.knox.analytics.uploader") // Exemplo safe de bypass
+        return runCommand("pm disable-user com.samsung.android.knox.analytics.uploader")
     }
 
     suspend fun disableJoyose(): String {
@@ -109,17 +124,12 @@ object ShellEngine {
     }
 
     suspend fun applyThreadPinning(pid: String): String {
-        // Pin to big cores (4-7) on Helio G35 (mask f0)
         return runCommand("taskset -p f0 $pid")
     }
 
     suspend fun applyRankXi(): String {
         val sb = StringBuilder()
-
-        // 1. Atomic Memory Compaction
         sb.append(runCommand("echo 1 > /proc/sys/vm/compact_memory")).append("\n")
-
-        // 2. Thermal Bypass
         val thermalCommands = listOf(
             "stop thermal-engine",
             "stop thermal_manager",
@@ -129,8 +139,6 @@ object ShellEngine {
         for (cmd in thermalCommands) {
             sb.append(runCommand(cmd)).append("\n")
         }
-
-        // 3. IRQ Affinity
         val irq = findTouchIrq()
         if (irq != null) {
             val result = runCommand("echo 1 > /proc/irq/$irq/smp_affinity")
@@ -142,7 +150,6 @@ object ShellEngine {
         } else {
             sb.append("Ξ: Touch IRQ not found\n")
         }
-
         return sb.toString()
     }
 
@@ -154,7 +161,6 @@ object ShellEngine {
         } else {
             sb.append("Omega: App not found for pinning\n")
         }
-        // Fsync Override (Safe check first)
         sb.append(runCommand("echo 0 > /sys/module/sync/parameters/fsync_enabled"))
         return sb.toString()
     }
@@ -162,7 +168,6 @@ object ShellEngine {
     suspend fun applyRankSSS(): String {
         val sb = StringBuilder()
         sb.append(runCommand("echo 2048 > /sys/block/mmcblk0/queue/read_ahead_kb")).append("\n")
-        // GPU Performance Governor (Multi-path)
         val gpuPaths = listOf(
             "/sys/class/devfreq/18500000.mali/governor",
             "/sys/class/kgsl/kgsl-3d0/devfreq/governor"
@@ -170,12 +175,11 @@ object ShellEngine {
         for (path in gpuPaths) {
             sb.append(runCommand("echo performance > $path")).append("\n")
         }
-        sb.append(runCommand("stop logd")) // Logcat Silencer
+        sb.append(runCommand("stop logd"))
         return sb.toString()
     }
 
     suspend fun applyRankS(): String {
-        // Swappiness 10 + Auto-Trigger handled in VM
         return runCommand("echo 10 > /proc/sys/vm/swappiness")
     }
 
@@ -191,6 +195,7 @@ object ShellEngine {
     }
 
     suspend fun applyProfile(profile: Profile, targetPid: String? = null): String {
+        AppLogger.i("ShellEngine", "Applying profile: ${profile.name}")
         return when (profile) {
             is Profile.Eco -> runCommand("settings put global low_power 1 && pm suspend com.google.android.gms")
             is Profile.RankS -> applyRankS()
@@ -199,7 +204,6 @@ object ShellEngine {
             is Profile.RankXi -> applyRankXi()
             is Profile.SensiFF -> applySensiFF()
             is Profile.Balanced -> runCommand("wm size reset && wm density reset && settings put global low_power 0")
-            // Fallback for older enums if any remain, though we will update Profile.kt
             else -> "Perfil Desconhecido"
         }
     }

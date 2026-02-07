@@ -13,6 +13,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import android.app.ActivityManager
 import android.content.Context
 import com.catdiego.turbocore.manager.ShizukuManager
+import com.catdiego.turbocore.util.AppLogger
+import com.catdiego.turbocore.util.LogLevel
 
 class DashboardViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -26,9 +28,14 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     var temp by mutableStateOf(0f)
     var isGlitchActive by mutableStateOf(_currentProfile.value is Profile.RankXi)
 
-    var terminalLog by mutableStateOf("Inicializando...")
-    // Observa o Flow do ShizukuManager em vez de usar MutableState passado
-    var shizukuStatus by mutableStateOf("Verificando...")
+    // Log Flow for Debug Console
+    val logFlow = AppLogger.logFlow
+
+    // Connection State for UI Indicator
+    enum class ConnectionState {
+        CONNECTED, OFFLINE, CHECKING
+    }
+    var connectionState by mutableStateOf(ConnectionState.CHECKING)
 
     var quickActions by mutableStateOf(emptyList<QuickAction>())
         private set
@@ -40,10 +47,8 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         initializeSmartCore()
         updateDynamicActions()
         startMonitoring()
-        // Re-apply saved profile on startup
         setProfile(_currentProfile.value)
 
-        // Start monitoring connection
         ShizukuManager.startMonitoring()
         observeShizukuStatus()
     }
@@ -51,42 +56,42 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     private fun observeShizukuStatus() {
         viewModelScope.launch {
             ShizukuManager.statusFlow.collect { status ->
-                shizukuStatus = status
-                if (status.startsWith("Erro")) {
-                    logDebug(status)
+                connectionState = when {
+                    status.startsWith("Conectado") -> ConnectionState.CONNECTED
+                    status.startsWith("Offline") -> ConnectionState.OFFLINE
+                    else -> ConnectionState.CHECKING
                 }
+                AppLogger.i("ShizukuStatus", status)
             }
         }
     }
 
     private fun initializeSmartCore() {
         viewModelScope.launch {
-            logDebug("Smart-Core Engine: Iniciando...")
+            AppLogger.i("SmartCore", "Iniciando...")
             val manufacturer = ShellEngine.getManufacturer()
-            logDebug("Fabricante detectado: $manufacturer")
+            AppLogger.d("SmartCore", "Fabricante: $manufacturer")
 
             if (manufacturer.contains("samsung", ignoreCase = true)) {
-                logDebug("Aplicando Bypass Knox (Samsung)...")
+                AppLogger.i("SmartCore", "Aplicando Bypass Knox (Samsung)...")
                 ShellEngine.bypassKnox()
             }
             if (manufacturer.contains("xiaomi", ignoreCase = true)) {
-                logDebug("Desativando Joyose (Xiaomi)...")
+                AppLogger.i("SmartCore", "Desativando Joyose (Xiaomi)...")
                 ShellEngine.disableJoyose()
             }
 
             val totalRam = ShellEngine.getTotalRam()
-            if (totalRam < 4000000) { // < 4GB
-                logDebug("Dispositivo Low-End detectado ($totalRam KB). Aplicando Swappiness 10.")
+            if (totalRam < 4000000) {
+                AppLogger.w("SmartCore", "Low-End ($totalRam KB). Force Swappiness 10.")
                 ShellEngine.runCommand("echo 10 > /proc/sys/vm/swappiness")
             }
         }
     }
 
+    // Compatibility wrapper
     fun logDebug(message: String) {
-        val timestamp = java.text.SimpleDateFormat("HH:mm:ss").format(java.util.Date())
-        // Mantém apenas as últimas 5 linhas para não poluir a UI
-        val lines = terminalLog.split("\n").takeLast(5)
-        terminalLog = (lines + "[$timestamp] $message").joinToString("\n")
+        AppLogger.d("Dashboard", message)
     }
 
     private fun startMonitoring() {
@@ -100,7 +105,6 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
 
     private fun updateMetrics() {
         viewModelScope.launch {
-            // 1. RAM (Nativo - Mantém)
             val am = getApplication<Application>().getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
             val memInfo = ActivityManager.MemoryInfo()
             am.getMemoryInfo(memInfo)
@@ -108,7 +112,6 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
             val availRam = memInfo.availMem.toFloat()
             ramUsage = ((totalRam - availRam) / totalRam) * 100
 
-            // 2. CPU REAL (Cálculo Delta via ShellEngine)
             val stats = ShellEngine.getCpuRawStats()
             val currentActive = stats.first
             val currentTotal = stats.second
@@ -123,30 +126,26 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
             prevTotal = currentTotal
             prevActive = currentActive
 
-            // 3. Temperatura REAL & Watchdog
             val realTemp = ShellEngine.getThermalTemp()
             temp = if (realTemp > 0) realTemp else 0f
 
-            // Thermal Watchdog (Safety Protocol)
             if (realTemp > 39 && (_currentProfile.value is Profile.RankXi || _currentProfile.value is Profile.RankOmega)) {
-                logDebug("ALERTA TÉRMICO: ${realTemp}°C. Revertendo para Eco.")
+                AppLogger.e("Watchdog", "ALERTA TÉRMICO: ${realTemp}°C. Revertendo para Eco.")
                 setProfile(Profile.Eco)
             }
 
-            // Atualiza ações dinâmicas periodicamente para pegar app foreground atual
             updateDynamicActions()
         }
     }
 
     private fun updateDynamicActions() {
         val context = getApplication<Application>()
-        // Pega o app atual ou fallback para systemui se null
         val currentApp = AppDetector.getForegroundApp(context) ?: "com.android.systemui"
 
         quickActions = listOf(
-            QuickAction("Limpar RAM", "echo 3 > /proc/sys/vm/drop_caches", "Limpa cache de página"),
-            QuickAction("Boost App Atual", "cmd package compile -m speed $currentApp", "Compila $currentApp"),
-            QuickAction("DNS Gamer", "settings put global private_dns_mode hostname && settings put global private_dns_specifier 1.1.1.1", "Cloudflare Low Ping")
+            QuickAction("Limpar RAM", "echo 3 > /proc/sys/vm/drop_caches", "Limpa cache"),
+            QuickAction("Boost App", "cmd package compile -m speed $currentApp", "Otimiza $currentApp"),
+            QuickAction("DNS Gamer", "settings put global private_dns_mode hostname && settings put global private_dns_specifier 1.1.1.1", "Cloudflare")
         )
     }
 
@@ -154,10 +153,8 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         viewModelScope.launch {
             _currentProfile.value = profile
             prefsManager.saveLastProfile(profile.name)
-
             isGlitchActive = (profile is Profile.RankXi)
 
-            // Detect target app for pinning if needed
             val targetPid = if (profile is Profile.RankOmega) {
                 val context = getApplication<Application>()
                 val pkg = AppDetector.getForegroundApp(context)
@@ -165,15 +162,23 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
             } else null
 
             val result = ShellEngine.applyProfile(profile, targetPid)
-            logDebug("Perfil ${profile.name}: $result")
+            if (result.startsWith("Erro")) {
+                AppLogger.e("Profile", "Falha ao aplicar ${profile.name}: $result")
+            } else {
+                AppLogger.s("Profile", "Perfil ${profile.name} ativo. $result")
+            }
         }
     }
 
     fun executeQuickAction(action: QuickAction) {
         viewModelScope.launch {
-            logDebug("Executando: ${action.name}...")
+            AppLogger.i("Action", "Executando: ${action.name}")
             val result = ShellEngine.runCommand(action.command)
-            logDebug(">> $result")
+            if (result.startsWith("Erro")) {
+                AppLogger.e("Action", "Falha: $result")
+            } else {
+                AppLogger.s("Action", "Resultado: $result")
+            }
         }
     }
 
@@ -186,7 +191,6 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
             Profile.RankOmega.name -> Profile.RankOmega
             Profile.RankXi.name -> Profile.RankXi
             Profile.SensiFF.name -> Profile.SensiFF
-            // Legacy fallbacks
             "Turbo" -> Profile.RankS
             "Sacrifício (Ξ)" -> Profile.RankXi
             else -> Profile.Balanced
