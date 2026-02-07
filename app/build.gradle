@@ -27,6 +27,13 @@ android {
     kotlinOptions {
         jvmTarget = '17'
     }
+    testOptions {
+        unitTests.all {
+            testLogging {
+                events "passed", "skipped", "failed", "standardOut", "standardError"
+            }
+        }
+    }
     buildFeatures { compose true }
     composeOptions {
         // Travado em 1.4.3 para compatibilidade com o Runner do GitHub
@@ -44,4 +51,5 @@ dependencies {
     implementation 'com.google.android.material:material:1.9.0'
     implementation "dev.rikka.shizuku:api:13.1.5"
     implementation "dev.rikka.shizuku:provider:13.1.5"
+    testImplementation 'junit:junit:4.13.2'
 }
