@@ -4,6 +4,8 @@ import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.os.Build
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import rikka.shizuku.Shizuku
 import java.io.BufferedReader
 import java.io.InputStreamReader
@@ -47,18 +49,19 @@ object AppManager {
      * Returns a list of installed non-system apps.
      * Optimized for RAM by filtering system apps (V140 requirement).
      */
-    fun getFilteredApps(context: Context): List<String> {
-        return try {
-            val pm = context.packageManager
-            val apps = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                pm.getInstalledApplications(PackageManager.ApplicationInfoFlags.of(0L))
-            } else {
-                pm.getInstalledApplications(0)
+    suspend fun getFilteredApps(context: Context): List<ApplicationInfo> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val pm = context.packageManager
+                val apps = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    pm.getInstalledApplications(PackageManager.ApplicationInfoFlags.of(0L))
+                } else {
+                    pm.getInstalledApplications(0)
+                }
+                apps.filter { (it.flags and ApplicationInfo.FLAG_SYSTEM) == 0 }
+            } catch (e: Exception) {
+                emptyList()
             }
-            apps.filter { (it.flags and ApplicationInfo.FLAG_SYSTEM) == 0 }
-                .map { it.loadLabel(pm).toString() }
-        } catch (e: Exception) {
-            listOf("Erro ao carregar apps")
         }
     }
 }
