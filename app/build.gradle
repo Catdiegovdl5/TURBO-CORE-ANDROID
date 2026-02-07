@@ -27,7 +27,10 @@ android {
     kotlinOptions {
         jvmTarget = '17'
     }
-    buildFeatures { compose true }
+    buildFeatures {
+        compose true
+        buildConfig true
+    }
     composeOptions {
         // Travado em 1.4.3 para compatibilidade com o Runner do GitHub
         kotlinCompilerExtensionVersion '1.4.3'
