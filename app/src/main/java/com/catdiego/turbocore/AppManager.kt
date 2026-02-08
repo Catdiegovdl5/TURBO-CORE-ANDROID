@@ -18,10 +18,35 @@ object AppManager {
             )
             method.isAccessible = true
             val process = method.invoke(null, arrayOf("sh", "-c", command), null, null) as Process
-            val reader = BufferedReader(InputStreamReader(process.inputStream))
-            val output = reader.readText()
+
+            val output = StringBuilder()
+            val errorOutput = StringBuilder()
+
+            val outThread = Thread {
+                try {
+                    process.inputStream.bufferedReader().forEachLine {
+                        synchronized(output) { output.append(it).append("\n") }
+                    }
+                } catch (_: Exception) {}
+            }
+
+            val errThread = Thread {
+                try {
+                    process.errorStream.bufferedReader().forEachLine {
+                        synchronized(errorOutput) { errorOutput.append(it).append("\n") }
+                    }
+                } catch (_: Exception) {}
+            }
+
+            outThread.start()
+            errThread.start()
+
             process.waitFor()
-            if (output.isEmpty()) "Sucesso" else output
+            outThread.join()
+            errThread.join()
+
+            val result = (output.toString() + errorOutput.toString()).trim()
+            if (result.isEmpty()) "Sucesso" else result
         } catch (e: Exception) { "Erro: ${e.message}" }
     }
 

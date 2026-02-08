@@ -154,14 +154,18 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun updateStatus() {
-        shizukuStatus = if (!Shizuku.pingBinder()) {
-            "Shizuku Parado (Abra o App Shizuku)"
-        } else if (Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED) {
-            "Conectado"
-        } else if (shizukuStatus == "Permissão Negada") {
-            "Configurações Restritas (Habilite Manualmente)"
-        } else {
-            "Aguardando Permissão"
+        if (!Shizuku.pingBinder()) {
+            shizukuStatus = "Shizuku Parado (Abra o App Shizuku)"
+            return
+        }
+        try {
+            shizukuStatus = if (Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED) {
+                "Conectado"
+            } else {
+                "Permissão Negada"
+            }
+        } catch (e: Exception) {
+            shizukuStatus = "Erro ao verificar status"
         }
     }
 
