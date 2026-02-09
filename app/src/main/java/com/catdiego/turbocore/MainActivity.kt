@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
@@ -64,12 +65,13 @@ class MainActivity : ComponentActivity() {
                             Button(onClick = {
                                 try {
                                     if (Shizuku.pingBinder()) {
-                                        Shizuku.requestPermission(REQUEST_CODE)
+                                        checkAndRequestShizukuPermission()
                                     } else {
                                         // Se o binder não responde, abre o app Shizuku direto
                                         launchShizukuApp(this@MainActivity)
                                     }
                                 } catch (e: Exception) {
+                                    Log.e("TurboCore", "Erro no botão de conexão", e)
                                     launchShizukuApp(this@MainActivity)
                                 }
                             }, Modifier.weight(1f)) {
@@ -140,34 +142,38 @@ class MainActivity : ComponentActivity() {
 
     private fun checkAndRequestShizukuPermission() {
         try {
-            if (Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED) {
+            if (Shizuku.isPreV11() || Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED) {
                 shizukuStatus = "Conectado"
             } else {
                 // Tenta o popup padrão
-                Shizuku.requestPermission(REQUEST_CODE)
-                // Se em 2 segundos não conectar, sugere abertura manual
-                shizukuStatus = "Autorize no App Shizuku..."
+                if (Shizuku.shouldShowRequestPermissionRationale()) {
+                    // Usuário negou anteriormente
+                    shizukuStatus = "Permissão Negada (Habilite Manualmente)"
+                } else {
+                    Shizuku.requestPermission(REQUEST_CODE)
+                    shizukuStatus = "Aguardando Permissão..."
+                }
             }
         } catch (e: Exception) {
-            launchShizukuApp(this)
+            Log.e("TurboCore", "Erro ao verificar permissão Shizuku", e)
+            if (e.message?.contains("Binder is dead") == true) {
+                shizukuStatus = "Shizuku Parado"
+            } else {
+                launchShizukuApp(this)
+            }
         }
     }
 
     private fun updateStatus() {
         shizukuStatus = if (!Shizuku.pingBinder()) {
             "Shizuku Parado (Abra o App Shizuku)"
-        } else if (Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED) {
+        } else if (Shizuku.isPreV11() || Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED) {
             "Conectado"
         } else if (shizukuStatus == "Permissão Negada") {
             "Configurações Restritas (Habilite Manualmente)"
         } else {
             "Aguardando Permissão"
         }
-    }
-
-    private fun openShizukuDownload(context: Context) {
-        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/RikkaApps/Shizuku/releases"))
-        context.startActivity(intent)
     }
 
     private fun launchShizukuApp(context: Context) {
@@ -179,12 +185,14 @@ class MainActivity : ComponentActivity() {
                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 context.startActivity(intent)
             } else {
-                // Se o intent falhar por segurança do Android 15, tenta via URI
+                // Se o intent falhar por segurança ou não instalado, tenta via URI
                 val githubIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/RikkaApps/Shizuku/releases"))
+                githubIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 context.startActivity(githubIntent)
             }
         } catch (e: Exception) {
-            shizukuStatus = "Erro de I/O: Reinstale o Shizuku"
+            Log.e("TurboCore", "Erro ao abrir Shizuku", e)
+            shizukuStatus = "Erro ao abrir Shizuku"
         }
     }
 

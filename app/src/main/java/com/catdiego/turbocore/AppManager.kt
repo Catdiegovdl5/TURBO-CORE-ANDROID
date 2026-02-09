@@ -18,11 +18,51 @@ object AppManager {
             )
             method.isAccessible = true
             val process = method.invoke(null, arrayOf("sh", "-c", command), null, null) as Process
-            val reader = BufferedReader(InputStreamReader(process.inputStream))
-            val output = reader.readText()
+            val output = StringBuilder()
+            val error = StringBuilder()
+
+            val stdoutThread = Thread {
+                try {
+                    BufferedReader(InputStreamReader(process.inputStream)).use { reader ->
+                        var line: String?
+                        while (reader.readLine().also { line = it } != null) {
+                            output.append(line).append("\n")
+                        }
+                    }
+                } catch (e: Exception) {
+                    output.append("Erro lendo stdout: ${e.message}\n")
+                }
+            }
+
+            val stderrThread = Thread {
+                try {
+                    BufferedReader(InputStreamReader(process.errorStream)).use { reader ->
+                        var line: String?
+                        while (reader.readLine().also { line = it } != null) {
+                            error.append(line).append("\n")
+                        }
+                    }
+                } catch (e: Exception) {
+                    error.append("Erro lendo stderr: ${e.message}\n")
+                }
+            }
+
+            stdoutThread.start()
+            stderrThread.start()
+
             process.waitFor()
-            if (output.isEmpty()) "Sucesso" else output
-        } catch (e: Exception) { "Erro: ${e.message}" }
+            stdoutThread.join()
+            stderrThread.join()
+
+            val result = output.toString()
+            val errResult = error.toString()
+
+            if (errResult.isNotEmpty()) {
+                if (result.isNotEmpty()) "$result\nErro:\n$errResult" else "Erro:\n$errResult"
+            } else {
+                if (result.isEmpty()) "Sucesso" else result.trim()
+            }
+        } catch (e: Exception) { "Erro crítico: ${e.message}" }
     }
 
     fun isShizukuInstalled(context: Context): Boolean {
