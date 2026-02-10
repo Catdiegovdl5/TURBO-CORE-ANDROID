@@ -7,22 +7,51 @@ import android.os.Build
 import rikka.shizuku.Shizuku
 import java.io.BufferedReader
 import java.io.InputStreamReader
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 object AppManager {
-    fun runCommand(command: String): String {
-        if (!Shizuku.pingBinder()) return "Erro: Serviço Shizuku parado no sistema!"
-        return try {
+    suspend fun runCommand(command: String): String = withContext(Dispatchers.IO) {
+        if (!Shizuku.pingBinder()) return@withContext "Erro: Serviço Shizuku parado no sistema!"
+        try {
             val method = Shizuku::class.java.getDeclaredMethod(
                 "newProcess",
                 Array<String>::class.java, Array<String>::class.java, String::class.java
             )
             method.isAccessible = true
             val process = method.invoke(null, arrayOf("sh", "-c", command), null, null) as Process
-            val reader = BufferedReader(InputStreamReader(process.inputStream))
-            val output = reader.readText()
-            process.waitFor()
-            if (output.isEmpty()) "Sucesso" else output
-        } catch (e: Exception) { "Erro: ${e.message}" }
+
+            val stdout = StringBuilder()
+            val stderr = StringBuilder()
+
+            val threadOut = Thread {
+                try {
+                    process.inputStream.bufferedReader().use { reader ->
+                        reader.forEachLine { line -> stdout.append(line).append("\n") }
+                    }
+                } catch (e: Exception) { /* Ignore stream closed */ }
+            }
+
+            val threadErr = Thread {
+                try {
+                    process.errorStream.bufferedReader().use { reader ->
+                        reader.forEachLine { line -> stderr.append(line).append("\n") }
+                    }
+                } catch (e: Exception) { /* Ignore stream closed */ }
+            }
+
+            threadOut.start()
+            threadErr.start()
+
+            val exitCode = process.waitFor()
+            threadOut.join()
+            threadErr.join()
+
+            val output = stdout.toString() + stderr.toString()
+            if (output.isBlank()) "Sucesso (Código $exitCode)" else output.trim()
+        } catch (e: Exception) {
+            "Erro: ${e.message}"
+        }
     }
 
     fun isShizukuInstalled(context: Context): Boolean {
