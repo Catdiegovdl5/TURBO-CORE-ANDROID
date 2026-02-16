@@ -7,22 +7,26 @@ import android.os.Build
 import rikka.shizuku.Shizuku
 import java.io.BufferedReader
 import java.io.InputStreamReader
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 object AppManager {
-    fun runCommand(command: String): String {
+    suspend fun runCommand(command: String): String {
         if (!Shizuku.pingBinder()) return "Erro: Serviço Shizuku parado no sistema!"
-        return try {
-            val method = Shizuku::class.java.getDeclaredMethod(
-                "newProcess",
-                Array<String>::class.java, Array<String>::class.java, String::class.java
-            )
-            method.isAccessible = true
-            val process = method.invoke(null, arrayOf("sh", "-c", command), null, null) as Process
-            val reader = BufferedReader(InputStreamReader(process.inputStream))
-            val output = reader.readText()
-            process.waitFor()
-            if (output.isEmpty()) "Sucesso" else output
-        } catch (e: Exception) { "Erro: ${e.message}" }
+        return withContext(Dispatchers.IO) {
+            try {
+                val method = Shizuku::class.java.getDeclaredMethod(
+                    "newProcess",
+                    Array<String>::class.java, Array<String>::class.java, String::class.java
+                )
+                method.isAccessible = true
+                val process = method.invoke(null, arrayOf("sh", "-c", command), null, null) as Process
+                val reader = BufferedReader(InputStreamReader(process.inputStream))
+                val output = reader.readText()
+                process.waitFor()
+                if (output.isEmpty()) "Sucesso" else output
+            } catch (e: Exception) { "Erro: ${e.message}" }
+        }
     }
 
     fun isShizukuInstalled(context: Context): Boolean {
