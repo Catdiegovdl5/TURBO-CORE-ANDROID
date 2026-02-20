@@ -4,25 +4,41 @@ import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.os.Build
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.withContext
 import rikka.shizuku.Shizuku
-import java.io.BufferedReader
-import java.io.InputStreamReader
 
 object AppManager {
-    fun runCommand(command: String): String {
-        if (!Shizuku.pingBinder()) return "Erro: Serviço Shizuku parado no sistema!"
-        return try {
+    suspend fun runCommand(command: String): String = withContext(Dispatchers.IO) {
+        if (!Shizuku.pingBinder()) return@withContext "Erro: Serviço Shizuku parado no sistema!"
+        return@withContext try {
             val method = Shizuku::class.java.getDeclaredMethod(
                 "newProcess",
                 Array<String>::class.java, Array<String>::class.java, String::class.java
             )
             method.isAccessible = true
             val process = method.invoke(null, arrayOf("sh", "-c", command), null, null) as Process
-            val reader = BufferedReader(InputStreamReader(process.inputStream))
-            val output = reader.readText()
+
+            val stdoutReader = async {
+                process.inputStream.bufferedReader().use { it.readText() }
+            }
+            val stderrReader = async {
+                process.errorStream.bufferedReader().use { it.readText() }
+            }
+
             process.waitFor()
-            if (output.isEmpty()) "Sucesso" else output
-        } catch (e: Exception) { "Erro: ${e.message}" }
+            val stdout = stdoutReader.await()
+            val stderr = stderrReader.await()
+
+            val result = if (stdout.isNotBlank()) stdout.trim() else ""
+            val error = if (stderr.isNotBlank()) "Erro: ${stderr.trim()}" else ""
+
+            if (result.isBlank() && error.isBlank()) "Sucesso"
+            else if (result.isNotBlank() && error.isBlank()) result
+            else if (result.isBlank() && error.isNotBlank()) error
+            else "$result\n$error"
+        } catch (e: Exception) { "Erro crítico: ${e.message}" }
     }
 
     fun isShizukuInstalled(context: Context): Boolean {
