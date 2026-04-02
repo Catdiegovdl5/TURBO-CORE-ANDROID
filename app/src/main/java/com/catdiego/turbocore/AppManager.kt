@@ -10,12 +10,10 @@ import java.io.InputStreamReader
 
 object AppManager {
     private val newProcessMethod by lazy {
-        val method = Shizuku::class.java.getDeclaredMethod(
+        Shizuku::class.java.getDeclaredMethod(
             "newProcess",
             Array<String>::class.java, Array<String>::class.java, String::class.java
-        )
-        method.isAccessible = true
-        method
+        ).apply { isAccessible = true }
     }
 
     fun runCommand(command: String): String {

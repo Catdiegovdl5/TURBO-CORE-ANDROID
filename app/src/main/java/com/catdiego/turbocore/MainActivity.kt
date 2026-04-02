@@ -182,11 +182,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun openShizukuDownload(context: Context) {
-        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/RikkaApps/Shizuku/releases"))
-        context.startActivity(intent)
-    }
-
     private fun launchShizukuApp(context: Context) {
         try {
             val intent = context.packageManager.getLaunchIntentForPackage("rikka.app.shizuku")
