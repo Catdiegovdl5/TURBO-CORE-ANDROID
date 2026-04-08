@@ -16,6 +16,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
 import rikka.shizuku.Shizuku
 
 class MainActivity : ComponentActivity() {
@@ -41,6 +43,7 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             var terminalLog by remember { mutableStateOf("Aguardando comando...") }
+            val coroutineScope = rememberCoroutineScope()
 
             LaunchedEffect(Unit) {
                 delay(1000)
@@ -85,13 +88,19 @@ class MainActivity : ComponentActivity() {
                         // DESEMPENHO
                         Text("DESEMPENHO", color = Color.Gray, style = MaterialTheme.typography.titleSmall)
                         Button(onClick = {
-                            terminalLog = AppManager.runCommand("wm size 540x1200 && wm density 210")
+                            coroutineScope.launch(Dispatchers.IO) {
+                                val log = AppManager.runCommand("wm size 540x1200 && wm density 210")
+                                terminalLog = log
+                            }
                         }, modifier = Modifier.fillMaxWidth()) { Text("MODO BRUTO (720p)") }
 
                         Spacer(Modifier.height(8.dp))
 
                         Button(onClick = {
-                            terminalLog = AppManager.runCommand("wm size reset && wm density reset")
+                            coroutineScope.launch(Dispatchers.IO) {
+                                val log = AppManager.runCommand("wm size reset && wm density reset")
+                                terminalLog = log
+                            }
                         }, modifier = Modifier.fillMaxWidth()) { Text("USUAL TURBO") }
 
                         Spacer(Modifier.height(16.dp))
@@ -99,13 +108,19 @@ class MainActivity : ComponentActivity() {
                         // ECONOMIA
                         Text("ECONOMIA", color = Color.Gray, style = MaterialTheme.typography.titleSmall)
                         Button(onClick = {
-                            terminalLog = AppManager.runCommand("settings put global low_power 1 && pm suspend com.google.android.gms")
+                            coroutineScope.launch(Dispatchers.IO) {
+                                val log = AppManager.runCommand("settings put global low_power 1 && pm suspend com.google.android.gms")
+                                terminalLog = log
+                            }
                         }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50))) { Text("SUPER ECONOMIA") }
 
                         Spacer(Modifier.height(8.dp))
 
                         Button(onClick = {
-                            terminalLog = AppManager.runCommand("wm size 360x800 && settings put global low_power 1")
+                            coroutineScope.launch(Dispatchers.IO) {
+                                val log = AppManager.runCommand("wm size 360x800 && settings put global low_power 1")
+                                terminalLog = log
+                            }
                         }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50))) { Text("ULTRA ECONOMIA") }
 
                         Spacer(Modifier.height(16.dp))
@@ -113,19 +128,28 @@ class MainActivity : ComponentActivity() {
                         // COMPETITIVO
                         Text("COMPETITIVO", color = Color.Gray, style = MaterialTheme.typography.titleSmall)
                         Button(onClick = {
-                            terminalLog = AppManager.runCommand("cmd power set-fixed-performance-mode-enabled true")
+                            coroutineScope.launch(Dispatchers.IO) {
+                                val log = AppManager.runCommand("cmd power set-fixed-performance-mode-enabled true")
+                                terminalLog = log
+                            }
                         }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3))) { Text("GAMER ULTIMATE") }
 
                         Spacer(Modifier.height(8.dp))
 
                         Button(onClick = {
-                            terminalLog = AppManager.runCommand("wm density 180")
+                            coroutineScope.launch(Dispatchers.IO) {
+                                val log = AppManager.runCommand("wm size 540x960 && wm density 180")
+                                terminalLog = log
+                            }
                         }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3))) { Text("SENSI FREE FIRE") }
 
                         Spacer(Modifier.height(24.dp))
 
                         Button(onClick = {
-                            terminalLog = AppManager.runCommand("wm size reset && wm density reset && settings put global low_power 0")
+                            coroutineScope.launch(Dispatchers.IO) {
+                                val log = AppManager.runCommand("wm size reset && wm density reset && settings put global low_power 0 && pm unsuspend com.google.android.gms && cmd power set-fixed-performance-mode-enabled false")
+                                terminalLog = log
+                            }
                         }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Color.Red)) { Text("RESETAR TUDO") }
 
                         Spacer(Modifier.height(20.dp))
@@ -163,11 +187,6 @@ class MainActivity : ComponentActivity() {
         } else {
             "Aguardando Permissão"
         }
-    }
-
-    private fun openShizukuDownload(context: Context) {
-        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/RikkaApps/Shizuku/releases"))
-        context.startActivity(intent)
     }
 
     private fun launchShizukuApp(context: Context) {
