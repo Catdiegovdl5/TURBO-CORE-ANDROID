@@ -1,17 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
     <uses-permission android:name="moe.shizuku.privilege.permission.API_V23" />
 
     <queries>
         <package android:name="moe.shizuku.privileged.api" />
         <package android:name="rikka.app.shizuku" />
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+        </intent>
     </queries>
 
     <application
         android:allowBackup="true"
         android:label="Turbo Core"
+        android:icon="@drawable/icon"
         android:supportsRtl="true"
         android:theme="@style/Theme.Material3.Dark.NoActionBar">
         
