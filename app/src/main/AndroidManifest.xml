@@ -9,7 +9,7 @@
         <package android:name="rikka.app.shizuku" />
     </queries>
 
-    <application
+    <application android:icon="@drawable/ic_launcher"
         android:allowBackup="true"
         android:label="Turbo Core"
         android:supportsRtl="true"
