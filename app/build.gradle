@@ -7,6 +7,10 @@ android {
     namespace 'com.catdiego.turbocore'
     compileSdk 35
 
+    lint {
+        lintConfig file("lint.xml")
+    }
+
     defaultConfig {
         applicationId "com.catdiego.turbocore"
         minSdk 26
