@@ -13,6 +13,7 @@
         android:allowBackup="true"
         android:label="Turbo Core"
         android:supportsRtl="true"
+        android:icon="@mipmap/ic_launcher"
         android:theme="@style/Theme.Material3.Dark.NoActionBar">
         
         <activity
