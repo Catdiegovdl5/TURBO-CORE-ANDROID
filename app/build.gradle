@@ -32,6 +32,9 @@ android {
         // Travado em 1.4.3 para compatibilidade com o Runner do GitHub
         kotlinCompilerExtensionVersion '1.4.3'
     }
+    lint {
+        lintConfig file("lint.xml")
+    }
 }
 
 dependencies {
