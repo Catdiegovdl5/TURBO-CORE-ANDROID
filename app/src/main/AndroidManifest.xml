@@ -9,7 +9,7 @@
         <package android:name="rikka.app.shizuku" />
     </queries>
 
-    <application
+    <application android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher_round"
         android:allowBackup="true"
         android:label="Turbo Core"
         android:supportsRtl="true"
