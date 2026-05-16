@@ -5,6 +5,9 @@ plugins {
 
 android {
     namespace 'com.catdiego.turbocore'
+    lint {
+        lintConfig = file("lint.xml")
+    }
     compileSdk 35
 
     defaultConfig {

@@ -10,10 +10,11 @@
     </queries>
 
     <application
+        android:icon="@drawable/icon"
         android:allowBackup="true"
         android:label="Turbo Core"
         android:supportsRtl="true"
-        android:theme="@style/Theme.Material3.Dark.NoActionBar">
+        android:theme="@style/Theme.TurboCore">
         
         <activity
             android:name=".MainActivity"
