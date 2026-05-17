@@ -4,6 +4,11 @@ plugins {
 }
 
 android {
+    lint {
+        baseline = file("lint-baseline.xml")
+        lintConfig = file("lint.xml")
+    }
+
     namespace 'com.catdiego.turbocore'
     compileSdk 35
 
