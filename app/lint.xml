@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lint>
+    <!-- Suppress QueryAllPackagesPermission warning as it is explicitly required by the Shizuku utility -->
+    <issue id="QueryAllPackagesPermission" severity="ignore" />
+</lint>
