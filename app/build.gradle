@@ -27,6 +27,10 @@ android {
     kotlinOptions {
         jvmTarget = '17'
     }
+    lint {
+        lintConfig = file("lint.xml")
+    }
+
     buildFeatures { compose true }
     composeOptions {
         // Travado em 1.4.3 para compatibilidade com o Runner do GitHub
