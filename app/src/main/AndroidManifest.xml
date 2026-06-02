@@ -13,7 +13,7 @@
         android:allowBackup="true"
         android:label="Turbo Core"
         android:supportsRtl="true"
-        android:theme="@style/Theme.Material3.Dark.NoActionBar">
+        android:theme="@style/Theme.TurboCore" android:icon="@drawable/ic_launcher_foreground">
         
         <activity
             android:name=".MainActivity"
