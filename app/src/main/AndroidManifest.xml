@@ -9,11 +9,11 @@
         <package android:name="rikka.app.shizuku" />
     </queries>
 
-    <application
+    <application android:icon="@drawable/ic_launcher_foreground"
         android:allowBackup="true"
         android:label="Turbo Core"
         android:supportsRtl="true"
-        android:theme="@style/Theme.Material3.Dark.NoActionBar">
+        android:theme="@style/Theme.TurboCore">
         
         <activity
             android:name=".MainActivity"
